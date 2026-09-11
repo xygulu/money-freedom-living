@@ -33,6 +33,22 @@ export interface SessionMemory {
   text: string;
 }
 
+/** 微行动/实验记录（阶段 3 主用，机制上任何阶段的微行动完成都记这里） */
+export interface ExperimentEntry {
+  date: string; // YYYY-MM-DD
+  action: string; // 做了什么（今日微行动原文）
+  feeling?: string; // 一句话体感（松/紧/平静/心虚……不问对错）
+}
+
+/** 信（docs/02 §6 letters[]；阶段仪式：给现在的自己/写给钱的一封信） */
+export interface LetterEntry {
+  stage: number;
+  content: string;
+  state: 'kept' | 'sealed' | 'opened'; // 留着 / 封存 / 已开（封存开启简版）
+  aiReply: string | null;
+  createdAt: string; // ISO
+}
+
 export interface GrowthProfile {
   user_key: string;
   locale: string;
@@ -42,6 +58,10 @@ export interface GrowthProfile {
   stage_started_at: string;
   pinned: { kind: string; text: string; createdAt: string }[];
   memories: SessionMemory[];
+  experiments: ExperimentEntry[];
+  letters: LetterEntry[];
+  /** 今日一签去重：最近看过的签文（上限 90 条 ≈ 90 天不重复，docs/02 一签机制） */
+  dailySeen: { date: string; text: string }[];
   payday: { type: 'monthly' | 'biweekly' | 'weekly'; day?: number } | null;
   total_active_days: number;
   last_active_date: string | null;
@@ -57,6 +77,9 @@ function rowToProfile(row: Record<string, unknown>): GrowthProfile {
     stage_started_at: String(row.stage_started_at),
     pinned: (row.pinned as GrowthProfile['pinned']) ?? [],
     memories: (row.memories as GrowthProfile['memories']) ?? [],
+    experiments: (row.experiments as GrowthProfile['experiments']) ?? [],
+    letters: (row.letters as GrowthProfile['letters']) ?? [],
+    dailySeen: (row.daily_seen as GrowthProfile['dailySeen']) ?? [],
     payday: (row.payday as GrowthProfile['payday']) ?? null,
     total_active_days: row.total_active_days as number,
     last_active_date: (row.last_active_date as string | null) ?? null,
@@ -67,13 +90,14 @@ export async function getProfile(userKey: string): Promise<GrowthProfile | null>
   await ensureSchema();
   const rows = await execWithFailover((sql: SqlClient) =>
     sql`SELECT user_key, locale, portrait, concerns, stage, stage_started_at,
-               pinned, memories, payday, total_active_days, last_active_date
+               pinned, memories, experiments, letters, daily_seen, payday,
+               total_active_days, last_active_date
         FROM growth_profiles WHERE user_key = ${userKey}`
   );
   return rows[0] ? rowToProfile(rows[0]) : null;
 }
 
-/** 取档案，无则建（问卷提交时触发，locale 取当前界面语言） */
+/** 取档案，无则建（问卷提交/微行动完成/写信时触发，locale 取当前界面语言） */
 export async function ensureProfile(userKey: string, locale: string): Promise<GrowthProfile> {
   await ensureSchema();
   const rows = await execWithFailover((sql: SqlClient) =>
@@ -165,6 +189,78 @@ export async function addPinned(
     sql`UPDATE growth_profiles
         SET pinned = pinned || ${JSON.stringify(fresh)}::jsonb,
             updated_at = now()
+        WHERE user_key = ${userKey}`
+  );
+}
+
+/**
+ * 微行动/实验记录写入（docs/02 阶段 3）：/journey 微行动卡"完成实验 + 一句话感受"。
+ * 做砸的实验也是数据——记成功或记没做都算，不评判。
+ */
+export async function appendExperiment(
+  userKey: string,
+  entry: { date: string; action: string; feeling?: string }
+): Promise<void> {
+  await execWithFailover((sql: SqlClient) =>
+    sql`UPDATE growth_profiles
+        SET experiments = experiments || ${JSON.stringify([{ date: entry.date, action: entry.action, feeling: entry.feeling?.trim() || undefined }])}::jsonb,
+            updated_at = now()
+        WHERE user_key = ${userKey}`
+  );
+}
+
+/**
+ * 信写入（阶段仪式）：state 初始 'kept'（留着）。
+ * createdAt 必须由调用方传入并在返回给客户端的对象里保持同一个值——
+ * PATCH 封存/开启按 createdAt 定位，两处各生成一个会导致毫秒级错位。
+ */
+export async function appendLetter(userKey: string, entry: LetterEntry): Promise<void> {
+  await execWithFailover((sql: SqlClient) =>
+    sql`UPDATE growth_profiles
+        SET letters = letters || ${JSON.stringify([entry])}::jsonb,
+            updated_at = now()
+        WHERE user_key = ${userKey}`
+  );
+}
+
+/** 信状态流转（封存开启简版）：kept ↔ sealed ↔ opened，按创建时间定位 */
+export async function setLetterState(
+  userKey: string,
+  createdAt: string,
+  state: LetterEntry['state']
+): Promise<void> {
+  await execWithFailover((sql: SqlClient) =>
+    sql`UPDATE growth_profiles
+        SET letters = (
+          SELECT jsonb_agg(CASE WHEN l->>'createdAt' = ${createdAt} THEN l || ${JSON.stringify({ state })}::jsonb ELSE l END)
+          FROM jsonb_array_elements(letters) AS l
+        ),
+        updated_at = now()
+        WHERE user_key = ${userKey}`
+  );
+}
+
+/**
+ * 记录今日一签（pickDaily 去重依据，"同一用户 90 天不重复"）。
+ * 幂等：同一天只记一条（journey 页每次渲染都会调）；超过 90 条从最旧裁。
+ * （jsonb 不支持切片下标，用 WITH ORDINALITY + LIMIT。）
+ */
+export async function recordDailySeen(userKey: string, date: string, text: string): Promise<void> {
+  await execWithFailover((sql: SqlClient) =>
+    sql`UPDATE growth_profiles
+        SET daily_seen = (
+          SELECT COALESCE(jsonb_agg(x ORDER BY ord), daily_seen)
+          FROM (
+            SELECT x, ord FROM jsonb_array_elements(
+              CASE WHEN EXISTS (SELECT 1 FROM jsonb_array_elements(daily_seen) e WHERE e->>'date' = ${date})
+                   THEN daily_seen
+                   ELSE daily_seen || ${JSON.stringify([{ date, text }])}::jsonb END
+            ) WITH ORDINALITY AS t(x, ord)
+            ORDER BY ord DESC
+            LIMIT 90
+          ) last_n
+        ),
+        updated_at = now()
         WHERE user_key = ${userKey}`
   );
 }

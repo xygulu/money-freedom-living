@@ -131,3 +131,14 @@ export function pickDaily(
 
   return finalPool[hash(`${dateISO}#${stage}`) % finalPool.length];
 }
+
+/**
+ * 今日微行动：按当前阶段练习确定性抽取（同一天同一用户同一条，docs/02 §5）。
+ * 练习只提议不指派——卡上永远给"随便聊聊/只看看签"的替代出口，可跳过。
+ */
+export function pickExercise(locale: Locale, dateISO: string, stage: number, userKey: string): string | null {
+  const stageContent = getJourneyStage(locale, stage);
+  const exercises = stageContent?.exercises ?? [];
+  if (exercises.length === 0) return null;
+  return exercises[hash(`${dateISO}#${userKey}`) % exercises.length];
+}

@@ -138,6 +138,7 @@ async function doMigrate(): Promise<void> {
       stage_started_at TIMESTAMPTZ NOT NULL DEFAULT now(),
       pinned JSONB NOT NULL DEFAULT '[]',
       memories JSONB NOT NULL DEFAULT '[]',
+      daily_seen JSONB NOT NULL DEFAULT '[]',
       experiments JSONB NOT NULL DEFAULT '[]',
       letters JSONB NOT NULL DEFAULT '[]',
       stamps JSONB NOT NULL DEFAULT '[]',
@@ -167,6 +168,7 @@ async function doMigrate(): Promise<void> {
   `;
   // 存量库补列（CREATE TABLE IF NOT EXISTS 不会给已存在的表加列）
   await sql`ALTER TABLE chat_sessions ADD COLUMN IF NOT EXISTS safety_flagged BOOLEAN NOT NULL DEFAULT false`;
+  await sql`ALTER TABLE growth_profiles ADD COLUMN IF NOT EXISTS daily_seen JSONB NOT NULL DEFAULT '[]'`;
   await sql`CREATE INDEX IF NOT EXISTS idx_chat_sessions_user ON chat_sessions(user_key, created_at DESC)`;
 
   // 对话原文只存这里（用户可删）；日志/safety_events 不含原文（P§9 日志纪律）
@@ -194,6 +196,22 @@ async function doMigrate(): Promise<void> {
     )
   `;
   await sql`CREATE INDEX IF NOT EXISTS idx_safety_events_user ON safety_events(user_key, created_at DESC)`;
+
+  // 日记（docs/03 §3）：免费写/存，VIP AI 回应（付费墙②"写完想被回应时"）。
+  // 原文只存此处（用户可删）；safety_events 不含原文（P§9 日志纪律）
+  await sql`
+    CREATE TABLE IF NOT EXISTS journal_entries (
+      id BIGSERIAL PRIMARY KEY,
+      user_key TEXT NOT NULL,
+      locale TEXT NOT NULL DEFAULT 'en',
+      content TEXT NOT NULL,
+      safety_hit BOOLEAN NOT NULL DEFAULT false,
+      ai_reply TEXT,
+      replied_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS idx_journal_entries_user ON journal_entries(user_key, created_at DESC)`;
 }
 
 /**
