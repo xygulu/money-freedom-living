@@ -6,6 +6,7 @@ import { resolveIdentity } from '@/lib/identity';
 import { getProfile, savePortrait } from '@/lib/profile';
 import { applyCalibration, parseCalibrateSection } from '@/lib/onboarding';
 import { checkSafety, recordSafetyEvent } from '@/lib/safety';
+import { track } from '@/lib/analytics';
 import { enabledLocales, isLocale, type Locale } from '@/i18n/config';
 import { jsonError } from '@/lib/sse';
 
@@ -40,6 +41,8 @@ export async function POST(request: NextRequest) {
     }
 
     const next = applyCalibration(profile.portrait, section, body.verdict, body.correction);
+    // 验收指标：说中率分母分子（docs/02 §11）
+    await track(identity.key, 'calibrate', { verdict: body.verdict, section });
     if (!next) return jsonError('calibration_requires_correction', 400);
     await savePortrait(identity.key, next);
 

@@ -7,6 +7,7 @@ import { resolveIdentity } from '@/lib/identity';
 import { createSession, findOpenChatSession } from '@/lib/chat';
 import { settleSession } from '@/lib/memory';
 import { getQuotaStatus, clientIpFromHeaders, guestKeyForRequest, guestCookieHeader, GUEST_ID_COOKIE, todayUtc } from '@/lib/quota';
+import { track } from '@/lib/analytics';
 import { enabledLocales, isLocale } from '@/i18n/config';
 import { jsonError } from '@/lib/sse';
 
@@ -37,6 +38,7 @@ export async function POST(request: NextRequest) {
     }
 
     const session = await createSession({ userKey: identity.key, locale, kind: 'chat' });
+    await track(identity.key, 'chat_session_started', {}, locale);
     const headers: Record<string, string> = { 'Cache-Control': 'no-store' };
     if (identity.newGuestCookie) headers['Set-Cookie'] = identity.newGuestCookie;
     else if (guest.newCookieId) headers['Set-Cookie'] = guestCookieHeader(guest.newCookieId);

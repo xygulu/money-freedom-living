@@ -1,7 +1,8 @@
 // /[locale]/login：登录 / 注册（MVP 最小闭环）。
 // 独立存在的理由：订阅 VIP 必须登录（checkout 路由 401 未登录）；
-// 游客身份不能跨设备保留，注册后档案迁移 g:→u: 在 M7 接入。
+// 游客身份不能跨设备保留——注册/登录后游客档案自动迁移 g:→u:（lib/migrate.ts）。
 import { headers } from 'next/headers';
+import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { getDict } from '@/i18n/get-dict';
 import { enabledLocales, isLocale } from '@/i18n/config';
@@ -36,6 +37,9 @@ export default async function loginPage({
       <div className="mt-8">
         <AuthForm next={next && next.startsWith('/') ? next : `/${locale}/me`} dict={dict.login} />
       </div>
+      <Link href={`/${locale}/recover`} className="mt-4 text-sm text-ink-soft underline underline-offset-4">
+        {dict.login.recoverLink}
+      </Link>
     </div>
   );
 }

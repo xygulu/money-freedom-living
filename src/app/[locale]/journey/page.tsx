@@ -13,7 +13,10 @@ import { enabledLocales, isLocale } from '@/i18n/config';
 import { getJourneyStages, pickDaily, pickExercise } from '@/lib/content';
 import { resolveIdentity } from '@/lib/identity';
 import { getProfile, recordDailySeen } from '@/lib/profile';
+import { isAnchorDay } from '@/lib/anchor';
+import { track } from '@/lib/analytics';
 import MicroActionCard from '@/components/MicroActionCard';
+import AnchorCard from '@/components/AnchorCard';
 
 export const dynamic = 'force-dynamic';
 
@@ -46,10 +49,41 @@ export default async function journeyPage({ params }: { params: Promise<{ locale
   const stages = getJourneyStages(locale);
   const letterCount = profile?.letters.length ?? 0;
 
+  // 归来问候（docs/02 §5）：暂停任意时长后回来给一句"欢迎回来，它还在"——
+  // 不追责、不问为什么没来、不显示中断天数。隔 ≥3 天才算"归来"（连续使用不打扰）。
+  let gapDays = -1;
+  if (profile?.last_active_date) {
+    gapDays = Math.floor((Date.parse(`${today}T00:00:00Z`) - Date.parse(`${profile.last_active_date}T00:00:00Z`)) / 86_400_000);
+  }
+  const welcomeBack = gapDays >= 3;
+  // 锚点日被动感知：只有用户自己设了锚点才会出现（默认不猜）
+  const anchorToday = profile?.payday ? isAnchorDay(profile.payday) : false;
+
+  // 验收指标：24h-72h 回访等（docs/02 §11）。查询端按 user+day 去重，这里无条件打点。
+  const gapBucket = gapDays < 0 ? 'first' : gapDays === 0 ? 'same_day' : gapDays <= 3 ? '1-3' : gapDays <= 7 ? '4-7' : '8+';
+  try {
+    await track(identity.key, 'journey_visit', { gap: gapBucket }, locale);
+  } catch {
+    // 打点绝不阻塞页面
+  }
+
   return (
     <div className="flex flex-col pt-16">
       <h1 className="text-2xl font-medium tracking-tight">{dict.journey.title}</h1>
       <p className="mt-3 text-sm leading-relaxed text-ink-soft">{dict.journey.sub}</p>
+
+      {welcomeBack && (
+        <p className="mt-6 border border-dashed border-line bg-white/60 p-5 text-sm leading-relaxed">
+          {dict.journey.welcomeBack}
+        </p>
+      )}
+      {anchorToday && (
+        <p className="mt-4 border border-line bg-white/60 p-5 text-sm leading-relaxed">
+          {dict.journey.anchorDay}
+        </p>
+      )}
+
+      <AnchorCard locale={locale} payday={profile?.payday ?? null} dict={dict} />
 
       {daily && (
         <section className="mt-10 border border-line bg-white/60 p-6">

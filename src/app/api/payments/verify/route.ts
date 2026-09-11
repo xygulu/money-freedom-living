@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { applyPaymentEvent, } from '@/lib/payments/engine';
+import { track } from '@/lib/analytics';
 import { getDefaultProvider, getEnabledProvider } from '@/lib/payments/registry';
 import type { PaymentProvider } from '@/lib/payments/types';
 
@@ -78,6 +79,8 @@ export async function GET(request: NextRequest) {
         { status: 502 }
       );
     }
+
+    await track(`u:${user.id}`, 'vip_granted', { provider: provider.id });
 
     return NextResponse.json({ granted: true, provider: provider.id });
   } catch (error) {

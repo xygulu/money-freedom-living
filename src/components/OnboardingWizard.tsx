@@ -28,6 +28,10 @@ export default function OnboardingWizard({ locale, dict }: Props) {
   const [turns, setTurns] = useState<Turn[]>([]);
   const [streaming, setStreaming] = useState(false);
   const [summary, setSummary] = useState('');
+  // 敏感信息单独同意 + 18+ 声明（P§9）：两个独立勾选，不与任何协议打包；
+  // 拒绝者可继续用问卷与日记，只是不生成画像、不进行 AI 深谈
+  const [adultOk, setAdultOk] = useState(false);
+  const [sensitiveOk, setSensitiveOk] = useState(false);
   const [supplement, setSupplement] = useState('');
   const [error, setError] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -143,12 +147,13 @@ export default function OnboardingWizard({ locale, dict }: Props) {
   }
 
   async function generatePortrait() {
+    if (!adultOk || !sensitiveOk) return;
     setStep('generating');
     try {
       const response = await fetch('/api/onboarding/portrait', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ locale, sessionId }),
+        body: JSON.stringify({ locale, sessionId, consent: true }),
       });
       if (!response.ok) throw new Error(String(response.status));
       setStep('done');
@@ -249,7 +254,24 @@ export default function OnboardingWizard({ locale, dict }: Props) {
         {summary && <div className="mt-6 whitespace-pre-wrap border border-line bg-white/60 p-5 text-sm leading-relaxed">{summary}</div>}
         {!summary && <p className="mt-6 text-sm text-ink-soft">{o.talk.hint}</p>}
         <div className="mt-8 flex flex-col gap-3">
-          <button type="button" onClick={generatePortrait} className="self-start rounded-full bg-accent px-6 py-2 text-sm text-paper hover:opacity-90">
+          {/* 单独同意区（P§9）：两项各自独立、默认不勾、拒绝不影响问卷/日记使用 */}
+          <div className="flex flex-col gap-3 border border-line bg-white/60 p-5 text-sm">
+            <label className="flex cursor-pointer items-start gap-3">
+              <input type="checkbox" checked={adultOk} onChange={(e) => setAdultOk(e.target.checked)} className="mt-1" />
+              <span>{o.consent.adultLabel}</span>
+            </label>
+            <label className="flex cursor-pointer items-start gap-3">
+              <input type="checkbox" checked={sensitiveOk} onChange={(e) => setSensitiveOk(e.target.checked)} className="mt-1" />
+              <span className="leading-relaxed">{o.consent.sensitiveLabel}</span>
+            </label>
+            <p className="text-xs leading-relaxed text-ink-soft">{o.consent.sensitiveHint}</p>
+          </div>
+          <button
+            type="button"
+            onClick={generatePortrait}
+            disabled={!adultOk || !sensitiveOk}
+            className="self-start rounded-full bg-accent px-6 py-2 text-sm text-paper hover:opacity-90 disabled:opacity-40"
+          >
             {o.reflect.confirm} · {o.reflect.next}
           </button>
           <div className="flex gap-2">

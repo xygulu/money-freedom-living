@@ -212,6 +212,48 @@ async function doMigrate(): Promise<void> {
     )
   `;
   await sql`CREATE INDEX IF NOT EXISTS idx_journal_entries_user ON journal_entries(user_key, created_at DESC)`;
+
+  // 使用事件（docs/02 §11 验收指标）：只存匿名 user_key + 事件名 + 脱敏元数据，
+  // 不存任何用户文本原文（P§9 日志纪律）。user_key 本身不含 PII（u:<uuid>/g:<随机 hex>）。
+  await sql`
+    CREATE TABLE IF NOT EXISTS events (
+      id BIGSERIAL PRIMARY KEY,
+      user_key TEXT NOT NULL,
+      name TEXT NOT NULL,
+      locale TEXT,
+      metadata JSONB NOT NULL DEFAULT '{}',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS idx_events_user ON events(user_key, created_at DESC)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_events_name ON events(name, created_at DESC)`;
+
+  // 敏感信息单独同意记录（P§9：带时间戳/IP/政策版本号存服务端，游客同样记录）。
+  // ip_hash = sha256(ip + RECOVERY_PEPPER)：能判重/审计，还原不出 IP。
+  await sql`
+    CREATE TABLE IF NOT EXISTS consent_records (
+      id BIGSERIAL PRIMARY KEY,
+      user_key TEXT NOT NULL,
+      granted BOOLEAN NOT NULL,
+      policy_version TEXT NOT NULL,
+      ip_hash TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS idx_consent_user ON consent_records(user_key, created_at DESC)`;
+
+  // 恢复码尝试审计与限速（P§7/恢复码设计：账号级 5 次/时 + IP 级 20 次/时 +
+  // 全局失败锁定）。只存 scope/主体哈希/结果，不存尝试码本身。
+  await sql`
+    CREATE TABLE IF NOT EXISTS recovery_attempts (
+      id BIGSERIAL PRIMARY KEY,
+      scope TEXT NOT NULL,           -- 'account' | 'ip' | 'global'
+      subject TEXT NOT NULL,         -- username / ip_hash / '*'
+      ok BOOLEAN NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS idx_recovery_attempts_scope ON recovery_attempts(scope, subject, created_at DESC)`;
 }
 
 /**

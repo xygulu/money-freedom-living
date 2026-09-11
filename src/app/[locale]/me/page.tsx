@@ -1,5 +1,5 @@
-// /[locale]/me：我的（最小 hub）。完整版随 M7 落地（恢复码 / 导出 / 删除账号 / 注册迁移）。
-// 现阶段：画像入口 + VIP 入口 + 登录态。
+// /[locale]/me：我的。画像入口 + VIP 入口 + 登录态 +（登录后）账户区：
+// 恢复码 / 数据导出 / 删除账号（M7，docs/02 §9 合规清单的"用户权利"三件套）。
 import { headers, cookies } from 'next/headers';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -9,6 +9,7 @@ import { auth } from '@/lib/auth';
 import { resolveIdentity } from '@/lib/identity';
 import { getEntitlement } from '@/lib/entitlements';
 import { getProfile } from '@/lib/profile';
+import MeAccount from '@/components/MeAccount';
 
 export const dynamic = 'force-dynamic';
 
@@ -63,7 +64,16 @@ export default async function mePage({ params }: { params: Promise<{ locale: str
         ))}
       </ul>
 
-      <p className="mt-10 text-xs leading-relaxed text-ink-soft/70">{dict.me.recoveryNote}</p>
+      {user ? (
+        <MeAccount locale={locale} dict={dict} />
+      ) : (
+        <p className="mt-10 text-xs leading-relaxed text-ink-soft/70">
+          {dict.me.recoveryNote}{' '}
+          <a href={`/${locale}/privacy`} className="underline underline-offset-4">
+            {dict.me.privacyLink}
+          </a>
+        </p>
+      )}
     </div>
   );
 }

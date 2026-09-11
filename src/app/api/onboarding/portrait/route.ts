@@ -7,6 +7,9 @@ import { getProfile, savePortrait, bumpActiveDay, type Portrait } from '@/lib/pr
 import { getSession, getSessionMessages, closeSession } from '@/lib/chat';
 import { buildPortraitMessages, validatePortraitDraft } from '@/lib/onboarding';
 import { llmCompleteJson } from '@/lib/llm';
+import { recordConsent, hashIp } from '@/lib/consent';
+import { track } from '@/lib/analytics';
+import { clientIpFromHeaders } from '@/lib/quota';
 import { enabledLocales, isLocale } from '@/i18n/config';
 import { jsonError } from '@/lib/sse';
 
@@ -15,9 +18,17 @@ export const maxDuration = 120;
 
 export async function POST(request: NextRequest) {
   try {
-    const body = (await request.json().catch(() => ({}))) as { locale?: string; sessionId?: string };
+    const body = (await request.json().catch(() => ({})) ) as {
+      locale?: string;
+      sessionId?: string;
+      consent?: boolean;
+    };
     const locale = body.locale;
     if (!isLocale(locale) || !enabledLocales.includes(locale)) return jsonError('invalid_locale', 400);
+
+    // 敏感信息单独同意（P§9）：服务端强校验，勾选记录带时间戳/IP 哈希/政策版本入库
+    //（游客同样记录）；拒绝者可继续用问卷与日记，只是走到这里会被拦下
+    if (body.consent !== true) return jsonError('consent_required', 400);
 
     const identity = await resolveIdentity(request);
     const profile = await getProfile(identity.key);
@@ -57,6 +68,9 @@ export async function POST(request: NextRequest) {
     };
     await savePortrait(identity.key, portrait);
     await bumpActiveDay(identity.key);
+    await recordConsent(identity.key, true, hashIp(clientIpFromHeaders(request.headers)));
+    // 验收指标：体检完成率分子（docs/02 §11）
+    await track(identity.key, 'portrait_done', {}, locale);
 
     const headers: Record<string, string> = { 'Cache-Control': 'no-store' };
     if (identity.newGuestCookie) headers['Set-Cookie'] = identity.newGuestCookie;

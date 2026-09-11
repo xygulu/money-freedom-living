@@ -5,6 +5,7 @@ import { NextRequest } from 'next/server';
 import { resolveIdentity } from '@/lib/identity';
 import { appendExperiment, bumpActiveDay, ensureProfile } from '@/lib/profile';
 import { checkSafety, recordSafetyEvent } from '@/lib/safety';
+import { track } from '@/lib/analytics';
 import { enabledLocales, isLocale, type Locale } from '@/i18n/config';
 import { jsonError } from '@/lib/sse';
 
@@ -44,6 +45,7 @@ export async function POST(request: NextRequest) {
     } catch (error) {
       console.error('[api/journey/experiment] bumpActiveDay failed:', error);
     }
+    await track(identity.key, 'experiment_saved', { safety: safetyHit }, locale);
 
     const headers: Record<string, string> = { 'Cache-Control': 'no-store' };
     if (identity.newGuestCookie) headers['Set-Cookie'] = identity.newGuestCookie;

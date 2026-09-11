@@ -31,7 +31,15 @@
     "toSignUp": "還沒有帳號？註冊一個",
     "toSignIn": "已經有帳號了？去登入",
     "note": "你的畫像、對話和日記屬於你，預設不用於任何模型訓練。",
-    "error": "登入沒有成功，請檢查信箱和密碼再試一次"
+    "error": "登入沒有成功，請檢查信箱和密碼再試一次",
+    "recoverLink": "忘記密碼？用恢復碼找回",
+    "recoverTitle": "恢復碼找回",
+    "recoverHint": "輸入使用者名稱和 12 位恢復碼，設定一個新密碼。恢復碼是你生成時保存下來的那串。",
+    "recoverCode": "恢復碼",
+    "recoverNewPassword": "新密碼",
+    "recoverSubmit": "重設密碼",
+    "recoverSuccess": "密碼已經重設。用新密碼登入就好。",
+    "recoverError": "使用者名稱、恢復碼或新密碼不對（也可能嘗試太多次被暫時鎖定）"
   },
   "vip": {
     "title": "VIP",
@@ -64,7 +72,23 @@
     "vip": "VIP 訂閱",
     "vipActive": "生效中。謝謝你在。",
     "vipFree": "旅程免費，VIP 更深更久。",
-    "recoveryNote": "恢復碼與資料匯出即將可用（這個頁面還在布置）。"
+    "recoveryNote": "恢復碼、資料匯出與刪除帳號，登入後在「我的」頁可用。",
+    "recovery": "恢復碼",
+    "recoveryHint": "12 位字元，是帳號的第二把鑰匙：換裝置、忘記密碼時用它找回。",
+    "recoveryGenerate": "生成恢復碼",
+    "recoveryOnce": "只顯示這一次，請離線保存（截圖抄下來都行）。重新生成會讓舊碼作廢。",
+    "recoveryRegenerate": "重新生成（舊碼作廢）",
+    "exportData": "匯出我的資料",
+    "exportHint": "畫像、對話全文、日記、信件打包成一個 JSON 檔案，只給你本人。",
+    "exportBtn": "下載匯出檔案",
+    "deleteAccount": "刪除帳號",
+    "deleteHint": "主庫即時清空，加密備份最多 30 天內清除。",
+    "deleteBtn": "刪除帳號…",
+    "deleteConfirmHint": "輸入 DELETE 確認。這一步不可撤銷：畫像、對話、日記、信件全部刪除。",
+    "deleteConfirmBtn": "永久刪除",
+    "deleteCancel": "先留著",
+    "privacyLink": "隱私政策",
+    "error": "出了點問題，請重試"
   },
   "journey": {
     "title": "旅程",
@@ -89,7 +113,25 @@
     "letterLabel": "寫一封信",
     "letterHint": "給現在的自己，或者給錢。它會把信好好收著，回一張溫柔的收條。",
     "letterCta": "寫信",
-    "reportTeaser": "每個階段畢業時，可以生成一份屬於你的深度報告。"
+    "reportTeaser": "每個階段畢業時，可以生成一份屬於你的深度報告。",
+    "welcomeBack": "歡迎回來。它還在，你的紀錄也都在。",
+    "anchorDay": "今天是發薪日。這個月，你和錢處得怎麼樣？",
+    "anchorLabel": "週期錨點",
+    "anchorHint": "設一個屬於你的週期錨點（比如發薪日），錨點日這裡會輕輕提一句。不設也完全沒關係。",
+    "anchorSet": "設一個",
+    "anchorChange": "改一下",
+    "anchorClear": "不設了",
+    "anchorSaved": "記下了。",
+    "anchorSave": "儲存",
+    "anchorCancel": "先不了",
+    "anchorTypeMonthly": "每月某天",
+    "anchorTypeBiweekly": "隔週某天",
+    "anchorTypeWeekly": "每週某天",
+    "anchorDayOfMonth": "日期",
+    "anchorDayOfWeek": "星期",
+    "anchorMonthly": "每月 {day} 號",
+    "anchorBiweekly": "隔週 {day}",
+    "anchorWeekly": "每週 {day}"
   },
   "journal": {
     "title": "心事",
@@ -195,7 +237,12 @@
       "saved": "已記錄"
     },
     "portraitLink": "看我的畫像",
-    "error": "出了點問題，請重試"
+    "error": "出了點問題，請重試",
+    "consent": {
+      "adultLabel": "我已年滿 18 歲",
+      "sensitiveLabel": "我同意把金錢困擾、童年記憶等敏感資訊用於生成我的金錢畫像。這些內容高度私密，預設不用於任何模型訓練。",
+      "sensitiveHint": "不勾選也能繼續使用：問卷和日記照常可用，只是不生成畫像、不進行 AI 深談。"
+    }
   },
   "portrait": {
     "title": "你的金錢畫像",

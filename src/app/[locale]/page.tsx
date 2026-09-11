@@ -25,6 +25,12 @@ export default async function LandingPage({ params }: { params: Promise<{ locale
         {dict.common.aiNotice}
       </p>
 
+      <p className="mt-4 text-xs">
+        <a href={`/${locale}/privacy`} className="text-ink-soft underline underline-offset-4">
+          {dict.me.privacyLink}
+        </a>
+      </p>
+
       <ul className="mt-6 flex flex-wrap gap-x-4 gap-y-2 text-xs">
         {visibleLocales.map(({ code, label, enabled }) => (
           <li key={code}>

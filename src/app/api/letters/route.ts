@@ -7,6 +7,7 @@ import { resolveIdentity } from '@/lib/identity';
 import { appendLetter, bumpActiveDay, ensureProfile, getProfile, setLetterState, type LetterEntry } from '@/lib/profile';
 import { buildLetterReplySystem } from '@/lib/letters';
 import { checkSafety, recordSafetyEvent, referralMessage } from '@/lib/safety';
+import { track } from '@/lib/analytics';
 import { getLlmProviders, llmComplete } from '@/lib/llm';
 import { enabledLocales, isLocale, type Locale } from '@/i18n/config';
 import { jsonError } from '@/lib/sse';
@@ -57,6 +58,7 @@ export async function POST(request: NextRequest) {
     } catch (error) {
       console.error('[api/letters] bumpActiveDay failed:', error);
     }
+    await track(identity.key, 'letter_sent', { safety: verdict.hit }, locale);
 
     const headers: Record<string, string> = { 'Cache-Control': 'no-store' };
     if (identity.newGuestCookie) headers['Set-Cookie'] = identity.newGuestCookie;

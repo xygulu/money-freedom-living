@@ -67,6 +67,17 @@ export interface GrowthProfile {
   last_active_date: string | null;
 }
 
+/** Neon HTTP 驱动把 DATE 解析成 JS Date（本地时区午夜）——归一化回 'YYYY-MM-DD'，
+ *  否则 gap 计算 `${date}T00:00:00Z` 拼出非法串得 NaN，归来问候永不触发 */
+export function dateColumnToISO(value: unknown): string | null {
+  if (typeof value === 'string') return value;
+  if (value instanceof Date) {
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}`;
+  }
+  return null;
+}
+
 function rowToProfile(row: Record<string, unknown>): GrowthProfile {
   return {
     user_key: row.user_key as string,
@@ -82,7 +93,7 @@ function rowToProfile(row: Record<string, unknown>): GrowthProfile {
     dailySeen: (row.daily_seen as GrowthProfile['dailySeen']) ?? [],
     payday: (row.payday as GrowthProfile['payday']) ?? null,
     total_active_days: row.total_active_days as number,
-    last_active_date: (row.last_active_date as string | null) ?? null,
+    last_active_date: dateColumnToISO(row.last_active_date),
   };
 }
 

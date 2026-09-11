@@ -6,6 +6,7 @@ import { NextRequest } from 'next/server';
 import { resolveIdentity } from '@/lib/identity';
 import { bumpActiveDay, ensureProfile } from '@/lib/profile';
 import { checkSafety, recordSafetyEvent } from '@/lib/safety';
+import { track } from '@/lib/analytics';
 import { getJournalEntries } from '@/lib/journal';
 import { execWithFailover, ensureSchema } from '@/lib/db';
 import { enabledLocales, isLocale, type Locale } from '@/i18n/config';
@@ -42,6 +43,8 @@ export async function POST(request: NextRequest) {
     } catch (error) {
       console.error('[api/journal] bumpActiveDay failed:', error);
     }
+    // 只存"写了一篇 + 是否命中危机"这类元数据，不含内容原文（P§9）
+    await track(identity.key, 'journal_saved', { safety: verdict.hit }, locale);
 
     const headers: Record<string, string> = { 'Cache-Control': 'no-store' };
     if (identity.newGuestCookie) headers['Set-Cookie'] = identity.newGuestCookie;

@@ -31,7 +31,15 @@
     "toSignUp": "No account yet? Create one",
     "toSignIn": "Already have an account? Sign in",
     "note": "Your portrait, conversations and journal belong to you, and are never used for model training by default.",
-    "error": "Sign-in didn't go through. Check your email and password, then try again"
+    "error": "Sign-in didn't go through. Check your email and password, then try again",
+    "recoverLink": "Forgot your password? Recover with your code",
+    "recoverTitle": "Recover with your code",
+    "recoverHint": "Enter your username and 12-character recovery code to set a new password. The code is the one you saved when you generated it.",
+    "recoverCode": "Recovery code",
+    "recoverNewPassword": "New password",
+    "recoverSubmit": "Reset password",
+    "recoverSuccess": "Your password has been reset. Sign in with the new one.",
+    "recoverError": "That username, code or new password doesn't look right (or too many attempts — try again later)"
   },
   "vip": {
     "title": "VIP",
@@ -64,7 +72,23 @@
     "vip": "VIP subscription",
     "vipActive": "Active. Thank you for being here.",
     "vipFree": "The journey is free; VIP goes deeper, longer.",
-    "recoveryNote": "Recovery code and data export are coming soon (this room is still being furnished)."
+    "recoveryNote": "Recovery code, data export and account deletion are on the \"Me\" page once you sign in.",
+    "recovery": "Recovery code",
+    "recoveryHint": "12 characters — the spare key to your account, for new devices or a forgotten password.",
+    "recoveryGenerate": "Generate a recovery code",
+    "recoveryOnce": "Shown only this once. Save it offline — a screenshot or a note on paper. Generating a new one retires the old code.",
+    "recoveryRegenerate": "Generate a new one (retires the old)",
+    "exportData": "Export my data",
+    "exportHint": "Your portrait, full conversations, journal and letters in one JSON file, for your eyes only.",
+    "exportBtn": "Download export",
+    "deleteAccount": "Delete account",
+    "deleteHint": "Removed from the live database immediately; encrypted backups roll off within 30 days.",
+    "deleteBtn": "Delete account…",
+    "deleteConfirmHint": "Type DELETE to confirm. This cannot be undone: portrait, conversations, journal and letters will all be gone.",
+    "deleteConfirmBtn": "Delete forever",
+    "deleteCancel": "Keep it",
+    "privacyLink": "Privacy policy",
+    "error": "Something went wrong, please try again"
   },
   "journey": {
     "title": "Journey",
@@ -89,7 +113,25 @@
     "letterLabel": "Write a letter",
     "letterHint": "To your present self, or to money itself. It will keep your letter safe and send back a gentle receipt.",
     "letterCta": "Write",
-    "reportTeaser": "Each time you finish a stage, you can generate a deep report of your own."
+    "reportTeaser": "Each time you finish a stage, you can generate a deep report of your own.",
+    "welcomeBack": "Welcome back. It is still here — and so are your records.",
+    "anchorDay": "It's payday. How has this month with money been?",
+    "anchorLabel": "Your rhythm anchor",
+    "anchorHint": "Set your own rhythm anchor — payday, for instance — and it will gently mention it on that day. Skipping is completely fine.",
+    "anchorSet": "Set one",
+    "anchorChange": "Change",
+    "anchorClear": "Remove it",
+    "anchorSaved": "Saved.",
+    "anchorSave": "Save",
+    "anchorCancel": "Not now",
+    "anchorTypeMonthly": "A day each month",
+    "anchorTypeBiweekly": "A day every other week",
+    "anchorTypeWeekly": "A day each week",
+    "anchorDayOfMonth": "Date",
+    "anchorDayOfWeek": "Weekday",
+    "anchorMonthly": "Monthly, on the {day}",
+    "anchorBiweekly": "Every other {day}",
+    "anchorWeekly": "Every {day}"
   },
   "journal": {
     "title": "Journal",
@@ -195,7 +237,12 @@
       "saved": "Noted"
     },
     "portraitLink": "See my portrait",
-    "error": "Something went wrong. Please try again."
+    "error": "Something went wrong. Please try again.",
+    "consent": {
+      "adultLabel": "I am 18 years of age or older",
+      "sensitiveLabel": "I agree that money worries, childhood memories and similar sensitive information may be used to draw my money portrait. This is highly private and is never used for model training.",
+      "sensitiveHint": "You can also continue without agreeing: the questionnaire and journal still work — there just won't be a portrait or an AI deep-talk."
+    }
   },
   "portrait": {
     "title": "Your money portrait",

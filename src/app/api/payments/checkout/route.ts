@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { hasActiveSubscriptionOn } from '@/lib/entitlements';
+import { track } from '@/lib/analytics';
 import { getDefaultProvider, getEnabledProvider } from '@/lib/payments/registry';
 import { PaymentProviderError } from '@/lib/payments/types';
 
@@ -49,6 +50,9 @@ export async function POST(request: NextRequest) {
   // 追加 provider 参数：成功页回查（/api/payments/verify）据此直达对应 adapter
   const origin = process.env.BETTER_AUTH_URL || request.nextUrl.origin;
   const successUrl = `${origin}/vip?provider=${provider.id}`;
+
+  // 验收指标：VIP 基线（转化漏斗起点）
+  await track(`u:${user.id}`, 'checkout_started', { provider: provider.id });
 
   try {
     const checkout = await provider.createCheckout({
