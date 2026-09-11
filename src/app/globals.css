@@ -1,0 +1,44 @@
+@import 'tailwindcss';
+
+/*
+ * 基调：暖、静、私密（产品方案 §1）。
+ * M1 先用安静的书卷底色与系统衬线栈；正式视觉走 frontend-design 流程后替换。
+ */
+:root {
+  --paper: #faf7f2;
+  --ink: #33302a;
+  --ink-soft: #6f6a5f;
+  --line: #e7e1d6;
+  --accent: #7a6a4f;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family:
+    Georgia,
+    'Songti SC',
+    'Noto Serif CJK SC',
+    'Hiragino Mincho ProN',
+    'Yu Mincho',
+    'Noto Serif CJK JP',
+    'Times New Roman',
+    serif;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

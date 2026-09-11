@@ -1,0 +1,23 @@
+{
+  "common": {
+    "productName": "Money Freedom Living",
+    "aiNotice": "This companion is AI. It offers company and reflection — not therapy, medical care, or financial advice.",
+    "comingSoon": "Coming soon"
+  },
+  "nav": {
+    "journey": "Journey",
+    "chat": "Talk",
+    "journal": "Journal",
+    "me": "Me"
+  },
+  "landing": {
+    "hero": "A room of your own, for everything money makes you feel.",
+    "sub": "Not budgeting. Not investing tips. A quiet companion that helps you see — and slowly soften — your relationship with money.",
+    "cta": "See your money portrait",
+    "privacy": "Private by design. Your words stay yours."
+  },
+  "placeholder": {
+    "title": "On its way",
+    "body": "This room is being prepared. The journey starts at your money portrait."
+  }
+}
