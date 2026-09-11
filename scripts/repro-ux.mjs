@@ -49,8 +49,11 @@ if ((await cta.count()) > 0) {
 // ── 3. 登录页：切注册模式 → 填表 → 注册按钮发出请求 ──
 await page.goto(`${BASE}/zh-CN/login`, { waitUntil: 'networkidle' });
 check('登录页表单渲染', (await page.locator('input').count()) >= 2, `inputs=${await page.locator('input').count()}`);
-// 默认登录模式（2 框）；点第二个 button（type=button 的切换链接）进入注册模式（3 框）
-await page.locator('form button[type="button"]').first().click();
+// 社交登录（Google/GitHub）：本机 .env.local 未配 OAuth 凭证 → 按钮应优雅降级不渲染
+const socialBtns = page.locator('form button', { hasText: /用 Google 继续|用 GitHub 继续/ });
+check('无凭证时社交登录按钮不渲染', (await socialBtns.count()) === 0, `count=${await socialBtns.count()}`);
+// 切注册模式：按文本定位（DOM 里此后可能还有社交按钮，type=button 的 first() 不再是它）
+await page.locator('form button', { hasText: '还没有账号' }).click();
 await page.locator('#auth-username').waitFor({ timeout: 5000 });
 const email = `pw-${Math.random().toString(36).slice(2, 8)}@smoke.test`;
 // better-auth username 插件只允许字母数字下划线（连字符会 400 INVALID_USERNAME）

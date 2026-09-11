@@ -39,7 +39,10 @@
     "recoverNewPassword": "新密码",
     "recoverSubmit": "重置密码",
     "recoverSuccess": "密码已经重置。用新密码登录就好。",
-    "recoverError": "用户名、恢复码或新密码不对（也可能尝试太多次被暂时锁定）"
+    "recoverError": "用户名、恢复码或新密码不对（也可能尝试太多次被暂时锁定）",
+    "orContinue": "或用邮箱继续",
+    "continueWithGoogle": "用 Google 继续",
+    "continueWithGithub": "用 GitHub 继续"
   },
   "vip": {
     "title": "VIP",

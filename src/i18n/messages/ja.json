@@ -39,7 +39,10 @@
     "recoverNewPassword": "新しいパスワード",
     "recoverSubmit": "パスワードを再設定",
     "recoverSuccess": "パスワードを再設定しました。新しいパスワードでログインしてください。",
-    "recoverError": "ユーザー名・コード・新しいパスワードのいずれかが違います（試行が多すぎて一時的にロック中の可能性もあります）"
+    "recoverError": "ユーザー名・コード・新しいパスワードのいずれかが違います（試行が多すぎて一時的にロック中の可能性もあります）",
+    "orContinue": "またはメールアドレスで続行",
+    "continueWithGoogle": "Google で続行",
+    "continueWithGithub": "GitHub で続行"
   },
   "vip": {
     "title": "VIP",

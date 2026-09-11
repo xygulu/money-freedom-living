@@ -50,6 +50,17 @@ export const auth = betterAuth({
       callbackURL: EMAIL_VERIFIED_HASH,
     },
   },
+  account: {
+    accountLinking: {
+      enabled: true,
+      trustedProviders: ['google', 'github'],
+      // 本项目邮箱验证「发信但不阻塞登录」：存量用户 emailVerified 多为 false。
+      // better-auth 默认隐式合并要求本地用户已验证邮箱，不放开的话同邮箱
+      // Google/GitHub 首登会报 "account not linked"。provider 侧邮箱本身经过
+      // 验证，放开后的接管风险可接受。
+      requireLocalEmailVerified: false,
+    },
+  },
   emailAndPassword: {
     enabled: true,
     minPasswordLength: 6,
@@ -125,3 +136,11 @@ export const auth = betterAuth({
 });
 
 export type Session = typeof auth.$Infer.Session;
+
+/** 社交登录按钮该渲染哪些：凭证（ID+SECRET）成对齐全才算可用，缺失即优雅降级为无按钮 */
+export function getEnabledSocialProviders(): ('google' | 'github')[] {
+  const enabled: ('google' | 'github')[] = [];
+  if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) enabled.push('google');
+  if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) enabled.push('github');
+  return enabled;
+}
