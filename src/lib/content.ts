@@ -33,10 +33,28 @@ export interface PracticeNote {
   body: string;
 }
 
+export interface SafetyKeywords {
+  crisis: string[];
+  domesticViolence: string[];
+}
+
+export interface SafetyResource {
+  name: string;
+  contact: string;
+  note?: string;
+}
+
+export interface SafetyResources {
+  verifyNote: string;
+  crisis: SafetyResource[];
+  domesticViolence: SafetyResource[];
+}
+
 interface ContentBundle {
   journey: Record<string, JourneyStage[]>;
   daily: Record<string, DailyCard[]>;
   practices: PracticeNote[];
+  safety: Record<string, { keywords: SafetyKeywords; resources: SafetyResources }>;
   builtAt: string;
 }
 
@@ -61,6 +79,24 @@ export function getPractices(): PracticeNote[] {
 /** 阶段相关的创造者笔记（按 stage 过滤，非全量注入——见 docs/02 §10） */
 export function getPracticesForStage(stage: number): PracticeNote[] {
   return getPractices().filter((p) => p.stage === stage);
+}
+
+/** 危机词表（git 管理的粗筛网，召回优先——safety.ts 消费） */
+export function getSafetyKeywords(locale: Locale): SafetyKeywords {
+  return (
+    (isEnabled(locale) ? bundle.safety[locale]?.keywords : null) ?? { crisis: [], domesticViolence: [] }
+  );
+}
+
+/** 转介资源表（上线前逐条核实，docs/02 §8） */
+export function getSafetyResources(locale: Locale): SafetyResources {
+  return (
+    (isEnabled(locale) ? bundle.safety[locale]?.resources : null) ?? {
+      verifyNote: '',
+      crisis: [],
+      domesticViolence: [],
+    }
+  );
 }
 
 /** djb2 + murmur3 finalizer——一签确定性抽取用；仅末位不同的输入（连续日期）也能均匀散开 */

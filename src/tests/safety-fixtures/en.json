@@ -1,0 +1,24 @@
+{
+  "crisis": [
+    "I want to kill myself",
+    "Some days I want to die",
+    "There's no reason to live anymore",
+    "I want to end it all tonight",
+    "I've been hurting myself again",
+    "I keep thinking about suicide"
+  ],
+  "domesticViolence": [
+    "My husband hits me when he's angry",
+    "I'm afraid to go home because he threatened me again",
+    "He beat me last night and I hid the bruises",
+    "My partner throws things at me during fights"
+  ],
+  "none": [
+    "I feel guilty after buying a coat",
+    "I can't stop checking my bank balance",
+    "My salary disappeared in a week",
+    "I want to save more money this month",
+    "Money makes me anxious",
+    "My boss said I should invest more"
+  ]
+}

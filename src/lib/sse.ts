@@ -1,8 +1,17 @@
 // SSE 响应小工具：把异步生成器包成 text/event-stream Response。
-// 事件约定：data: {"session"|"delta"|"error": ...} / data: [DONE]
+// 事件约定：data: {"session"|"delta"|"error"|"safety"|"wrap": ...} / data: [DONE]
+//   safety = 危机命中（值为类目），wrap = 会话到限温和收尾（delta 为收尾文案）
 import { NextResponse } from 'next/server';
 
-export function sseResponse(events: AsyncGenerator<{ delta?: string; session?: string; error?: string }>): Response {
+export interface SseEvent {
+  delta?: string;
+  session?: string;
+  error?: string;
+  safety?: string;
+  wrap?: boolean;
+}
+
+export function sseResponse(events: AsyncGenerator<SseEvent>): Response {
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {

@@ -27,6 +27,12 @@ export interface Portrait {
   scriptStatus: 'pending' | 'confirmed' | 'rejected'; // 脚本确认状态：确认后才进长期工作记忆
 }
 
+/** 关键对话摘要（带日期，双层记忆：会话结束写入 1-2 句轻摘要，下次对话立即可用） */
+export interface SessionMemory {
+  date: string; // YYYY-MM-DD
+  text: string;
+}
+
 export interface GrowthProfile {
   user_key: string;
   locale: string;
@@ -35,6 +41,7 @@ export interface GrowthProfile {
   stage: number;
   stage_started_at: string;
   pinned: { kind: string; text: string; createdAt: string }[];
+  memories: SessionMemory[];
   payday: { type: 'monthly' | 'biweekly' | 'weekly'; day?: number } | null;
   total_active_days: number;
   last_active_date: string | null;
@@ -49,6 +56,7 @@ function rowToProfile(row: Record<string, unknown>): GrowthProfile {
     stage: row.stage as number,
     stage_started_at: String(row.stage_started_at),
     pinned: (row.pinned as GrowthProfile['pinned']) ?? [],
+    memories: (row.memories as GrowthProfile['memories']) ?? [],
     payday: (row.payday as GrowthProfile['payday']) ?? null,
     total_active_days: row.total_active_days as number,
     last_active_date: (row.last_active_date as string | null) ?? null,
@@ -59,7 +67,7 @@ export async function getProfile(userKey: string): Promise<GrowthProfile | null>
   await ensureSchema();
   const rows = await execWithFailover((sql: SqlClient) =>
     sql`SELECT user_key, locale, portrait, concerns, stage, stage_started_at,
-               pinned, payday, total_active_days, last_active_date
+               pinned, memories, payday, total_active_days, last_active_date
         FROM growth_profiles WHERE user_key = ${userKey}`
   );
   return rows[0] ? rowToProfile(rows[0]) : null;
@@ -109,6 +117,53 @@ export async function addConcern(userKey: string, content: string): Promise<void
   await execWithFailover((sql: SqlClient) =>
     sql`UPDATE growth_profiles
         SET concerns = concerns || ${JSON.stringify([{ content, status: 'open', sourceAt: new Date().toISOString() }])}::jsonb,
+            updated_at = now()
+        WHERE user_key = ${userKey}`
+  );
+}
+
+/**
+ * 追加会话记忆（双层记忆的轻摘要层，docs/02 §6）。
+ * 按 text 去重：惰性补摘要 + 主动结束可能对同一会话触发两次，不能重复入档。
+ */
+export async function appendMemories(userKey: string, entries: SessionMemory[]): Promise<void> {
+  if (entries.length === 0) return;
+  const existing = await getProfile(userKey);
+  if (!existing) return;
+  const seen = new Set(existing.memories.map((m) => m.text));
+  const fresh = entries.filter((e) => e.text.trim() && !seen.has(e.text.trim()));
+  if (fresh.length === 0) return;
+  await execWithFailover((sql: SqlClient) =>
+    sql`UPDATE growth_profiles
+        SET memories = memories || ${JSON.stringify(fresh.map((e) => ({ date: e.date, text: e.text.trim() })))}::jsonb,
+            updated_at = now()
+        WHERE user_key = ${userKey}`
+  );
+}
+
+/**
+ * pinned 写入（结构化字段，永不参与摘要滚动合并）：taboo 用户禁忌 / promise 重要承诺 /
+ * open 未完成话题。按 text 去重；禁忌最先注入 system（P§6 优先级 2）。
+ */
+export async function addPinned(
+  userKey: string,
+  items: { kind: string; text: string }[]
+): Promise<void> {
+  const valid = items.filter(
+    (i): i is { kind: 'taboo' | 'promise' | 'open'; text: string } =>
+      ['taboo', 'promise', 'open'].includes(i.kind) && Boolean(i.text.trim())
+  );
+  if (valid.length === 0) return;
+  const existing = await getProfile(userKey);
+  if (!existing) return;
+  const seen = new Set(existing.pinned.map((p) => p.text));
+  const fresh = valid
+    .filter((i) => !seen.has(i.text.trim()))
+    .map((i) => ({ kind: i.kind, text: i.text.trim(), createdAt: new Date().toISOString() }));
+  if (fresh.length === 0) return;
+  await execWithFailover((sql: SqlClient) =>
+    sql`UPDATE growth_profiles
+        SET pinned = pinned || ${JSON.stringify(fresh)}::jsonb,
             updated_at = now()
         WHERE user_key = ${userKey}`
   );

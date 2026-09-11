@@ -150,7 +150,8 @@ async function doMigrate(): Promise<void> {
     )
   `;
 
-  // 对话会话：kind 区分正式对话与体检初谈；quota_consumed 支撑"首回复成功才落账"（P§7）
+  // 对话会话：kind 区分正式对话与体检初谈；quota_consumed 支撑"首回复成功才落账"（P§7）；
+  // safety_flagged 命中危机后置位，后续轮次注入"稳定陪伴模式"（docs/03 §6）
   await sql`
     CREATE TABLE IF NOT EXISTS chat_sessions (
       id UUID PRIMARY KEY,
@@ -159,10 +160,13 @@ async function doMigrate(): Promise<void> {
       kind TEXT NOT NULL DEFAULT 'chat',
       message_count INT NOT NULL DEFAULT 0,
       quota_consumed BOOLEAN NOT NULL DEFAULT false,
+      safety_flagged BOOLEAN NOT NULL DEFAULT false,
       status TEXT NOT NULL DEFAULT 'open',
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     )
   `;
+  // 存量库补列（CREATE TABLE IF NOT EXISTS 不会给已存在的表加列）
+  await sql`ALTER TABLE chat_sessions ADD COLUMN IF NOT EXISTS safety_flagged BOOLEAN NOT NULL DEFAULT false`;
   await sql`CREATE INDEX IF NOT EXISTS idx_chat_sessions_user ON chat_sessions(user_key, created_at DESC)`;
 
   // 对话原文只存这里（用户可删）；日志/safety_events 不含原文（P§9 日志纪律）
@@ -176,6 +180,20 @@ async function doMigrate(): Promise<void> {
     )
   `;
   await sql`CREATE INDEX IF NOT EXISTS idx_chat_messages_session ON chat_messages(session_id, id)`;
+
+  // 安全事件（docs/03 §3）：只存引用与类别，不存原文（P§9 日志纪律）。
+  // handled = 是否已向用户呈现转介；删除账号时应用层级联清理（M7）。
+  await sql`
+    CREATE TABLE IF NOT EXISTS safety_events (
+      id BIGSERIAL PRIMARY KEY,
+      user_key TEXT NOT NULL,
+      source TEXT NOT NULL,
+      category TEXT NOT NULL,
+      handled BOOLEAN NOT NULL DEFAULT false,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS idx_safety_events_user ON safety_events(user_key, created_at DESC)`;
 }
 
 /**

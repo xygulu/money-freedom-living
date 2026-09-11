@@ -114,5 +114,19 @@
     "back": "回到旅程",
     "spokenTitle": "你說過的",
     "baseColorTitle": "你的金錢底色"
+  },
+  "chat": {
+    "title": "對話",
+    "subtitle": "它記得你上次說到哪了。想說什麼就說。",
+    "start": "開始今天的對話",
+    "remaining": "今日剩餘對話次數",
+    "quotaExhausted": "今天先到這裡，明天它還在。",
+    "vipHint": "升級 VIP，隨時繼續。",
+    "inputPlaceholder": "想到什麼，就說什麼……",
+    "send": "傳送",
+    "endToday": "結束今天的對話",
+    "ended": "今天的對話結束了。明天見。",
+    "wrapUp": "今天先聊到這裡吧。你說的那些，我都記著。明天見。",
+    "safetyNote": "如果你此刻處在緊急危險中，請先撥打當地的急救電話。"
   }
 }

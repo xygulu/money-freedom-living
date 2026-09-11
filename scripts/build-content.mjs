@@ -93,9 +93,34 @@ function readPractices() {
     });
 }
 
+// ---- safety（M4：危机词表 + 转介资源表，docs/03 §6）----
+// 词表是"召回优先"的粗筛网：宁可宽，误报由 LLM 语义确认兜住；漏检才是事故。
+function readSafety(locale) {
+  const read = (sub) => JSON.parse(readFileSync(join(contentDir, 'safety', sub, `${locale}.json`), 'utf8'));
+  const keywords = read('keywords');
+  const resources = read('resources');
+  for (const kind of ['crisis', 'domesticViolence']) {
+    const list = keywords[kind];
+    if (!Array.isArray(list) || list.length < (kind === 'crisis' ? 8 : 5)) {
+      fail(`safety/keywords/${locale}.json: ${kind} 词表过短（召回优先，crisis ≥8 条、domesticViolence ≥5 条）`);
+    }
+    const entries = resources[kind];
+    if (!Array.isArray(entries) || entries.length === 0) {
+      fail(`safety/resources/${locale}.json: ${kind} 转介资源不能为空`);
+    } else {
+      entries.forEach((r, i) => {
+        if (!r.name?.trim() || !r.contact?.trim()) fail(`safety/resources/${locale}.json: ${kind}[${i}] 缺 name/contact`);
+      });
+    }
+  }
+  if (!resources.verifyNote?.trim()) fail(`safety/resources/${locale}.json: 缺 verifyNote（上线前逐条核实的提醒）`);
+  return { keywords, resources };
+}
+
 // ---- 构建 ----
 const journeyByLocale = {};
 const dailyByLocale = {};
+const safetyByLocale = {};
 const journeyIds = [];
 
 for (const locale of ENABLED_LOCALES) {
@@ -106,6 +131,7 @@ for (const locale of ENABLED_LOCALES) {
     .map(({ file, data, body }) => ({ id: data.id, file, ...data, body }))
     .sort((a, b) => a.id - b.id);
   dailyByLocale[locale] = validateDaily(locale);
+  safetyByLocale[locale] = readSafety(locale);
 }
 
 // 语言间结构对齐：journey 阶段集合一致、一签条数一致
@@ -115,7 +141,7 @@ if (journeyIds.length > 1 && !journeyIds.every((ids) => JSON.stringify(ids) === 
 const counts = ENABLED_LOCALES.map((l) => dailyByLocale[l].length);
 if (new Set(counts).size > 1) fail(`各语言一签条数不一致: ${ENABLED_LOCALES.map((l, i) => `${l}=${counts[i]}`).join(', ')}`);
 
-const generated = { journey: journeyByLocale, daily: dailyByLocale, practices: readPractices(), builtAt: new Date().toISOString() };
+const generated = { journey: journeyByLocale, daily: dailyByLocale, practices: readPractices(), safety: safetyByLocale, builtAt: new Date().toISOString() };
 
 if (errors.length) {
   console.error(`内容校验失败（${errors.length} 处）：`);
@@ -127,5 +153,5 @@ mkdirSync(dirname(outFile), { recursive: true });
 // 去掉 builtAt 的易变秒数不利于缓存——保留完整时间戳，本文件入库后 diff 可读即可
 writeFileSync(outFile, JSON.stringify(generated, null, 2) + '\n');
 const dailyTotal = ENABLED_LOCALES.map((l) => `${l}=${dailyByLocale[l].length}`).join(' ');
-console.log(`内容校验通过 ✅ journey=${journeyByLocale[ENABLED_LOCALES[0]].length} 阶段/语言, 一签 ${dailyTotal}, practices=${generated.practices.length} 篇`);
+console.log(`内容校验通过 ✅ journey=${journeyByLocale[ENABLED_LOCALES[0]].length} 阶段/语言, 一签 ${dailyTotal}, practices=${generated.practices.length} 篇, safety=${Object.keys(safetyByLocale).length} 语言`);
 console.log(`已生成 ${outFile}`);

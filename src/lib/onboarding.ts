@@ -34,7 +34,7 @@ export function paydayFromAnswers(_answers: Record<string, string>): null {
 
 // ---------- prompt 组装 ----------
 
-const LOCALE_NAME: Record<string, string> = {
+export const LOCALE_NAME: Record<string, string> = {
   en: 'English',
   'zh-CN': '简体中文',
   'zh-TW': '繁體中文',

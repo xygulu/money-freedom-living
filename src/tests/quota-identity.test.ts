@@ -23,10 +23,10 @@ import {
 
 const DAY = '2026-09-07';
 
-describe('每日上限三档', () => {
-  it('游客 3 / 免费 10 / VIP 100', () => {
-    expect(dailyLimitFor(false, false)).toBe(3);
-    expect(dailyLimitFor(true, false)).toBe(10);
+describe('每日上限三档（P§7：游客 1 会话/免费 3 会话/VIP 无限≈100 兜底）', () => {
+  it('游客 1 / 免费 3 / VIP 100', () => {
+    expect(dailyLimitFor(false, false)).toBe(1);
+    expect(dailyLimitFor(true, false)).toBe(3);
     expect(dailyLimitFor(true, true)).toBe(100);
   });
 });

@@ -3,6 +3,8 @@ export interface SseEvent {
   session?: string;
   delta?: string;
   error?: string;
+  safety?: string;
+  wrap?: boolean;
 }
 
 export async function readSse(response: Response, onEvent: (event: SseEvent) => void): Promise<void> {

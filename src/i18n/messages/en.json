@@ -114,5 +114,19 @@
     "back": "Back to journey",
     "spokenTitle": "What you said",
     "baseColorTitle": "Your money undertone"
+  },
+  "chat": {
+    "title": "Conversation",
+    "subtitle": "It remembers where you left off. Just talk.",
+    "start": "Start today's conversation",
+    "remaining": "conversations left today",
+    "quotaExhausted": "That's all for today. It will still be here tomorrow.",
+    "vipHint": "VIP keeps talking, anytime.",
+    "inputPlaceholder": "Say whatever is on your mind…",
+    "send": "Send",
+    "endToday": "End today's conversation",
+    "ended": "Today's conversation has ended. See you tomorrow.",
+    "wrapUp": "Let's stop here for today. Everything you said — I'm keeping it. See you tomorrow.",
+    "safetyNote": "If you are in immediate danger, please contact local emergency services first."
   }
 }

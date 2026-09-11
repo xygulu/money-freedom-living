@@ -3,10 +3,11 @@ import { ensureSchema, execWithFailover } from '@/lib/db';
 import { isUserVip } from '@/lib/entitlements';
 
 /**
- * 每日使用量配额（游客/免费/VIP 三档）：
- *   未登录（游客）3 次/天，注册免费用户 10 次/天，VIP 100 次/天。
- * 计数单位 = 一次"受门禁保护的动作"（游戏里是开局；按项目改成一次生成、
- * 一次导出……）。计数在服务端：/api/quota/consume 原子地"查数 + 插行"
+ * 每日使用量配额（游客/免费/VIP 三档，P§7 精确定义）：
+ *   陪伴对话 1 次 = 一次会话（游客 1 会话/天，免费 3 会话/天，VIP 无限≈100 上限兜底）。
+ * 体检全流程（问卷/初谈/画像/校准）不占配额（P§7"首次流程不占配额"）。
+ * 落账语义"失败不扣"：consume 只在 AI 首条回复成功后发生（chat/[sessionId] 路由）。
+ * 计数在服务端：/api/quota/consume 原子地"查数 + 插行"
  * （单条 INSERT ... WHERE count < limit），并发双击也不会超发。
  *
  * 游客身份（guestKey 的来源）按稳定性排序：
@@ -22,8 +23,8 @@ import { isUserVip } from '@/lib/entitlements';
  * 对东八区用户每天前 8 小时属于"前一天"，属已知取舍。
  */
 
-export const GUEST_DAILY_QUOTA = 3;
-export const FREE_DAILY_QUOTA = 10;
+export const GUEST_DAILY_QUOTA = 1;
+export const FREE_DAILY_QUOTA = 3;
 export const VIP_DAILY_QUOTA = 100;
 
 /** 仅 VIP 可用的功能 key（consumeQuota 的 kind 命中即 403 FEATURE_VIP_ONLY）。

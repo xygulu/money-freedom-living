@@ -114,5 +114,19 @@
     "back": "回到旅程",
     "spokenTitle": "你说过的",
     "baseColorTitle": "你的金钱底色"
+  },
+  "chat": {
+    "title": "对话",
+    "subtitle": "它记得你上次说到哪了。想说什么就说。",
+    "start": "开始今天的对话",
+    "remaining": "今日剩余对话次数",
+    "quotaExhausted": "今天先到这里，明天它还在。",
+    "vipHint": "升级 VIP，随时继续。",
+    "inputPlaceholder": "想到什么，就说什么……",
+    "send": "发送",
+    "endToday": "结束今天的对话",
+    "ended": "今天的对话结束了。明天见。",
+    "wrapUp": "今天先聊到这里吧。你说的那些，我都记着。明天见。",
+    "safetyNote": "如果你此刻处在紧急危险中，请先拨打当地的急救电话。"
   }
 }
