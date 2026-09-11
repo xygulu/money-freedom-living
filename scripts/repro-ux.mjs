@@ -49,9 +49,19 @@ if ((await cta.count()) > 0) {
 // ── 3. 登录页：切注册模式 → 填表 → 注册按钮发出请求 ──
 await page.goto(`${BASE}/zh-CN/login`, { waitUntil: 'networkidle' });
 check('登录页表单渲染', (await page.locator('input').count()) >= 2, `inputs=${await page.locator('input').count()}`);
-// 社交登录（Google/GitHub）：本机 .env.local 未配 OAuth 凭证 → 按钮应优雅降级不渲染
+// 社交登录（Google/GitHub）：按钮渲染应与 .env.local 凭证配置一致（全配=2 / 全缺=0）
 const socialBtns = page.locator('form button', { hasText: /用 Google 继续|用 GitHub 继续/ });
-check('无凭证时社交登录按钮不渲染', (await socialBtns.count()) === 0, `count=${await socialBtns.count()}`);
+const socialCount = await socialBtns.count();
+check('社交按钮渲染与凭证配置一致（0 或 2）', socialCount === 0 || socialCount === 2, `count=${socialCount}`);
+if (socialCount > 0) {
+  // 点击应发出 sign-in/social 请求且 200（返回授权 URL；不真跳外域，随即回登录页）
+  const [sresp] = await Promise.all([
+    page.waitForResponse((r) => r.url().includes('/api/auth/sign-in/social'), { timeout: 10000 }).catch(() => null),
+    socialBtns.first().click(),
+  ]);
+  check('社交按钮点击 → sign-in/social 200', Boolean(sresp) && sresp.status() === 200, sresp ? `→ ${sresp.status()}` : '无请求');
+  await page.goto(`${BASE}/zh-CN/login`, { waitUntil: 'networkidle' });
+}
 // 切注册模式：按文本定位（DOM 里此后可能还有社交按钮，type=button 的 first() 不再是它）
 await page.locator('form button', { hasText: '还没有账号' }).click();
 await page.locator('#auth-username').waitFor({ timeout: 5000 });

@@ -42,6 +42,12 @@ export const auth = betterAuth({
   database: pool,
   secret: process.env.BETTER_AUTH_SECRET,
   baseURL: process.env.BETTER_AUTH_URL,
+  // 带 cookie 的 POST 会做 Origin 校验（CSRF）：baseURL 之外可配 TRUSTED_ORIGINS
+  // （逗号分隔）放行反代/测试域名；缺失时浏览器经域名访问会 403 INVALID_ORIGIN
+  trustedOrigins: (process.env.TRUSTED_ORIGINS ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean),
   user: {
     // 启用 /api/auth/change-email：新邮箱先收验证链接，点了才切换
     //（旧邮箱在此之前仍生效，避免改到一半丢号）
