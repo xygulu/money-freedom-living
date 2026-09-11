@@ -28,5 +28,91 @@
     "dailyLabel": "Today's card",
     "dailyReflect": "Sit with it",
     "stageLocked": "Opens in v1.5"
+  },
+  "onboarding": {
+    "title": "A check-up for your relationship with money",
+    "start": "Begin",
+    "questions": {
+      "moment_when": {
+        "text": "When did you last buy something purely because you wanted it?",
+        "options": {
+          "week": "This week",
+          "month": "This month",
+          "cant_remember": "Can't remember",
+          "dare_not": "I dare not think about it"
+        }
+      },
+      "balance_feeling": {
+        "text": "When you check your balance, what's the first feeling?",
+        "options": {
+          "calm": "Calm",
+          "avoid": "I avoid looking",
+          "panic": "A pang of panic",
+          "whatever": "Whatever — it's never enough anyway"
+        }
+      },
+      "childhood": {
+        "text": "Growing up, what's the one sentence or one scene about money that stuck with you?",
+        "placeholder": "Just one line is enough"
+      },
+      "payday_action": {
+        "text": "On the day money arrives, what's your first move?",
+        "options": {
+          "repay": "Pay off what I owe",
+          "save": "Save it first",
+          "treat": "Treat myself",
+          "nothing": "Nothing in particular"
+        }
+      },
+      "aspiration": {
+        "text": "Whose way of being with money do you envy most?",
+        "options": {
+          "relaxed": "Relaxed, never agonizing",
+          "dare_spend": "Daring to spend",
+          "earn_well": "Great at earning",
+          "free_of_money": "Unbothered by money"
+        }
+      },
+      "recent_worry": {
+        "text": "When did you last feel panic or guilt about money — and why?",
+        "placeholder": "As much or as little as you want"
+      }
+    },
+    "talk": {
+      "title": "A short talk",
+      "hint": "It will ask about one thing only, and go deeper. You can stop any time.",
+      "done": "Ready to see your portrait?",
+      "generate": "Draw my portrait"
+    },
+    "reflect": {
+      "title": "Here's what I heard",
+      "confirm": "That's right",
+      "supplement": "Add one thing…",
+      "send": "Add",
+      "next": "Draw my portrait"
+    },
+    "generating": "Drawing your money portrait…",
+    "calibrate": {
+      "hit": "That's me",
+      "miss": "Not quite",
+      "correction": "Write one that fits better…",
+      "saved": "Noted"
+    },
+    "portraitLink": "See my portrait",
+    "error": "Something went wrong. Please try again."
+  },
+  "portrait": {
+    "title": "Your money portrait",
+    "empty": "You haven't done the check-up yet.",
+    "cta": "Start the check-up",
+    "scriptTitle": "Here's what I think I heard",
+    "scriptPending": "Does that ring true?",
+    "scriptConfirmed": "You confirmed this script.",
+    "scriptRejected": "You said this one isn't yours.",
+    "momentsTitle": "Three moments between you and money",
+    "toFutureTitle": "To your future self",
+    "back": "Back to journey",
+    "spokenTitle": "What you said",
+    "baseColorTitle": "Your money undertone"
   }
 }

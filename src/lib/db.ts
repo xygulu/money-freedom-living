@@ -122,6 +122,60 @@ async function doMigrate(): Promise<void> {
   `;
   await sql`CREATE INDEX IF NOT EXISTS idx_quota_events_user_day ON quota_events(user_id, day)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_quota_events_guest_day ON quota_events(guest_key, day)`;
+
+  // ---- money-freedom-living 业务表（docs/03 §3）----
+
+  // 成长档案：一行一用户，JSON 字段整体读写（单用户并发极低，读-改-写可接受）。
+  // user_key 前缀 u:/g:（identity.ts），游客 key 不 FK —— 注册迁移时整体换键，
+  // 删除账号在应用层级联（M7 导出/删除），所以这里不设 REFERENCES。
+  await sql`
+    CREATE TABLE IF NOT EXISTS growth_profiles (
+      user_key TEXT PRIMARY KEY,
+      locale TEXT NOT NULL DEFAULT 'en',
+      portrait JSONB,
+      concerns JSONB NOT NULL DEFAULT '[]',
+      stage SMALLINT NOT NULL DEFAULT 1,
+      stage_started_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      pinned JSONB NOT NULL DEFAULT '[]',
+      memories JSONB NOT NULL DEFAULT '[]',
+      experiments JSONB NOT NULL DEFAULT '[]',
+      letters JSONB NOT NULL DEFAULT '[]',
+      stamps JSONB NOT NULL DEFAULT '[]',
+      payday JSONB,
+      recovery_code_hash TEXT,
+      total_active_days INT NOT NULL DEFAULT 0,
+      last_active_date DATE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+  `;
+
+  // 对话会话：kind 区分正式对话与体检初谈；quota_consumed 支撑"首回复成功才落账"（P§7）
+  await sql`
+    CREATE TABLE IF NOT EXISTS chat_sessions (
+      id UUID PRIMARY KEY,
+      user_key TEXT NOT NULL,
+      locale TEXT NOT NULL DEFAULT 'en',
+      kind TEXT NOT NULL DEFAULT 'chat',
+      message_count INT NOT NULL DEFAULT 0,
+      quota_consumed BOOLEAN NOT NULL DEFAULT false,
+      status TEXT NOT NULL DEFAULT 'open',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS idx_chat_sessions_user ON chat_sessions(user_key, created_at DESC)`;
+
+  // 对话原文只存这里（用户可删）；日志/safety_events 不含原文（P§9 日志纪律）
+  await sql`
+    CREATE TABLE IF NOT EXISTS chat_messages (
+      id BIGSERIAL PRIMARY KEY,
+      session_id UUID NOT NULL REFERENCES chat_sessions(id) ON DELETE CASCADE,
+      role TEXT NOT NULL,
+      content TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS idx_chat_messages_session ON chat_messages(session_id, id)`;
 }
 
 /**

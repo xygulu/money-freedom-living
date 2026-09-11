@@ -28,5 +28,91 @@
     "dailyLabel": "今日の一枚",
     "dailyReflect": "考えてみる",
     "stageLocked": "v1.5 で開放"
+  },
+  "onboarding": {
+    "title": "お金との関係チェック",
+    "start": "はじめる",
+    "questions": {
+      "moment_when": {
+        "text": "「純粋に欲しい」ものを自分のために買ったのは、いつですか？",
+        "options": {
+          "week": "今週",
+          "month": "今月",
+          "cant_remember": "思い出せない",
+          "dare_not": "考えたくもない"
+        }
+      },
+      "balance_feeling": {
+        "text": "残高を開くとき、最初の感覚は？",
+        "options": {
+          "calm": "落ち着いている",
+          "avoid": "見たくなくて避ける",
+          "panic": "胸がざわつく",
+          "whatever": "どうでもいい、どうせ足りない"
+        }
+      },
+      "childhood": {
+        "text": "子どもの頃の家で、お金について一番印象に残っている言葉や場面は？",
+        "placeholder": "ひとことでも大丈夫"
+      },
+      "payday_action": {
+        "text": "お金が入った日、最初にすることは？",
+        "options": {
+          "repay": "まず借金を返す",
+          "save": "まず貯める",
+          "treat": "自分へのごほうび",
+          "nothing": "特に何も感じない"
+        }
+      },
+      "aspiration": {
+        "text": "どんな人とお金の関係を一番うらやましく思いますか？",
+        "options": {
+          "relaxed": "ゆるやかで悩まない",
+          "dare_spend": "思いきって使える",
+          "earn_well": "稼ぐのが上手",
+          "free_of_money": "お金に支配されない"
+        }
+      },
+      "recent_worry": {
+        "text": "直近でお金のことで不安や罪悪感を覚えたのは、いつ、何がきっかけでしたか？",
+        "placeholder": "書ける範囲でどうぞ"
+      }
+    },
+    "talk": {
+      "title": "少しだけ話しましょう",
+      "hint": "相手は一つのことだけを深く尋ねます。やめたくなったら、いつでも止まって大丈夫。",
+      "done": "話せましたか？",
+      "generate": "私の肖像を描いて"
+    },
+    "reflect": {
+      "title": "私が聞いたこと",
+      "confirm": "うん、そうだ",
+      "supplement": "ひとこと足す…",
+      "send": "追加",
+      "next": "肖像を生成する"
+    },
+    "generating": "あなたのお金の肖像を描いています…",
+    "calibrate": {
+      "hit": "当たっている",
+      "miss": "ちょっと違う",
+      "correction": "もっと合う言葉を書く…",
+      "saved": "記録しました"
+    },
+    "portraitLink": "私の肖像を見る",
+    "error": "問題が起きました。もう一度お試しください"
+  },
+  "portrait": {
+    "title": "あなたのお金の肖像",
+    "empty": "まだチェックが済んでいません。",
+    "cta": "チェックをはじめる",
+    "scriptTitle": "私が聞いたかもしれないこと",
+    "scriptPending": "当たっていますか？",
+    "scriptConfirmed": "このスクリプトを確かめました。",
+    "scriptRejected": "これは違う、とあなたが言いました。",
+    "momentsTitle": "あなたとお金の三つの瞬間",
+    "toFutureTitle": "未来のあなたへ",
+    "back": "旅路へ戻る",
+    "spokenTitle": "あなたの言葉",
+    "baseColorTitle": "お金の底色"
   }
 }

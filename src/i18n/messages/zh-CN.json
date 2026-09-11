@@ -28,5 +28,91 @@
     "dailyLabel": "今日一签",
     "dailyReflect": "想一想",
     "stageLocked": "v1.5 开启"
+  },
+  "onboarding": {
+    "title": "金钱关系体检",
+    "start": "开始",
+    "questions": {
+      "moment_when": {
+        "text": "最近一次为自己买「纯粹想要」的东西，是什么时候？",
+        "options": {
+          "week": "这周",
+          "month": "这个月",
+          "cant_remember": "想不起来",
+          "dare_not": "不敢想"
+        }
+      },
+      "balance_feeling": {
+        "text": "打开余额的时候，你的第一感觉是？",
+        "options": {
+          "calm": "平静",
+          "avoid": "逃避不想看",
+          "panic": "心慌",
+          "whatever": "无所谓，反正不够"
+        }
+      },
+      "childhood": {
+        "text": "小时候家里，关于钱你印象最深的一句话或一个画面？",
+        "placeholder": "随便写，一句就够"
+      },
+      "payday_action": {
+        "text": "钱到账的那天，你的第一个动作是？",
+        "options": {
+          "repay": "先还账",
+          "save": "先存起来",
+          "treat": "犒劳自己",
+          "nothing": "没什么感觉"
+        }
+      },
+      "aspiration": {
+        "text": "你最羡慕什么样的人和钱的关系？",
+        "options": {
+          "relaxed": "松弛不纠结",
+          "dare_spend": "敢花",
+          "earn_well": "很会赚",
+          "free_of_money": "不被钱支配"
+        }
+      },
+      "recent_worry": {
+        "text": "最近一次为钱心慌或内疚，是什么时候、因为什么？",
+        "placeholder": "愿意说多少说多少"
+      }
+    },
+    "talk": {
+      "title": "聊几句",
+      "hint": "它只会挑一件事问，往深处走。不想说了随时停。",
+      "done": "聊得差不多了？",
+      "generate": "生成我的画像"
+    },
+    "reflect": {
+      "title": "我听到的是",
+      "confirm": "是的，就是这样",
+      "supplement": "补充一句…",
+      "send": "补充",
+      "next": "生成画像"
+    },
+    "generating": "正在绘制你的金钱画像…",
+    "calibrate": {
+      "hit": "说中了",
+      "miss": "不太像",
+      "correction": "写一句更像的…",
+      "saved": "已记录"
+    },
+    "portraitLink": "看我的画像",
+    "error": "出了点问题，请重试"
+  },
+  "portrait": {
+    "title": "你的金钱画像",
+    "empty": "你还没做过体检。",
+    "cta": "开始体检",
+    "scriptTitle": "我听到的可能",
+    "scriptPending": "像吗？",
+    "scriptConfirmed": "你确认了这条脚本。",
+    "scriptRejected": "你说过这条不像你。",
+    "momentsTitle": "你和钱的三个瞬间",
+    "toFutureTitle": "给未来的你",
+    "back": "回到旅程",
+    "spokenTitle": "你说过的",
+    "baseColorTitle": "你的金钱底色"
   }
 }
