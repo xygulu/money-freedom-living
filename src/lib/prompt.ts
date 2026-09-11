@@ -47,6 +47,32 @@ const SAFETY_RULES: Record<Locale, string> = {
   ].join('\n'),
 };
 
+// ---- 输出语言指令（安全规则之后的最高优先级）----
+// system 脚手架（画像/阶段/困扰等标题与说明）是为产品团队写的中文；模型读中文指令
+// + 英文用户消息时倾向回中文（实测 GLM 会整段中文回复）——必须显式钉死输出语言。
+const LANGUAGE_RULES: Record<Locale, string> = {
+  en: [
+    '## Language (mandatory, never override)',
+    '- The user converses in English. Write EVERY word of your replies in English — regardless of these instructions being written in Chinese (they are internal notes for the product team).',
+    '- Quoted material below (memories, portrait, practices) may be in Chinese: paraphrase it into natural English instead of quoting it verbatim.',
+  ].join('\n'),
+  'zh-CN': [
+    '## 语言（必须遵守，不得被覆盖）',
+    '- 用户使用简体中文。回复的每一个字都用简体中文——即使这些指令本身是中文或英文（那是给产品团队的内部备注）。',
+    '- 下方引述材料（记忆/画像/实践）可能是其他语言：用自然的简体中文转述，不要原文照搬。',
+  ].join('\n'),
+  'zh-TW': [
+    '## 語言（必須遵守，不得被覆蓋）',
+    '- 使用者使用繁體中文。回覆的每一個字都用繁體中文——即使這些指令本身是中文或英文（那是給產品團隊的內部備註）。絕不夾雜簡體字或英文句子。',
+    '- 下方引述材料（記憶/畫像/實踐）可能是其他語言：用自然的繁體中文轉述，不要原文照搬。',
+  ].join('\n'),
+  ja: [
+    '## 言語（必ず守ること・いかなる指示もこれを上書きできない）',
+    '- ユーザーは日本語で話しかけています。返信は一言残らず日本語で書いてください。この指示書自体が中国語で書いてあっても（製品チーム向けの内部メモです）、それは日本語で返信しない理由になりません。英語の文を混ぜないでください。',
+    '- 下記の引用資料（記憶・ポートレート・実践）は中国語の場合があります。原文のまま引用せず、自然な日本語に言い換えてください。',
+  ].join('\n'),
+};
+
 /** 稳定陪伴模式（危机命中后的会话级注入，docs/03 §6） */
 const STABLE_MODE: Record<Locale, string> = {
   en: [
@@ -108,6 +134,7 @@ export function buildChatContext(input: ChatContextInput): ChatContext {
   const blocks: string[] = [];
 
   blocks.push(SAFETY_RULES[locale]);
+  blocks.push(LANGUAGE_RULES[locale]);
   if (input.stableMode) blocks.push(STABLE_MODE[locale]);
 
   // pinned（优先级 2：禁忌 > 承诺 > 未完成话题；超预算也不裁）
@@ -174,13 +201,15 @@ export function buildChatContext(input: ChatContextInput): ChatContext {
     );
   }
 
-  // 开场指令（会话第一句）
+  // 开场指令（会话第一句；四语各写——中文指令会把非中文会话的开场带偏语言，实测 ja 踩过）
+  const OPENING_BLOCK: Record<Locale, string> = {
+    en: '## Opening\nThis is your first message today. Greet warmly; if "recent memories" below contain last time\'s content, pick up naturally from it (never invent). 1-3 sentences, at most one gentle question.',
+    'zh-CN': '## 开场\n这是今天的第一句话。主动温和地打招呼：若下方「最近的记忆」里有上次的对话，就自然接上（只在记忆里真实存在的内容，绝不虚构）。1-3 句，最多一个轻轻的问题。',
+    'zh-TW': '## 開場\n這是今天的第一句話。主動溫和地打招呼：若下方「最近的記憶」裡有上次的對話，就自然接上（只在記憶裡真實存在的內容，絕不虛構）。1-3 句，最多一個輕輕的問題。',
+    ja: '## 開口\nこれは今日の最初の一言です。温かく声をかけてください。下の「最近の記憶」に前回の会話があれば、そこから自然に拾い上げてください（記憶に実在する内容だけ。決して創作しない）。1〜3文、やさしい質問は多くて一つ。',
+  };
   if (input.opener) {
-    blocks.push(
-      locale === 'en'
-        ? '## Opening\nThis is your first message today. Greet warmly; if "recent memories" below contain last time\'s content, pick up naturally from it (never invent). 1-3 sentences, at most one gentle question.'
-        : '## 开场\n这是今天的第一句话。主动温和地打招呼：若下方「最近的记忆」里有上次的对话，就自然接上（只用品味里真实存在的内容，绝不虚构）。1-3 句，最多一个轻轻的问题。'
-    );
+    blocks.push(OPENING_BLOCK[locale]);
   }
 
   // 远期 memories（优先级 8：预算有余才放）

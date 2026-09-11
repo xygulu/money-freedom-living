@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     if (history.length === 0) return jsonError('empty_session', 400);
 
     const chatText = history.map((m) => `${m.role === 'user' ? '用户' : '你'}：${m.content}`).join('\n\n');
-    const { system, messages } = buildReflectMessages(chatText);
+    const { system, messages } = buildReflectMessages(locale, chatText);
     const summary = await llmComplete({ system, messages, maxTokens: 600 });
 
     const headers: Record<string, string> = { 'Cache-Control': 'no-store' };

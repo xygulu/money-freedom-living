@@ -58,6 +58,43 @@ interface LlmCallOptions {
 
 const DEFAULT_TIMEOUT_MS = 45_000;
 
+// ---- 全局串行锁 ----
+// 网关（Anthropic 兼容层）在并发流下会把不同请求的 SSE 混写（实测：两条回复
+// 字符级交错成乱文、另一请求瞬间"吃"到本流的缓冲提前结束）。陪伴场景本就是
+// 单用户低并发，MVP 全局串行：任一时刻最多一个 LLM 请求在途，从触发条件上
+// 根除串流。安全层分类与对话流是顺序调用（不嵌套拿锁），无死锁风险；
+// 一个在途请求最长 45s（超时兜底），排队延迟可接受。
+let llmChain: Promise<unknown> = Promise.resolve();
+
+async function withLlmLock<T>(fn: () => Promise<T>): Promise<T> {
+  const run = llmChain.then(fn, fn);
+  llmChain = run.then(
+    () => undefined,
+    () => undefined
+  );
+  return run;
+}
+
+async function* withLlmLockStream<T>(gen: AsyncGenerator<T>): AsyncGenerator<T> {
+  const release = await acquireLock();
+  try {
+    yield* gen;
+  } finally {
+    release();
+  }
+}
+
+function acquireLock(): Promise<() => void> {
+  let release!: () => void;
+  // gate 只在本人释放时 resolve；它是留给「下一个排队者」的等待点。
+  // 注意不能让「发 release 给本人」的 promise 采纳 gate——那样要等 gate
+  // resolve 才能拿到 release，而 gate 又要等 release 被调用 → 自锁。
+  const gate = new Promise<void>((resolve) => (release = resolve));
+  const turn = llmChain.then(() => release, () => release); // 前一个持有者结束 = 轮到我
+  llmChain = gate;
+  return turn;
+}
+
 function newClient(provider: LlmProvider): Anthropic {
   return new Anthropic({ baseURL: provider.baseURL, apiKey: provider.apiKey });
 }
@@ -81,27 +118,35 @@ function textOf(message: Anthropic.Message): string {
     .join('');
 }
 
+/** usage 观测日志（只记 token 数，不落任何内容——P§9 纪律）；单位经济测算的数据源 */
+function logUsage(provider: LlmProvider, kind: 'complete' | 'stream', input: number | undefined, output: number | undefined): void {
+  console.error(`[llm] usage kind=${kind} provider=${provider.id} model=${provider.model} in=${input ?? '?'} out=${output ?? '?'}`);
+}
+
 /**
  * 非流式补全：按 provider 顺序逐个试，任一失败切下一个，全部失败抛最后异常。
  */
 export async function llmComplete(opts: LlmCallOptions): Promise<string> {
-  const providers = getLlmProviders();
-  if (providers.length === 0) throw new Error('未配置任何 LLM provider（ANTHROPIC_AUTH_TOKEN）');
+  return withLlmLock(async () => {
+    const providers = getLlmProviders();
+    if (providers.length === 0) throw new Error('未配置任何 LLM provider（ANTHROPIC_AUTH_TOKEN）');
 
-  let lastError: unknown;
-  for (const provider of providers) {
-    try {
-      const client = newClient(provider);
-      const response = await client.messages.create(callParams(provider, opts), {
-        signal: AbortSignal.timeout(opts.timeoutMs ?? DEFAULT_TIMEOUT_MS),
-      });
-      return textOf(response);
-    } catch (error) {
-      lastError = error;
-      console.error(`[llm] provider ${provider.id} failed:`, error);
+    let lastError: unknown;
+    for (const provider of providers) {
+      try {
+        const client = newClient(provider);
+        const response = await client.messages.create(callParams(provider, opts), {
+          signal: AbortSignal.timeout(opts.timeoutMs ?? DEFAULT_TIMEOUT_MS),
+        });
+        logUsage(provider, 'complete', response.usage?.input_tokens, response.usage?.output_tokens);
+        return textOf(response);
+      } catch (error) {
+        lastError = error;
+        console.error(`[llm] provider ${provider.id} failed:`, error);
+      }
     }
-  }
-  throw lastError ?? new Error('LLM 调用失败');
+    throw lastError ?? new Error('LLM 调用失败');
+  });
 }
 
 /**
@@ -109,7 +154,13 @@ export async function llmComplete(opts: LlmCallOptions): Promise<string> {
  * 会切换 provider 重试；已开始输出后不再切换（客户端已收到一半内容）。
  * 全部 provider 连首块都拿不到时抛最后异常。
  */
-export async function* llmStream(opts: LlmCallOptions): AsyncGenerator<string> {
+export function llmStream(opts: LlmCallOptions): AsyncGenerator<string> {
+  // 持锁范围 = 迭代器全程（首个 next() 拿锁，return/throw 释放）——
+  // 调用方中途 break 时 for await 会触发 return()，finally 仍能释放锁
+  return withLlmLockStream(rawLlmStream(opts));
+}
+
+async function* rawLlmStream(opts: LlmCallOptions): AsyncGenerator<string> {
   const providers = getLlmProviders();
   if (providers.length === 0) throw new Error('未配置任何 LLM provider（ANTHROPIC_AUTH_TOKEN）');
 
@@ -121,12 +172,17 @@ export async function* llmStream(opts: LlmCallOptions): AsyncGenerator<string> {
         timeout: opts.timeoutMs ?? DEFAULT_TIMEOUT_MS,
       });
       let started = false;
+      let usageIn: number | undefined;
+      let usageOut: number | undefined;
       for await (const event of stream) {
+        if (event.type === 'message_start') usageIn = event.message.usage?.input_tokens;
+        if (event.type === 'message_delta' && event.usage) usageOut = event.usage.output_tokens;
         if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
           started = true;
           yield event.delta.text;
         }
       }
+      logUsage(provider, 'stream', usageIn, usageOut);
       return;
     } catch (error) {
       // 首块前失败可切换；已输出后失败只能中止（调用方已收到部分内容）

@@ -1766,7 +1766,16 @@
           "cutting myself",
           "overdose",
           "disappear forever",
-          "stop existing"
+          "stop existing",
+          "ending my life",
+          "ending it all",
+          "wanted to die",
+          "wanna die",
+          "took my own life",
+          "ended my life",
+          "don't want to live",
+          "make it stop",
+          "better off without me"
         ],
         "domesticViolence": [
           "hits me",
@@ -1796,7 +1805,7 @@
           {
             "name": "Find a Helpline — international directory",
             "contact": "findahelpline.com",
-            "note": "verified helplines in 130+ countries"
+            "note": "verified helplines in 175+ countries"
           }
         ],
         "domesticViolence": [
@@ -1881,5 +1890,5 @@
       }
     }
   },
-  "builtAt": "2026-09-11T06:11:30.775Z"
+  "builtAt": "2026-09-11T14:27:40.381Z"
 }

@@ -52,6 +52,13 @@ export default function ChatView({ locale, dict, openSessionId, initialMessages,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(text ? { message: text } : { opener: true }),
       });
+      if (response.status === 429) {
+        // 上一条回复还在生成（会话级流互斥）：不报错，草稿放回输入框，等流结束再发
+        setError(t.replyInProgress);
+        setMessages((prev) => prev.slice(0, assistantIndex));
+        if (text) setDraft(text);
+        return;
+      }
       if (!response.ok || !response.body) {
         setError(dict.onboarding.error);
         setMessages((prev) => prev.slice(0, assistantIndex));

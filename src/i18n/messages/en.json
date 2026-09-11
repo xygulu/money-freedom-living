@@ -265,6 +265,7 @@
     "remaining": "conversations left today",
     "quotaExhausted": "That's all for today. It will still be here tomorrow.",
     "vipHint": "VIP keeps talking, anytime.",
+    "replyInProgress": "The last reply is still being written. Give it a moment, then send again.",
     "inputPlaceholder": "Say whatever is on your mind…",
     "send": "Send",
     "endToday": "End today's conversation",

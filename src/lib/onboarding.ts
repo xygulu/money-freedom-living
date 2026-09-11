@@ -76,14 +76,25 @@ export function buildTalkSystem(locale: Locale, questionnaire: Record<string, st
 }
 
 /** 「我听到的是」确认：3-5 句复述，供用户确认/补充（素材校验，不是总结陈词） */
-export function buildReflectMessages(chatText: string): { system: string; messages: { role: 'user' | 'assistant'; content: string }[] } {
+export function buildReflectMessages(
+  locale: Locale,
+  chatText: string
+): { system: string; messages: { role: 'user' | 'assistant'; content: string }[] } {
+  const opener =
+    locale === 'en'
+      ? 'What I heard is…'
+      : locale === 'ja'
+        ? '私が聞いたのは…'
+        : locale === 'zh-TW'
+          ? '我聽到的是…'
+          : '我听到的是…';
   return {
     system: [
-      '你是初谈的倾听者。初谈结束前，用 3-5 句话向用户复述你听到的关键点（「我听到的是…」）。',
-      '规则：只复述用户真的说过的内容，用"我听到的是"开头；拿不准的地方用问句结尾（「我理解得对吗」）；',
+      `你是初谈的倾听者。初谈结束前，用 3-5 句话向用户复述你听到的关键点（「${opener}」）。请始终用${LOCALE_NAME[locale] ?? 'English'}输出。`,
+      `规则：只复述用户真的说过的内容，以「${opener}」开头；拿不准的地方用问句结尾（「我理解得对吗」）；`,
       '不做评价、不建议、不升华。直接输出这 3-5 句话本身，不要任何前后缀。',
     ].join('\n'),
-    messages: [{ role: 'user', content: `以下是我和你初谈的记录：\n\n${chatText}\n\n请输出「我听到的是…」。` }],
+    messages: [{ role: 'user', content: `以下是我和你初谈的记录：\n\n${chatText}\n\n请输出「${opener}」。` }],
   };
 }
 

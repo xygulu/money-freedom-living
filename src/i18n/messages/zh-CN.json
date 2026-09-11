@@ -265,6 +265,7 @@
     "remaining": "今日剩余对话次数",
     "quotaExhausted": "今天先到这里，明天它还在。",
     "vipHint": "升级 VIP，随时继续。",
+    "replyInProgress": "上一条回复还在写。等它说完，再发一次就好。",
     "inputPlaceholder": "想到什么，就说什么……",
     "send": "发送",
     "endToday": "结束今天的对话",

@@ -1,11 +1,27 @@
 {
   "verifyNote": "Verify every contact before launch (docs/02 §8). These are well-known defaults; show region-appropriate resources and always include the international directory.",
   "crisis": [
-    { "name": "988 Suicide & Crisis Lifeline (US)", "contact": "call or text 988", "note": "24/7, free, confidential" },
-    { "name": "Find a Helpline — international directory", "contact": "findahelpline.com", "note": "verified helplines in 130+ countries" }
+    {
+      "name": "988 Suicide & Crisis Lifeline (US)",
+      "contact": "call or text 988",
+      "note": "24/7, free, confidential"
+    },
+    {
+      "name": "Find a Helpline — international directory",
+      "contact": "findahelpline.com",
+      "note": "verified helplines in 175+ countries"
+    }
   ],
   "domesticViolence": [
-    { "name": "National Domestic Violence Hotline (US)", "contact": "1-800-799-7233", "note": "24/7, free, confidential" },
-    { "name": "Find a Helpline — international directory", "contact": "findahelpline.com", "note": "search for your country" }
+    {
+      "name": "National Domestic Violence Hotline (US)",
+      "contact": "1-800-799-7233",
+      "note": "24/7, free, confidential"
+    },
+    {
+      "name": "Find a Helpline — international directory",
+      "contact": "findahelpline.com",
+      "note": "search for your country"
+    }
   ]
 }

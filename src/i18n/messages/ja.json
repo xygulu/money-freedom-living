@@ -265,6 +265,7 @@
     "remaining": "今日あと",
     "quotaExhausted": "今日はここまで。明日もここにいます。",
     "vipHint": "VIP なら、いつでも続けられます。",
+    "replyInProgress": "前の返信がまだ書かれています。少し待って、もう一度送ってください。",
     "inputPlaceholder": "思ったことを、そのまま……",
     "send": "送信",
     "endToday": "今日の対話を終える",
