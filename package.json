@@ -10,11 +10,13 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "check-content": "node scripts/check-content.mjs"
+    "build-content": "node scripts/build-content.mjs",
+    "check-content": "pnpm build-content && pnpm test -- content"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
     "better-auth": "^1.7.2",
+    "gray-matter": "^4.0.3",
     "next": "16.3.3",
     "pg": "^8.23.0",
     "react": "19.2.8",

@@ -19,5 +19,14 @@
   "placeholder": {
     "title": "On its way",
     "body": "This room is being prepared. The journey starts at your money portrait."
+  },
+  "journey": {
+    "title": "Journey",
+    "sub": "Four stages, no deadlines. How far you go is up to you.",
+    "weeks": "about {n} weeks",
+    "stages": "The four stages",
+    "dailyLabel": "Today's card",
+    "dailyReflect": "Sit with it",
+    "stageLocked": "Opens in v1.5"
   }
 }

@@ -1,0 +1,97 @@
+// content/ 装载层：只读构建期产物 src/generated/content.json（pnpm build-content 生成）
+// 源文件在 content/（git 管理），改内容后重跑脚本，代码永远不直接读运行时文件系统
+import generated from '@/generated/content.json';
+import { isEnabled, type Locale } from '@/i18n/config';
+
+export interface JourneyStage {
+  id: number;
+  title: string;
+  goal: string;
+  weeks: number;
+  exercises: string[];
+  ai_stance: { do: string[]; dont: string[] };
+  advance_when: string[];
+  ritual: string;
+  body: string;
+}
+
+export type DailyType = 'observation' | 'practice' | 'way';
+
+export interface DailyCard {
+  text: string;
+  type: DailyType;
+  stages: number[];
+  reflection: string;
+}
+
+export interface PracticeNote {
+  file: string;
+  date: string;
+  type: 'fact' | 'opinion';
+  stage: number;
+  tags: string[];
+  body: string;
+}
+
+interface ContentBundle {
+  journey: Record<string, JourneyStage[]>;
+  daily: Record<string, DailyCard[]>;
+  practices: PracticeNote[];
+  builtAt: string;
+}
+
+const bundle = generated as ContentBundle;
+
+export function getJourneyStages(locale: Locale): JourneyStage[] {
+  return (isEnabled(locale) ? bundle.journey[locale] : null) ?? [];
+}
+
+export function getJourneyStage(locale: Locale, id: number): JourneyStage | null {
+  return getJourneyStages(locale).find((s) => s.id === id) ?? null;
+}
+
+export function getDailyPool(locale: Locale): DailyCard[] {
+  return (isEnabled(locale) ? bundle.daily[locale] : null) ?? [];
+}
+
+export function getPractices(): PracticeNote[] {
+  return bundle.practices;
+}
+
+/** 阶段相关的创造者笔记（按 stage 过滤，非全量注入——见 docs/02 §10） */
+export function getPracticesForStage(stage: number): PracticeNote[] {
+  return getPractices().filter((p) => p.stage === stage);
+}
+
+/** djb2 + murmur3 finalizer——一签确定性抽取用；仅末位不同的输入（连续日期）也能均匀散开 */
+function hash(str: string): number {
+  let h = 5381;
+  for (let i = 0; i < str.length; i++) h = (Math.imul(h, 33) + str.charCodeAt(i)) | 0;
+  h ^= h >>> 16;
+  h = Math.imul(h, 2246822507);
+  h ^= h >>> 13;
+  h = Math.imul(h, 3266489909);
+  h ^= h >>> 16;
+  return h >>> 0;
+}
+
+/**
+ * 今日一签：确定性抽取——同一天同一阶段看到同一条（共时感），同一用户 90 天不重复。
+ * seenTexts 由调用方从用户档案传入；某阶段候选耗尽后自动回落全阶段池。
+ */
+export function pickDaily(
+  locale: Locale,
+  dateISO: string,
+  stage: number,
+  seenTexts: string[] = [],
+): DailyCard | null {
+  const pool = getDailyPool(locale);
+  if (pool.length === 0) return null;
+
+  const seen = new Set(seenTexts);
+  const candidates = pool.filter((c) => c.stages.includes(stage) && !seen.has(c.text));
+  const fallback = pool.filter((c) => !seen.has(c.text));
+  const finalPool = candidates.length > 0 ? candidates : fallback.length > 0 ? fallback : pool;
+
+  return finalPool[hash(`${dateISO}#${stage}`) % finalPool.length];
+}

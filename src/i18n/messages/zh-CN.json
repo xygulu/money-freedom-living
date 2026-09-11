@@ -19,5 +19,14 @@
   "placeholder": {
     "title": "正在准备",
     "body": "这个房间还在布置。旅程从你的金钱画像开始。"
+  },
+  "journey": {
+    "title": "旅程",
+    "sub": "四个阶段，不设期限。走到哪一步，由你说了算。",
+    "weeks": "约 {n} 周",
+    "stages": "四个阶段",
+    "dailyLabel": "今日一签",
+    "dailyReflect": "想一想",
+    "stageLocked": "v1.5 开启"
   }
 }
