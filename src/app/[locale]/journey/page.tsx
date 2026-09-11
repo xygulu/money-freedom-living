@@ -127,6 +127,14 @@ export default async function journeyPage({ params }: { params: Promise<{ locale
           );
         })}
       </ol>
+
+      {/* 付费墙触发点③（soft gate）：阶段毕业想看深度报告时。MVP 中报告功能未上线，占位引导 */}
+      <p className="mt-8 border-t border-line pt-6 text-xs leading-relaxed text-ink-soft/70">
+        {dict.journey.reportTeaser}{' '}
+        <Link href={`/${locale}/vip`} className="text-accent underline underline-offset-4">
+          {dict.vip.vipLink}
+        </Link>
+      </p>
     </div>
   );
 }

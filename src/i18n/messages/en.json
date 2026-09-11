@@ -20,6 +20,52 @@
     "title": "On its way",
     "body": "This room is being prepared. The journey starts at your money portrait."
   },
+  "login": {
+    "title": "Sign in",
+    "sub": "Sign in and your journey follows you — across devices.",
+    "username": "Username",
+    "email": "Email",
+    "password": "Password",
+    "signIn": "Sign in",
+    "signUp": "Create account",
+    "toSignUp": "No account yet? Create one",
+    "toSignIn": "Already have an account? Sign in",
+    "note": "Your portrait, conversations and journal belong to you, and are never used for model training by default.",
+    "error": "Sign-in didn't go through. Check your email and password, then try again"
+  },
+  "vip": {
+    "title": "VIP",
+    "sub": "The journey is open to everyone. VIP is only for deeper, longer companionship.",
+    "noContentWall": "Free users can walk the whole path at their own pace — there is no content wall.",
+    "vipLink": "About VIP",
+    "loginRequired": "Subscribing needs an account first — your VIP has to travel with you.",
+    "loginCta": "Sign in / Create account",
+    "active": "VIP is active",
+    "until": "Valid until {date}",
+    "perkChat": "Unlimited conversations (free: 3 a day, guest: 1)",
+    "perkJournal": "A response to every journal entry",
+    "perkReport": "A deep report each time you finish a stage",
+    "subscribe": "Get VIP",
+    "manage": "Manage subscription",
+    "notConfigured": "The payment channel is in final preparation and will open soon.",
+    "verifyPending": "Your payment is still being confirmed. Wait a moment, or come back and refresh later.",
+    "verifyGranted": "VIP is active. The rest of the road — take it slow.",
+    "verifyGrantedSub": "Your benefits are live. Head back to your journey.",
+    "verifyFailed": "We couldn't verify the payment yet. If you were charged, it will activate when you return to this page.",
+    "error": "Something went wrong, please try again"
+  },
+  "me": {
+    "title": "Me",
+    "guestNote": "You're walking as a guest. Sign in and your profile follows your account.",
+    "loginLink": "Sign in / Create account",
+    "portrait": "My money portrait",
+    "portraitDone": "Read it anytime, calibrate it anytime.",
+    "portraitEmpty": "No check-up yet. Start here.",
+    "vip": "VIP subscription",
+    "vipActive": "Active. Thank you for being here.",
+    "vipFree": "The journey is free; VIP goes deeper, longer.",
+    "recoveryNote": "Recovery code and data export are coming soon (this room is still being furnished)."
+  },
   "journey": {
     "title": "Journey",
     "sub": "Four stages, no deadlines. How far you go is up to you.",
@@ -42,7 +88,8 @@
     "chatCta": "Start today's conversation",
     "letterLabel": "Write a letter",
     "letterHint": "To your present self, or to money itself. It will keep your letter safe and send back a gentle receipt.",
-    "letterCta": "Write"
+    "letterCta": "Write",
+    "reportTeaser": "Each time you finish a stage, you can generate a deep report of your own."
   },
   "journal": {
     "title": "Journal",

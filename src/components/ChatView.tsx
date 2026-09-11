@@ -4,6 +4,7 @@
 // 会话建立后立即请求 AI 开场（opener）——归来问候自然接上 memories 里的上次内容。
 // 危机命中（safety 事件）时该轮回复是服务端定死的转介文案，样式区分并附安全提示。
 import { useState } from 'react';
+import Link from 'next/link';
 import { readSse } from '@/lib/sse-client';
 import type { Dict } from '@/i18n/get-dict';
 
@@ -124,7 +125,13 @@ export default function ChatView({ locale, dict, openSessionId, initialMessages,
       return (
         <div className="flex flex-col gap-3 text-sm text-ink-soft">
           <p>{t.quotaExhausted}</p>
-          <p className="text-xs">{t.vipHint}</p>
+          {/* 付费墙触发点①（soft gate）：会话用完时提 VIP，全产品仅三处之一 */}
+          <p className="text-xs">
+            {t.vipHint}{' '}
+            <Link href={`/${locale}/vip`} className="text-accent underline underline-offset-4">
+              {dict.vip.vipLink}
+            </Link>
+          </p>
         </div>
       );
     }

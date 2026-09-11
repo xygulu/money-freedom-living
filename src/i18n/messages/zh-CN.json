@@ -20,6 +20,52 @@
     "title": "正在准备",
     "body": "这个房间还在布置。旅程从你的金钱画像开始。"
   },
+  "login": {
+    "title": "登录",
+    "sub": "登录后，你的旅程会跟着你走——换设备也在。",
+    "username": "用户名",
+    "email": "邮箱",
+    "password": "密码",
+    "signIn": "登录",
+    "signUp": "注册",
+    "toSignUp": "还没有账号？注册一个",
+    "toSignIn": "已经有账号了？去登录",
+    "note": "你的画像、对话和日记属于你，默认不用于任何模型训练。",
+    "error": "登录没有成功，请检查邮箱和密码再试一次"
+  },
+  "vip": {
+    "title": "VIP",
+    "sub": "旅程对所有人开放。VIP 卖的只是更深、更久的陪伴。",
+    "noContentWall": "免费用户慢走能走完全程，没有任何内容墙。",
+    "vipLink": "了解 VIP",
+    "loginRequired": "订阅 VIP 需要先有一个账号——权益要能跟着你走。",
+    "loginCta": "登录 / 注册",
+    "active": "VIP 生效中",
+    "until": "有效期至 {date}",
+    "perkChat": "对话不限次数（免费每天 3 次，游客 1 次）",
+    "perkJournal": "每一篇心事都能得到回应",
+    "perkReport": "每个阶段毕业时的深度报告",
+    "subscribe": "开通 VIP",
+    "manage": "管理订阅",
+    "notConfigured": "支付通道正在最后准备中，很快开放。",
+    "verifyPending": "支付还在确认中，稍等片刻，或稍后回到这页刷新。",
+    "verifyGranted": "VIP 已开通。剩下的路，慢慢走。",
+    "verifyGrantedSub": "权益已生效，回到旅程继续就好。",
+    "verifyFailed": "支付状态没有核实成功。如果已扣款，稍后回到这页会自动生效。",
+    "error": "出了点问题，请重试"
+  },
+  "me": {
+    "title": "我的",
+    "guestNote": "你正在以访客身份旅程。登录后，档案会跟着账号走。",
+    "loginLink": "登录 / 注册",
+    "portrait": "我的金钱画像",
+    "portraitDone": "看过它，也可以随时校准。",
+    "portraitEmpty": "还没做过体检。从这里开始。",
+    "vip": "VIP 订阅",
+    "vipActive": "生效中。谢谢你在。",
+    "vipFree": "旅程免费，VIP 更深更久。",
+    "recoveryNote": "恢复码与数据导出即将可用（这个页面还在布置）。"
+  },
   "journey": {
     "title": "旅程",
     "sub": "四个阶段，不设期限。走到哪一步，由你说了算。",
@@ -42,7 +88,8 @@
     "chatCta": "开始今天的对话",
     "letterLabel": "写一封信",
     "letterHint": "给现在的自己，或者给钱。它会把信好好收着，回一张温柔的收条。",
-    "letterCta": "写信"
+    "letterCta": "写信",
+    "reportTeaser": "每个阶段毕业时，可以生成一份属于你的深度报告。"
   },
   "journal": {
     "title": "心事",
