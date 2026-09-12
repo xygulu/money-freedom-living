@@ -53,6 +53,14 @@ export async function saveJournalReply(userKey: string, id: number, reply: strin
   );
 }
 
+/** 基线之后的日记条数（演进提议判定计数用，不拉全行） */
+export async function countJournalEntriesSince(userKey: string, sinceISO: string): Promise<number> {
+  const rows = await execWithFailover((sql) =>
+    sql`SELECT count(*)::int AS n FROM journal_entries WHERE user_key = ${userKey} AND created_at > ${sinceISO}`
+  );
+  return (rows[0]?.n as number) ?? 0;
+}
+
 /**
  * VIP 日记回应提示词：接住、回应具体的那个细节，简短。
  * 不给理财建议、不诊断、不要求"更积极"；结尾最多一个开放的轻问题，也可以没有。

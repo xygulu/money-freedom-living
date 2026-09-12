@@ -6,6 +6,7 @@ import { resolveIdentity } from '@/lib/identity';
 import { getProfile, savePortrait, bumpActiveDay, type Portrait } from '@/lib/profile';
 import { getSession, getSessionMessages, closeSession } from '@/lib/chat';
 import { buildPortraitMessages, validatePortraitDraft } from '@/lib/onboarding';
+import { insertPortraitVersion } from '@/lib/evolution';
 import { llmCompleteJson } from '@/lib/llm';
 import { recordConsent, hashIp } from '@/lib/consent';
 import { track } from '@/lib/analytics';
@@ -67,6 +68,13 @@ export async function POST(request: NextRequest) {
       scriptStatus: 'pending',
     };
     await savePortrait(identity.key, portrait);
+    // v1 快照入版本表（时间线画像节点 + 演进基线用）。best-effort：失败不拦画像，
+    // 首次演进时有懒回填兜底
+    try {
+      await insertPortraitVersion(identity.key, 1, portrait, 'onboarding');
+    } catch (error) {
+      console.error('[api/onboarding/portrait] insert v1 snapshot failed:', error);
+    }
     await bumpActiveDay(identity.key);
     await recordConsent(identity.key, true, hashIp(clientIpFromHeaders(request.headers)));
     // 验收指标：体检完成率分子（docs/02 §11）
