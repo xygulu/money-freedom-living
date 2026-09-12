@@ -189,6 +189,15 @@
     "stage3_review": "You looked at your portrait again",
     "stage4_entered": "Entered: A way of living"
   },
+  "evolve": {
+    "label": "A fresh look",
+    "invite": "You have shared a lot these past weeks. I would like to look at you again, and redraw your money portrait.",
+    "hint": "The new portrait keeps what you have confirmed, and adds what has changed since. It is free, and the old portrait stays.",
+    "cta": "See me again",
+    "dismiss": "Not now",
+    "busy": "It is rereading your conversations. This takes about a minute.",
+    "failed": "It did not come through this time. Your portrait has not changed. Come back whenever you like."
+  },
   "journal": {
     "title": "Journal",
     "sub": "Write it down, for your eyes only. When you want to be heard, it will respond.",

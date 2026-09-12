@@ -5,6 +5,7 @@
 // growth_profiles.portrait_evolution 只存用户动作与锁（parseEvolution 见 profile.ts）。
 import { ensureSchema, execWithFailover } from '@/lib/db';
 import type { GrowthProfile, Portrait, PortraitEvolution, SessionMemory, ExperimentEntry } from '@/lib/profile';
+import { getJournalEntries, countJournalEntriesSince } from '@/lib/journal';
 import { LOCALE_NAME } from '@/lib/onboarding';
 import type { Locale } from '@/i18n/config';
 
@@ -122,6 +123,47 @@ export function shouldPropose(profile: GrowthProfile, counts: EvolveMaterialCoun
   if (counts.memories >= EVOLVE_MIN_MEMORIES) return true;
   const anyMaterial = counts.memories + counts.journals + counts.experiments > 0;
   return counts.daysSince >= EVOLVE_MIN_DAYS && anyMaterial;
+}
+
+/**
+ * 素材计数（journey 提议判定与 evolve 路由共用）：memories/experiments 按日粒度
+ * （档案里就是日期），journals 走 SQL 按时间戳（更准，也避免拉全文只为数数）。
+ */
+export async function countMaterialSince(
+  userKey: string,
+  profile: GrowthProfile,
+  baselineISO: string,
+  nowISO: string
+): Promise<EvolveMaterialCounts> {
+  const counts = materialSince(baselineISO, { memories: profile.memories, journals: [], experiments: profile.experiments }, nowISO);
+  counts.journals = await countJournalEntriesSince(userKey, baselineISO);
+  return counts;
+}
+
+/**
+ * 组演进素材（generate 用）：基线后 摘要≤20 / 日记≤10（最新优先）/ 微行动≤10
+ * （各取最近），加上当前画像里 miss 且给了修正的段落（同段多次修正取最新）。
+ */
+export async function gatherEvolveMaterial(
+  userKey: string,
+  profile: GrowthProfile,
+  baselineISO: string
+): Promise<EvolveMaterial> {
+  const base = baselineISO.slice(0, 10);
+  const after = (day: string) => day > base;
+  const journals = await getJournalEntries(userKey, 10);
+  const bySection = new Map<string, string>();
+  for (const c of profile.portrait?.calibrations ?? []) {
+    if (c.verdict === 'miss' && c.correction?.trim()) bySection.set(c.section, c.correction.trim());
+  }
+  return {
+    memories: profile.memories.filter((m) => after(m.date.slice(0, 10))).slice(-20),
+    journals: journals
+      .filter((j) => after(j.createdAt.slice(0, 10)))
+      .map((j) => ({ createdAt: j.createdAt, content: j.content })),
+    experiments: profile.experiments.filter((e) => after(e.date)).slice(-10),
+    missCorrections: [...bySection].map(([section, correction]) => ({ section, correction })),
+  };
 }
 
 // ---------- portrait_evolution 写入 ----------

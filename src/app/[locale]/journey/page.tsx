@@ -17,10 +17,12 @@ import { isAnchorDay } from '@/lib/anchor';
 import { track } from '@/lib/analytics';
 import { buildTimeline, formatTimelineDay } from '@/lib/timeline';
 import { computeStageProgress, pendingStamps, MAX_STAGE } from '@/lib/stage';
+import { baselineFor, countMaterialSince, shouldPropose, saveEvolution, listPortraitVersions } from '@/lib/evolution';
 import MicroActionCard from '@/components/MicroActionCard';
 import AnchorCard from '@/components/AnchorCard';
 import TimelineItemView from '@/components/TimelineItemView';
 import AdvanceCard from '@/components/AdvanceCard';
+import EvolveCard from '@/components/EvolveCard';
 
 export const dynamic = 'force-dynamic';
 
@@ -77,6 +79,25 @@ export default async function journeyPage({ params }: { params: Promise<{ locale
   // 无档案（还没体检）不显示——足迹从旅程第一步开始才有东西可看
   const growthPreview = profile ? await buildTimeline(identity.key, 3, 3) : [];
 
+  // 演进提议（M9 需求②）：读时现算不落库（阈值改动立即生效，且 API 直刷过同一道判定）。
+  // 首现写 proposedSeenAt + 埋点（演进成功会重置纪元，每纪元只记一次首现）。失败不阻塞页面。
+  let evolveProposal = false;
+  if (profile?.portrait) {
+    try {
+      const versions = await listPortraitVersions(identity.key);
+      const baseline = baselineFor(profile, versions);
+      const nowISO = new Date().toISOString();
+      const counts = await countMaterialSince(identity.key, profile, baseline, nowISO);
+      evolveProposal = shouldPropose(profile, counts, nowISO);
+      if (evolveProposal && !profile.evolution.proposedSeenAt) {
+        await saveEvolution(identity.key, { proposedSeenAt: nowISO });
+        await track(identity.key, 'evolve_proposal_seen', {}, locale);
+      }
+    } catch (error) {
+      console.error('[journey] evolve proposal failed:', error);
+    }
+  }
+
   // 归来问候（docs/02 §5）：暂停任意时长后回来给一句"欢迎回来，它还在"——
   // 不追责、不问为什么没来、不显示中断天数。隔 ≥3 天才算"归来"（连续使用不打扰）。
   let gapDays = -1;
@@ -112,6 +133,9 @@ export default async function journeyPage({ params }: { params: Promise<{ locale
       )}
 
       <AnchorCard locale={locale} payday={profile?.payday ?? null} dict={dict} />
+
+      {/* 演进提议卡：素材攒够时「我想重新看看你」——AI 提议，用户确认才重画 */}
+      {evolveProposal && <EvolveCard locale={locale} dict={dict} />}
 
       {daily && (
         <section className="mt-10 border border-line bg-white/60 p-6">
