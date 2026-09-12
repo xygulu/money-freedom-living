@@ -265,8 +265,9 @@ check(
 const advanceAgain = await post('/api/journey/assess', { locale: 'en', action: 'advance' }, main.cookie);
 check('无 pending 的 advance → 404', advanceAgain.status === 404, `status=${advanceAgain.status}`);
 
-// 心印刻度进度条（数据驱动锚点）：stage=2，灯 = stage1×2 + stage2×0 + 仪式印不进刻度
-// seg1 2/3 → Math.round(66.7)=67%；seg2 0/3 → 0%；右值当前阶段「0/3」
+// 进度条（数据驱动锚点）：stage=2，确认评估是推进时的那份阶段 1 评估（2 亮 1 未亮）。
+// 评估结论语义：seg1 走过的段整段填充（width:100%）；seg2 当前段按确认评估 =
+// 0/3（width:0%）；右值当前阶段「0/3」
 const seg = (html, id) => {
   const start = html.indexOf(`data-segment="${id}"`);
   if (start === -1) return '';
@@ -274,7 +275,7 @@ const seg = (html, id) => {
   return html.slice(start, next === -1 ? start + 2000 : next);
 };
 const barHtml = await (await get('/en/journey', main.cookie)).text();
-check('进度条 seg1 按实际点亮比例填充（2/3 → width:67%）', seg(barHtml, 1).includes('width:67%'), seg(barHtml, 1).match(/width:\d+%/) ?? 'no width');
+check('进度条 seg1 走过的段整段填充（width:100%）', seg(barHtml, 1).includes('width:100%'), seg(barHtml, 1).match(/width:\d+%/) ?? 'no width');
 check('进度条 seg2 尚未点亮（width:0%）', seg(barHtml, 2).includes('width:0%'));
 check('进度条右值 = 当前阶段灯数 data-lamp-count="0/3"', barHtml.includes('data-lamp-count="0/3"'));
 

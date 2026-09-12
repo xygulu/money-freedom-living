@@ -57,9 +57,10 @@ export default async function journeyPage({ params }: { params: Promise<{ locale
   const stageContent = stages.find((s) => s.id === stage) ?? null;
   const letterCount = profile?.letters.length ?? 0;
 
-  // 阶段进度（M9 需求③，语义修正）：灯 = 认知/行为里程碑，点亮真值是 stamps
-  // （评估确认时才发印，渲染不再补发——操作次数不等于进度）。灯的依据来自
-  // 最近一次确认过的评估（evidence 随 confirmed 评估长期保存）。
+  // 阶段进度：灯 = 认知/行为里程碑，点亮真值是最近一次确认的评估
+  // （assessment.confirmed.lamps——评估结论，不是动作档案；stamps 只是确认仪式
+  // 同步留下的心印存档）。灯的依据来自同一份评估（evidence 随 confirmed 长期
+  // 保存）；评估没说亮的灯一律未点亮。
   const progress = profile ? computeStageProgress(stage, profile) : null;
   const confirmed = profile?.assessment.confirmed ?? null;
   const confirmedEvidence = new Map(
@@ -289,11 +290,9 @@ export default async function journeyPage({ params }: { params: Promise<{ locale
                 <p className="mt-2 text-xs text-accent">● {dict.journey.currentStageNote}</p>
               )}
 
-              {/* 这个阶段的灯（M9 需求③语义修正）：认知/行为里程碑，点亮真值是
-                  stamps（评估确认时入档）。点亮的灯用心印的见证文案 + 评估依据
-                  （confirmed 里保存的 evidence）；每盏灯下方展示点亮标准——与评估
-                  LLM 用的是同一张判定表（STAGE_LAMPS），标准透明；未点亮用「这盏
-                  灯是什么」。 */}
+              {/* 这个阶段的灯：灯 = 评估结论（最近一次确认评估的 lamps：亮/不亮 +
+                  依据），不是用户动作的记录——评估没说亮的灯一律未点亮。点亮标准
+                  （hint）与评估 LLM 用的是同一张判定表（STAGE_LAMPS），标准透明。 */}
               {current && progress && progress.checks.length > 0 && (
                 <div className="mt-5">
                   <p className="text-xs tracking-widest text-ink-soft">
@@ -306,21 +305,14 @@ export default async function journeyPage({ params }: { params: Promise<{ locale
                       const hint = (dict.journey as unknown as Record<string, string>)[`${c.labelKey}Hint`];
                       return (
                         <li key={c.kind} className="text-sm leading-relaxed">
-                          {c.done ? (
-                            <>
-                              <span className="text-accent">
-                                ● {(dict.stamps as unknown as Record<string, string>)[c.kind] ?? c.kind}
-                              </span>
-                              {confirmedEvidence.get(c.kind) && (
-                                <span className="mt-1 block text-xs leading-relaxed text-ink-soft/80">
-                                  {dict.assess.evidenceLead}
-                                  {confirmedEvidence.get(c.kind)}
-                                </span>
-                              )}
-                            </>
-                          ) : (
-                            <span className="text-ink-soft">
-                              ○ {(dict.journey as unknown as Record<string, string>)[c.labelKey] ?? c.labelKey}
+                          <span className={c.done ? 'text-accent' : 'text-ink-soft'}>
+                            {c.done ? '●' : '○'}{' '}
+                            {(dict.journey as unknown as Record<string, string>)[c.labelKey] ?? c.labelKey}
+                          </span>
+                          {c.done && confirmedEvidence.get(c.kind) && (
+                            <span className="mt-1 block text-xs leading-relaxed text-ink-soft/80">
+                              {dict.assess.evidenceLead}
+                              {confirmedEvidence.get(c.kind)}
                             </span>
                           )}
                           {hint && (
@@ -333,10 +325,8 @@ export default async function journeyPage({ params }: { params: Promise<{ locale
                       );
                     })}
                   </ul>
-                  {progress.litCount < progress.checks.length ? (
+                  {progress.litCount < progress.checks.length && (
                     <p className="mt-3 text-xs text-ink-soft/70">{dict.journey.stageLampWaiting}</p>
-                  ) : (
-                    <p className="mt-3 text-xs text-ink-soft/70">{dict.journey.stageLampsAllLit}</p>
                   )}
                 </div>
               )}

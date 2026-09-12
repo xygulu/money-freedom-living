@@ -1,14 +1,15 @@
 // 阶段进度（M9 需求③，语义修正版）：进度评估的是用户当前表现出的认知与行为
 // 实际所处的阶段——离核心价值「一辈子不愁钱的活法」已达成的进度——与产品内
-// 操作/交互次数没有严格关系。灯的点亮由阶段评估（assess.ts，AI 提议 + 用户确认）
-// 颁发心印来记录：stamps 数组就是「已点亮集合」的唯一事实源，本文件只负责灯的
-// 形状与展示判定。只增不减：灯不熄灭、阶段不倒退；无 deadline、无红点；阶段 4
-// 没有终点线。
+// 操作/交互次数没有严格关系。灯的点亮由阶段评估判定（assess.ts，AI 提议 + 用户
+// 确认），展示真值是 assessment.confirmed.lamps——最近一次确认评估的结论；stamps
+// 只是确认仪式同步留下的心印存档（足迹/心印陈列用），不是灯的判定来源。本文件
+// 只负责灯的形状与展示判定。只增不减：灯不熄灭、阶段不倒退；无 deadline、无
+// 红点；阶段 4 没有终点线。
 import type { GrowthProfile, Stamp } from '@/lib/profile';
 
 export interface StageCheck {
-  kind: Stamp['kind']; // 心印 kind，点亮后入档；展示名走 dict.stamps.<kind>
-  labelKey: string; // 未点亮时「这盏灯是什么」的文案 key（dict.journey.<labelKey>）
+  kind: Stamp['kind']; // 关联评估结论与确认时入档的心印 kind；展示名走 dict.journey.<labelKey>
+  labelKey: string; // 「这盏灯是什么」的文案 key（dict.journey.<labelKey>），点亮/未点亮共用
   done: boolean;
 }
 
@@ -82,23 +83,31 @@ export const STAGE_LAMPS: Record<number, LampRule[]> = {
 
 export const MAX_STAGE = 4;
 
-/** 灯的点亮判定 = stamps 里是否已有这枚印（评估确认时颁发）。阶段 4 无灯。 */
+/** 灯的点亮判定 = 最近一次确认的评估里这盏灯亮不亮（评估结论，不是动作记录）。
+ *  评估没说亮的灯，即使 stamps 里有历史存档印也不亮。阶段 4 无灯。 */
 export function computeStageProgress(stage: number, profile: GrowthProfile): StageProgress {
-  const earned = new Set(profile.stamps.map((s) => s.kind));
+  const verdict = new Map((profile.assessment.confirmed?.lamps ?? []).map((l) => [l.kind, l.lit]));
   const checks: StageCheck[] = (STAGE_LAMPS[stage] ?? []).map((r) => ({
     kind: r.kind,
     labelKey: r.labelKey,
-    done: earned.has(r.kind),
+    done: verdict.get(r.kind) === true,
   }));
   return { checks, litCount: checks.filter((c) => c.done).length };
 }
 
-/** 四段刻度（全局进度条用）：各阶段已点亮/灯总数；stage4 total=0（无灯无刻度）。
- *  stage{n}_entered 等非灯印天然被过滤。 */
+/** 四段刻度（全局进度条用）：走过的段整段填充（阶段推进只发生在评估确认仪式
+ *  里，「走过」本身就是评估结论）；当前段按最近一次确认评估点亮的灯数；未到的
+ *  段全空——没有评估过的进度不造假。stage4 total=0（无灯无刻度）。 */
 export function stageLampScales(profile: GrowthProfile): { id: number; lit: number; total: number }[] {
-  const earned = new Set(profile.stamps.map((s) => s.kind));
+  const verdict = new Map((profile.assessment.confirmed?.lamps ?? []).map((l) => [l.kind, l.lit]));
   return [1, 2, 3, 4].map((id) => {
     const rules = STAGE_LAMPS[id] ?? [];
-    return { id, lit: rules.filter((r) => earned.has(r.kind)).length, total: rules.length };
+    const lit =
+      id < profile.stage
+        ? rules.length
+        : id === profile.stage
+          ? rules.filter((r) => verdict.get(r.kind) === true).length
+          : 0;
+    return { id, lit, total: rules.length };
   });
 }

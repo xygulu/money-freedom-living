@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { computeStageProgress, stageLampScales, STAGE_LAMPS, MAX_STAGE } from '@/lib/stage';
 import type { GrowthProfile } from '@/lib/profile';
 
-// M9 需求③语义修正版：灯 = 认知/行为里程碑，点亮真值是 stamps（评估确认时颁发）。
-// 这里只测「灯的形状」与「stamps → done」的展示判定；评估判定本身在 assess.test.ts。
+// 灯 = 评估结论：点亮真值是最近一次确认评估的 lamps（assessment.confirmed），
+// 不是 stamps（动作存档，不参与判定）。这里只测「灯的形状」与「评估结论 →
+// done/刻度」的展示判定；评估判定本身在 assess.test.ts。
 
 const profile = (over: Partial<GrowthProfile> = {}): GrowthProfile => ({
   user_key: 'u:test',
@@ -36,6 +37,21 @@ const profile = (over: Partial<GrowthProfile> = {}): GrowthProfile => ({
 
 const stamps = (kinds: string[]) => kinds.map((kind) => ({ kind, earnedAt: '2026-09-01T00:00:00Z' }));
 
+/** 最近一次确认评估的种子：lamps 就是灯的判定真值（其余报告字段展示用，占位即可） */
+const confirmedWith = (lamps: { kind: string; lit: boolean; evidence: string }[]) => ({
+  ...profile().assessment,
+  confirmed: {
+    actualStage: 1,
+    lamps,
+    summary: 's',
+    diagnosis: 'd',
+    distance: 'f',
+    actions: [],
+    nextHint: '',
+    assessedAt: '2026-09-01T00:00:00Z',
+  },
+});
+
 describe('STAGE_LAMPS（灯判定表的形状）', () => {
   it('阶段 1/2/3 分别 3/3/2 盏灯；kind 在各阶段内唯一；hint 非空（评估 prompt 的判定提示）', () => {
     expect(STAGE_LAMPS[1].map((r) => r.kind)).toEqual(['stage1_story', 'stage1_script', 'stage1_color']);
@@ -57,13 +73,26 @@ describe('STAGE_LAMPS（灯判定表的形状）', () => {
   });
 });
 
-describe('computeStageProgress（stamps 即点亮真值）', () => {
-  it('done 只看 stamps 里有没有这枚印——机械时代存量印继续有效', () => {
-    const p = profile({ stamps: stamps(['stage1_story', 'stage1_color']) });
+describe('computeStageProgress（最近一次确认评估 = 点亮真值）', () => {
+  it('done 只看评估结论：评估说亮才亮，评估没覆盖的灯一律未点亮', () => {
+    const p = profile({
+      assessment: confirmedWith([
+        { kind: 'stage1_story', lit: true, evidence: 'e1' },
+        { kind: 'stage1_script', lit: false, evidence: '' },
+        { kind: 'stage1_color', lit: true, evidence: 'e2' },
+      ]),
+    });
     const pr = computeStageProgress(1, p);
     expect(pr.checks.map((c) => c.done)).toEqual([true, false, true]);
     expect(pr.litCount).toBe(2);
-    // 操作数据不参与判定：聊再多、实验再多，没有评估确认就不亮
+    // stamps 是动作存档，不参与判定：历史印再多也点不亮评估没说亮的灯
+    const legacy = profile({
+      stamps: stamps(['stage1_script', 'stage1_color']),
+      assessment: confirmedWith([{ kind: 'stage1_story', lit: true, evidence: 'e1' }]),
+    });
+    expect(computeStageProgress(1, legacy).checks.map((c) => c.done)).toEqual([true, false, false]);
+    // 无确认评估 → 全不亮；操作数据不参与判定（聊再多、实验再多也不亮）
+    expect(computeStageProgress(1, profile()).litCount).toBe(0);
     const busy = profile({
       memories: Array.from({ length: 20 }, (_, i) => ({ date: '2026-09-01', text: String(i) })),
       experiments: Array.from({ length: 10 }, () => ({ date: '2026-09-01', action: 'x' })),
@@ -71,8 +100,8 @@ describe('computeStageProgress（stamps 即点亮真值）', () => {
     expect(computeStageProgress(1, busy).litCount).toBe(0);
   });
 
-  it('未点亮灯携带 labelKey（「这盏灯是什么」）；点亮灯携带 kind（心印见证文案）', () => {
-    const p = profile({ stamps: stamps(['stage2_claim']) });
+  it('每盏灯都携带 kind + labelKey（「这盏灯是什么」，点亮/未点亮共用）', () => {
+    const p = profile({ assessment: confirmedWith([{ kind: 'stage2_claim', lit: true, evidence: 'e' }]) });
     const pr = computeStageProgress(2, p);
     expect(pr.checks.find((c) => c.kind === 'stage2_claim')).toMatchObject({ done: true, labelKey: 'stageLampClaim' });
     expect(pr.checks.find((c) => c.done === false)).toMatchObject({ labelKey: 'stageLampTry' });
@@ -86,28 +115,45 @@ describe('computeStageProgress（stamps 即点亮真值）', () => {
   });
 });
 
-describe('stageLampScales（四段刻度：进度条心印刻度的真值）', () => {
-  it('各段 lit/total 按该段灯集统计；混入 stage4_entered 与重复 kind 不多算', () => {
+describe('stageLampScales（四段刻度 = 评估结论：走过段满、当前段按确认评估、未到段空）', () => {
+  it('推进后的确认评估还是上一阶段的灯：走过的段整段填充，当前段从 0 起', () => {
     const p = profile({
-      stamps: stamps(['stage1_story', 'stage1_story', 'stage1_color', 'stage2_claim', 'stage4_entered']),
+      stage: 2,
+      assessment: confirmedWith([
+        { kind: 'stage1_story', lit: true, evidence: 'e' },
+        { kind: 'stage1_script', lit: true, evidence: 'e' },
+        { kind: 'stage1_color', lit: false, evidence: '' },
+      ]),
     });
     expect(stageLampScales(p)).toEqual([
-      { id: 1, lit: 2, total: 3 },
+      { id: 1, lit: 3, total: 3 },
+      { id: 2, lit: 0, total: 3 },
+      { id: 3, lit: 0, total: 2 },
+      { id: 4, lit: 0, total: 0 },
+    ]);
+  });
+
+  it('当前段的灯被确认评估覆盖时按 lit 计数；历史 stamps 存档印不多算', () => {
+    const p = profile({
+      stage: 2,
+      stamps: stamps(['stage1_story', 'stage2_claim', 'stage2_voice', 'stage4_entered']),
+      assessment: confirmedWith([
+        { kind: 'stage2_claim', lit: true, evidence: 'e' },
+        { kind: 'stage2_try', lit: false, evidence: '' },
+        { kind: 'stage2_voice', lit: false, evidence: '' },
+      ]),
+    });
+    expect(stageLampScales(p)).toEqual([
+      { id: 1, lit: 3, total: 3 },
       { id: 2, lit: 1, total: 3 },
       { id: 3, lit: 0, total: 2 },
       { id: 4, lit: 0, total: 0 },
     ]);
   });
 
-  it('空 stamps 全零刻度；stage4 total 恒 0（无灯无终点线，进度条整段淡色）', () => {
+  it('无确认评估全零刻度（不造假进度）；stage4 total 恒 0（无灯无终点线，整段淡色）', () => {
     const empty = stageLampScales(profile());
     expect(empty.map((s) => s.lit)).toEqual([0, 0, 0, 0]);
     expect(empty[3]).toEqual({ id: 4, lit: 0, total: 0 });
-    // 全点亮：三段满、第四段仍 0
-    const all = profile({
-      stage: 4,
-      stamps: stamps(['stage1_story', 'stage1_script', 'stage1_color', 'stage2_claim', 'stage2_try', 'stage2_voice', 'stage3_seven', 'stage3_review']),
-    });
-    expect(stageLampScales(all).map((s) => [s.lit, s.total])).toEqual([[3, 3], [3, 3], [2, 2], [0, 0]]);
   });
 });

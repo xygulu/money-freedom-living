@@ -98,7 +98,7 @@ export default function AssessCard({
           <li key={l.kind} className="text-sm leading-relaxed">
             {l.lit ? (
               <>
-                <span className="text-accent">● {(dict.stamps as unknown as Record<string, string>)[l.kind] ?? l.kind}</span>
+                <span className="text-accent">● {(dict.journey as unknown as Record<string, string>)[rules.get(l.kind) ?? ''] ?? l.kind}</span>
                 {l.evidence && (
                   <span className="mt-1 block text-xs leading-relaxed text-ink-soft/80">
                     {t.evidenceLead}
