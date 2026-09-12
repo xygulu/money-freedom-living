@@ -72,7 +72,13 @@ export default async function journeyPage({ params }: { params: Promise<{ locale
     }
     progress = computeStageProgress(stage, profile);
   }
-  const stageStamps = (profile?.stamps ?? []).filter((st) => st.kind.startsWith(`stage${stage}_`));
+  // 渲染侧按 kind 去重兜底（历史行可能带重复；appendStamps 已原子化并自愈存量）
+  const seenStampKinds = new Set<string>();
+  const stageStamps = (profile?.stamps ?? []).filter((st) => {
+    if (!st.kind.startsWith(`stage${stage}_`) || seenStampKinds.has(st.kind)) return false;
+    seenStampKinds.add(st.kind);
+    return true;
+  });
   const nextStage = stages.find((s) => s.id === stage + 1) ?? null;
 
   // 「旅程中的我」预览（M9 需求①）：画像/足迹下钻入口 + 最近三步。

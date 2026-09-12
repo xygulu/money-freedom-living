@@ -83,7 +83,10 @@ await sql`
       { date: dayStr(2), action: 'M9 微行动：给自己买了一束花' },
     ])}::jsonb,
     ${JSON.stringify([{ stage: 1, content: 'M9 信：亲爱的后来的我', state: 'kept', aiReply: null, createdAt: daysAgo(12) }])}::jsonb,
-    ${JSON.stringify([{ kind: 'stage1_story', earnedAt: daysAgo(1) }])}::jsonb,
+    ${JSON.stringify([
+      { kind: 'stage1_story', earnedAt: daysAgo(2) },
+      { kind: 'stage1_story', earnedAt: daysAgo(1) }, // 模拟旧版并发写出的重复 kind
+    ])}::jsonb,
     '{}'::jsonb, ${daysAgo(35)}, '[]'::jsonb)`;
 await sql`
   INSERT INTO portrait_versions (user_key, version, portrait, source, material, created_at)
@@ -145,10 +148,17 @@ const stampsAfter = () =>
   sql`SELECT stamps FROM growth_profiles WHERE user_key = ${main.key}`.then((r) => r[0].stamps.map((s) => s.kind).sort());
 await get('/en/journey', main.cookie); // 画像存在+script 已表态 → 补 stage1_script
 let kinds = await stampsAfter();
-check('补发 stage1_script（story 已在档案不重发）', JSON.stringify(kinds) === JSON.stringify(['stage1_script', 'stage1_story']), JSON.stringify(kinds));
+check(
+  '补发 stage1_script，且治愈种子里的历史重复（story 只剩一枚）',
+  JSON.stringify(kinds) === JSON.stringify(['stage1_script', 'stage1_story']),
+  JSON.stringify(kinds)
+);
 await get('/en/journey', main.cookie);
 kinds = await stampsAfter();
 check('再刷不重复颁发（幂等）', kinds.length === 2, JSON.stringify(kinds));
+await Promise.all([get('/en/journey', main.cookie), get('/en/journey', main.cookie)]);
+kinds = await stampsAfter();
+check('并发渲染不产生重复心印（原子幂等）', new Set(kinds).size === kinds.length && kinds.length === 2, JSON.stringify(kinds));
 
 const advanceEarly = await post('/api/journey/advance', { locale: 'en' }, main.cookie);
 check('两灯未全亮 advance → 403', advanceEarly.status === 403, `status=${advanceEarly.status} ${await advanceEarly.text()}`);
