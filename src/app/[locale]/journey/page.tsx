@@ -15,8 +15,10 @@ import { resolveIdentity } from '@/lib/identity';
 import { getProfile, recordDailySeen } from '@/lib/profile';
 import { isAnchorDay } from '@/lib/anchor';
 import { track } from '@/lib/analytics';
+import { buildTimeline, formatTimelineDay } from '@/lib/timeline';
 import MicroActionCard from '@/components/MicroActionCard';
 import AnchorCard from '@/components/AnchorCard';
+import TimelineItemView from '@/components/TimelineItemView';
 
 export const dynamic = 'force-dynamic';
 
@@ -48,6 +50,10 @@ export default async function journeyPage({ params }: { params: Promise<{ locale
   const exercise = pickExercise(locale, today, stage, identity.key);
   const stages = getJourneyStages(locale);
   const letterCount = profile?.letters.length ?? 0;
+
+  // 「旅程中的我」预览（M9 需求①）：画像/足迹下钻入口 + 最近三步。
+  // 无档案（还没体检）不显示——足迹从旅程第一步开始才有东西可看
+  const growthPreview = profile ? await buildTimeline(identity.key, 3, 3) : [];
 
   // 归来问候（docs/02 §5）：暂停任意时长后回来给一句"欢迎回来，它还在"——
   // 不追责、不问为什么没来、不显示中断天数。隔 ≥3 天才算"归来"（连续使用不打扰）。
@@ -133,6 +139,42 @@ export default async function journeyPage({ params }: { params: Promise<{ locale
           {letterCount > 0 ? `（${letterCount}）` : ''}
         </Link>
       </section>
+
+      {profile && (
+        <section className="mt-8 border border-dashed border-line p-6">
+          <p className="text-xs tracking-widest text-ink-soft">{dict.journey.growthLabel}</p>
+          <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm">
+            {profile.portrait && (
+              <Link href={`/${locale}/portrait`} className="text-accent underline underline-offset-4">
+                {dict.journey.growthPortraitLink}
+                {profile.portrait.version > 1 ? ` v${profile.portrait.version}` : ''}
+              </Link>
+            )}
+            <Link href={`/${locale}/timeline`} className="text-accent underline underline-offset-4">
+              {dict.journey.growthTrailLink}
+            </Link>
+          </div>
+          {growthPreview.length > 0 ? (
+            <ul className="mt-4 flex flex-col">
+              {growthPreview.map((item, i) => (
+                <li key={`growth-${i}`} className="border-t border-line py-4">
+                  <p className="text-xs text-ink-soft/70">{formatTimelineDay(locale, item.date)}</p>
+                  <div className="mt-2">
+                    <TimelineItemView item={item} locale={locale} dict={dict} />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-4 text-sm leading-relaxed text-ink-soft">{dict.journey.growthEmpty}</p>
+          )}
+          {growthPreview.length > 0 && (
+            <Link href={`/${locale}/timeline`} className="mt-5 inline-block text-accent underline underline-offset-4">
+              {dict.journey.growthMore} →
+            </Link>
+          )}
+        </section>
+      )}
 
       <h2 className="mt-14 text-sm tracking-widest text-ink-soft">{dict.journey.stages}</h2>
       <ol className="mt-4 flex flex-col">
