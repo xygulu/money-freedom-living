@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
 
     if (body.action === 'confirm') {
       await appendStamps(identity.key, newlyLit);
-      await saveAssessmentState(identity.key, { pending: null, confirmed: pending, confirmedAt: now });
+      await saveAssessmentState(identity.key, { pending: null, confirmed: pending, confirmedAt: now, previousConfirmed: state.confirmed });
       await bumpActiveDay(identity.key);
       await track(identity.key, 'stage_assessment_confirmed', { stage: profile.stage, lit: newlyLit.length }, locale);
       return respond({ ok: true });
@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
     const to = from + 1;
     await appendStamps(identity.key, [...newlyLit, `stage${to}_entered`]);
     await saveStage(identity.key, to);
-    await saveAssessmentState(identity.key, { pending: null, confirmed: pending, confirmedAt: now });
+    await saveAssessmentState(identity.key, { pending: null, confirmed: pending, confirmedAt: now, previousConfirmed: state.confirmed });
     await bumpActiveDay(identity.key);
     await track(identity.key, 'stage_advanced', { from: String(from), to: String(to) }, locale);
     return respond({ stage: to });

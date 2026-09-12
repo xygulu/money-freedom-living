@@ -16,7 +16,7 @@ import { getJournalEntries } from '@/lib/journal';
 import { LOCALE_NAME } from '@/lib/onboarding';
 import { MAX_STAGE, STAGE_LAMPS } from '@/lib/stage';
 import type { EvolveMaterialCounts } from '@/lib/evolution';
-import type { JourneyStage } from '@/lib/content';
+import { TOPICS_ZH, type JourneyStage } from '@/lib/content';
 import type { Locale } from '@/i18n/config';
 
 // ---------- 常量 ----------
@@ -246,6 +246,9 @@ export function buildAssessMessages(
     '',
     `当前阶段的灯（评估对象，每盏是一个认知/行为里程碑）：`,
     ...(STAGE_LAMPS[stage] ?? []).map((r) => `- ${r.kind}：${r.hint}`),
+    ...(current?.topics?.length
+      ? [`本阶段涉及的命题：${current.topics.map((t) => TOPICS_ZH[t] ?? t).join('、')}（diagnosis 归属参考，不必点名）`]
+      : []),
     '',
     '输出（严格遵守，不要输出 JSON 以外的内容）：',
     '{',
@@ -274,6 +277,7 @@ export function buildAssessMessages(
             .filter((l) => l.lit)
             .map((l) => l.kind)
             .join('、') || '（无）'}。`,
+          '归因对照：若素材里有他两次面对同类场景的不同说法，可在 diagnosis 里自然描述他归因方式的变化（如从「我不行/都怪别人」移向「我当时真正想要的是什么」）——只描述看见的变化，不打分、不比较好坏。',
           '',
         ]
       : []),

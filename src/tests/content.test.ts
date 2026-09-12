@@ -19,6 +19,21 @@ describe('journey 内容', () => {
     }
   });
 
+  it.each(ENABLED)('%s journey M10 可选字段合法：topics 枚举、free_alt 非空、skippable 布尔', (locale) => {
+    const TOPICS = ['self-worth', 'parents', 'inner-turmoil', 'boundaries', 'money-safety', 'allowing'];
+    for (const s of getJourneyStages(locale)) {
+      if (s.topics !== undefined) {
+        expect(s.topics.length).toBeGreaterThan(0);
+        for (const t of s.topics) expect(TOPICS).toContain(t);
+      }
+      if (s.free_alt !== undefined) expect(s.free_alt.trim().length).toBeGreaterThan(0);
+      if (s.skippable !== undefined) expect(typeof s.skippable).toBe('boolean');
+    }
+    // 阶段 1 的回忆功课可永远跳过；阶段 2 的花钱实验必须给 0 元替代版
+    expect(getJourneyStage(locale, 1)?.skippable).toBe(true);
+    expect(getJourneyStage(locale, 2)?.free_alt?.trim().length ?? 0).toBeGreaterThan(0);
+  });
+
   it('按 id 可取单阶段', () => {
     expect(getJourneyStage('zh-CN', 3)?.title).toBe('练习');
     expect(getJourneyStage('en', 4)?.title).toBe('Living');

@@ -3,6 +3,27 @@
 import generated from '@/generated/content.json';
 import { isEnabled, type Locale } from '@/i18n/config';
 
+/** 六命题（docs/02 §10 命题索引）：跨书索引，M10 仅用于内容归属与评估 prompt 参考 */
+export const TOPICS = [
+  'self-worth',
+  'parents',
+  'inner-turmoil',
+  'boundaries',
+  'money-safety',
+  'allowing',
+] as const;
+export type TopicId = (typeof TOPICS)[number];
+
+/** 命题的中文标签（prompt 内部备注用，不直接展示给用户） */
+export const TOPICS_ZH: Record<TopicId, string> = {
+  'self-worth': '我不配',
+  parents: '和父母的关系',
+  'inner-turmoil': '情绪与内耗',
+  boundaries: '关系与边界',
+  'money-safety': '金钱与安全感',
+  allowing: '允许自己',
+};
+
 export interface JourneyStage {
   id: number;
   title: string;
@@ -13,6 +34,10 @@ export interface JourneyStage {
   advance_when: string[];
   ritual: string;
   body: string;
+  /** M10 可选 frontmatter 直通（gray-matter 原样保留 snake_case 键，故字段名不转驼峰） */
+  free_alt?: string;
+  skippable?: boolean;
+  topics?: TopicId[];
 }
 
 export type DailyType = 'observation' | 'practice' | 'way';

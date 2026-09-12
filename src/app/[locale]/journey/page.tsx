@@ -54,6 +54,7 @@ export default async function journeyPage({ params }: { params: Promise<{ locale
 
   const exercise = pickExercise(locale, today, stage, identity.key);
   const stages = getJourneyStages(locale);
+  const stageContent = stages.find((s) => s.id === stage) ?? null;
   const letterCount = profile?.letters.length ?? 0;
 
   // 阶段进度（M9 需求③，语义修正）：灯 = 认知/行为里程碑，点亮真值是 stamps
@@ -191,7 +192,10 @@ export default async function journeyPage({ params }: { params: Promise<{ locale
         {exercise ? (
           <>
             <p className="mt-4 text-base leading-relaxed">{exercise}</p>
-            <MicroActionCard locale={locale} action={exercise} dict={dict} />
+            {stageContent?.skippable && (
+              <p className="mt-2 text-sm text-ink-soft/80">{dict.journey.microSkippable}</p>
+            )}
+            <MicroActionCard locale={locale} action={exercise} freeAlt={stageContent?.free_alt} skippable={stageContent?.skippable} dict={dict} />
           </>
         ) : (
           <p className="mt-4 text-sm text-ink-soft">{dict.journey.microNone}</p>
@@ -344,6 +348,12 @@ export default async function journeyPage({ params }: { params: Promise<{ locale
                       </ul>
                     </>
                   )}
+                  <Link
+                    href={`/${locale}/journey/changes`}
+                    className="mt-4 inline-block text-sm text-accent underline underline-offset-4"
+                  >
+                    {dict.journey.changeListLink}
+                  </Link>
                 </div>
               )}
 

@@ -23,6 +23,8 @@ advance_when:
   - The user confirms (or corrects) one "here's what I think I heard"
   - The user can describe a recurring money feeling, not just an event
 ritual: First draft of the Money Portrait (What you said / What I think I heard)
+topics: [money-safety, parents, self-worth]
+skippable: true
 ---
 
 # Stage 1 · Seeing

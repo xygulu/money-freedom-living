@@ -22,6 +22,7 @@ advance_when:
   - The user writes money principles in their own words (need not be polished)
   - The user voluntarily reduces session frequency and reports feeling steady
 ritual: Portrait v2 beside the first draft — see the road you walked
+topics: [allowing, self-worth]
 ---
 
 # Stage 4 · Living

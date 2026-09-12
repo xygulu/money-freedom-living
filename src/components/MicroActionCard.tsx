@@ -9,16 +9,23 @@ import type { Dict } from '@/i18n/get-dict';
 export default function MicroActionCard({
   locale,
   action,
+  freeAlt,
+  skippable,
   dict,
 }: {
   locale: string;
   action: string;
+  /** 0 元替代版（M10）：这一步不花钱也能做的并列选项 */
+  freeAlt?: string;
+  /** 该功课可永远跳过（M10）：不做也算数 */
+  skippable?: boolean;
   dict: Dict;
 }) {
   const t = dict.journey;
   const [feeling, setFeeling] = useState('');
   const [state, setState] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [showSafety, setShowSafety] = useState(false);
+  const [receipt, setReceipt] = useState<string | null>(null);
 
   async function submit() {
     if (state !== 'idle') return;
@@ -30,8 +37,9 @@ export default function MicroActionCard({
         body: JSON.stringify({ action, feeling: feeling.trim() || undefined, locale }),
       });
       if (!res.ok) throw new Error(String(res.status));
-      const data = (await res.json()) as { safety?: boolean };
+      const data = (await res.json()) as { safety?: boolean; receipt?: string | null };
       setShowSafety(data.safety === true);
+      setReceipt(typeof data.receipt === 'string' && data.receipt ? data.receipt : null);
       setState('saved');
     } catch {
       // 失败保留输入，回到可提交状态
@@ -44,6 +52,7 @@ export default function MicroActionCard({
     return (
       <div className="mt-5">
         <p className="text-sm text-ink-soft">{t.microSaved}</p>
+        {receipt && <p className="mt-3 text-sm leading-relaxed">{receipt}</p>}
         {showSafety && <p className="mt-3 text-sm leading-relaxed text-ink-soft">{dict.chat.safetyNote}</p>}
       </div>
     );
@@ -51,6 +60,12 @@ export default function MicroActionCard({
 
   return (
     <div className="mt-5">
+      {freeAlt && (
+        <p className="mb-3 text-sm leading-relaxed text-ink-soft">
+          {t.microFreeAlt}
+          {freeAlt}
+        </p>
+      )}
       <label className="text-sm text-ink-soft" htmlFor="micro-feeling">
         {t.microDone}
       </label>

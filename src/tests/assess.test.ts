@@ -348,11 +348,45 @@ describe('buildAssessMessages（评估 prompt：诊断四问、红线、语言�
     expect(user).toContain('## 体检画像（他说过的关于自己的话）\n(无)');
     expect(user).toContain('(无)');
   });
+  it('M10 归因对照行：有 confirmed 评估时，system 提示在 diagnosis 里描述归因方式的变化（只描述，不打分）', () => {
+    const confirmed: StageAssessment = {
+      actualStage: 1,
+      lamps: STAGE_LAMPS[1].map((r) => ({ kind: r.kind, lit: false, evidence: '' })),
+      summary: '上次的样子。', diagnosis: '上次的原因。', distance: '上次的距离。',
+      actions: ['上次的小步。'], nextHint: '继续。', assessedAt: daysAgo(30),
+    };
+    const withIt = buildAssessMessages('zh-CN', 1, [stageFixture(1), stageFixture(2)], material, {
+      confirmed, earnedKinds: [],
+    }).system;
+    expect(withIt).toContain('归因对照');
+    expect(withIt).toContain('只描述看见的变化，不打分、不比较好坏');
+    const withoutIt = buildAssessMessages('zh-CN', 1, [stageFixture(1), stageFixture(2)], material, { earnedKinds: [] }).system;
+    expect(withoutIt).not.toContain('归因对照');
+  });
+
+  it('M10 命题行：阶段 content 带 topics 时进 system（中文标签），不带则不出现在 prompt 里', () => {
+    const withTopics: JourneyStage = { ...stageFixture(2), topics: ['allowing', 'boundaries'] };
+    const { system } = buildAssessMessages('zh-CN', 2, [stageFixture(1), withTopics], material, { earnedKinds: [] });
+    expect(system).toContain('本阶段涉及的命题：允许自己、关系与边界');
+    const plain = buildAssessMessages('zh-CN', 1, [stageFixture(1), stageFixture(2)], material, { earnedKinds: [] }).system;
+    expect(plain).not.toContain('本阶段涉及的命题');
+  });
+
 });
 
 describe('parseAssessmentState（容脏读取）', () => {
   it("'{}' / null / 脏值 → 全空默认；合法对象透传", () => {
-    const empty = { pending: null, confirmed: null, confirmedAt: null, dismissedAt: null, generatingAt: null, proposedSeenAt: null };
+    const empty = {
+      pending: null,
+      confirmed: null,
+      confirmedAt: null,
+      dismissedAt: null,
+      generatingAt: null,
+      proposedSeenAt: null,
+      previousConfirmed: null,
+      changeList: null,
+      changeListLockAt: null,
+    };
     expect(parseAssessmentState({})).toEqual(empty);
     expect(parseAssessmentState(null)).toEqual(empty);
     expect(parseAssessmentState('junk')).toEqual(empty);

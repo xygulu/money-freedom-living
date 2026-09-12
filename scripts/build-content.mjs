@@ -13,6 +13,8 @@ const outFile = join(root, 'src/generated/content.json');
 const ENABLED_LOCALES = ['en', 'zh-CN'];
 const DAILY_TYPES = ['observation', 'practice', 'way'];
 const STAGES = [1, 2, 3, 4];
+// 与 src/lib/content.ts 的 TOPICS 保持一致（mjs 脚本无法 import TS，改一处须同步另一处）
+const TOPICS = ['self-worth', 'parents', 'inner-turmoil', 'boundaries', 'money-safety', 'allowing'];
 const MIN_DAILY = 90;
 
 const errors = [];
@@ -44,6 +46,15 @@ function validateJourney(locale, stages) {
     if (!Array.isArray(data.advance_when) || data.advance_when.length === 0) fail(`${locale}/journey/${file}: advance_when 不能为空`);
     if (!data.ai_stance?.do?.length || !data.ai_stance?.dont?.length) fail(`${locale}/journey/${file}: ai_stance.do/dont 不能为空`);
     if (body.length < 100) fail(`${locale}/journey/${file}: 正文太短（<100 字符），它是 AI system prompt 的原料`);
+    // M10 可选字段：0 元替代版 / 可跳过 / 命题标签（枚举见 src/lib/content.ts TOPICS，六命题 docs/02 §10）
+    if (data.free_alt !== undefined && (typeof data.free_alt !== 'string' || data.free_alt.trim() === ''))
+      fail(`${locale}/journey/${file}: free_alt 若提供必须是非空字符串`);
+    if (data.skippable !== undefined && typeof data.skippable !== 'boolean')
+      fail(`${locale}/journey/${file}: skippable 必须是布尔`);
+    if (data.topics !== undefined) {
+      if (!Array.isArray(data.topics) || data.topics.length === 0) fail(`${locale}/journey/${file}: topics 若提供必须是非空数组`);
+      else for (const t of data.topics) if (!TOPICS.includes(t)) fail(`${locale}/journey/${file}: topics 含未知命题 ${t}（允许：${TOPICS.join('/')}）`);
+    }
     if (id) byId.set(id, data);
   }
   return byId;

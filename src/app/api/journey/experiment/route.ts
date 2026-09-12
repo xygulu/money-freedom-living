@@ -4,8 +4,10 @@
 import { NextRequest } from 'next/server';
 import { resolveIdentity } from '@/lib/identity';
 import { appendExperiment, bumpActiveDay, ensureProfile } from '@/lib/profile';
-import { checkSafety, recordSafetyEvent } from '@/lib/safety';
+import { checkSafety, recordSafetyEvent, referralMessage } from '@/lib/safety';
 import { track } from '@/lib/analytics';
+import { getLlmProviders, llmComplete } from '@/lib/llm';
+import { buildReceiptSystem, buildReceiptUser, pickReceiptFallback } from '@/lib/receipt';
 import { enabledLocales, isLocale, type Locale } from '@/i18n/config';
 import { jsonError } from '@/lib/sse';
 
@@ -38,7 +40,9 @@ export async function POST(request: NextRequest) {
     }
 
     // 对话本身就是建档动作：微行动完成也可能发生在体检之前（无档案行先建）
-    await ensureProfile(identity.key, locale);
+    const profile = await ensureProfile(identity.key, locale);
+    // M10 即时见证：用户人生第一件被记录的小事值得一次即时回应（其余也回应，只埋点区分首次）
+    const isFirstExperiment = profile.experiments.length === 0;
     await appendExperiment(identity.key, { date: new Date().toISOString().slice(0, 10), action, feeling });
     try {
       await bumpActiveDay(identity.key);
@@ -46,10 +50,33 @@ export async function POST(request: NextRequest) {
       console.error('[api/journey/experiment] bumpActiveDay failed:', error);
     }
     await track(identity.key, 'experiment_saved', { safety: safetyHit }, locale);
+    if (isFirstExperiment) {
+      await track(identity.key, 'micro_action_first_done', { stage: String(profile.stage) }, locale);
+    }
+
+    // M10 即时见证回应：命中安全层→转介文案作收条；LLM 可用→收条体；
+    // 失败/无 provider 静默降级词典收条——回应本身绝不阻塞记录
+    const fallback = pickReceiptFallback(locale, `${identity.key}#${action}`);
+    let receipt = safetyHit ? referralMessage(locale, 'crisis') : fallback;
+    if (!safetyHit && getLlmProviders().length > 0) {
+        try {
+          const raw = await llmComplete({
+            system: buildReceiptSystem(locale),
+            messages: [{ role: 'user', content: buildReceiptUser({ action, feeling: feeling || undefined }) }],
+            maxTokens: 200,
+            temperature: 0.7,
+          });
+          const text = raw.trim();
+          if (text) receipt = text;
+        } catch (error) {
+          console.error('[api/journey/experiment] receipt llm failed:', error);
+        }
+      }
+    await track(identity.key, 'micro_action_instant_response_shown', { llm: String(receipt !== fallback) }, locale);
 
     const headers: Record<string, string> = { 'Cache-Control': 'no-store' };
     if (identity.newGuestCookie) headers['Set-Cookie'] = identity.newGuestCookie;
-    return new Response(JSON.stringify({ ok: true, safety: safetyHit }), {
+    return new Response(JSON.stringify({ ok: true, safety: safetyHit, receipt }), {
       headers: { ...headers, 'Content-Type': 'application/json' },
     });
   } catch (error) {

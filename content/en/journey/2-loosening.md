@@ -23,6 +23,8 @@ advance_when:
   - The user has done at least one "unearned" thing or reframed one inner line
   - The user starts replacing I-must with I-can-choose when describing money decisions
 ritual: Script rewrite — turn the claimed script into a sentence they choose to keep
+free_alt: "Finally use the thing you have been saving for later, or give yourself a half-day off — allowing yourself does not have to cost money."
+topics: [self-worth, allowing]
 ---
 
 # Stage 2 · Loosening

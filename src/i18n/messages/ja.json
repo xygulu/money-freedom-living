@@ -152,7 +152,10 @@
     "stageLampReview": "自分のことばで、変わったところを語れること",
     "stageLampWaiting": "急がなくて大丈夫。待っています。",
     "stageStampsLabel": "集めた心印",
-    "stageNoFinishLine": "ここにゴールラインも卒業もありません。暮らし方とは、日々を生きること——定期的なふりかえりが、ここで待っています。"
+    "stageNoFinishLine": "ここにゴールラインも卒業もありません。暮らし方とは、日々を生きること——定期的なふりかえりが、ここで待っています。",
+    "microSkippable": "このステップは、ずっと飛ばしても大丈夫。やらなくても、かぞえます。",
+    "microFreeAlt": "お金をかけずに：",
+    "changeListLink": "わたしの変化リスト →"
   },
   "timeline": {
     "title": "成長の足あと",
@@ -381,5 +384,17 @@
     "historyView": "読み返す",
     "historyBack": "対話一覧",
     "historyReplayTitle": "あの日の対話"
+  },
+  "changes": {
+    "title": "わたしの変化リスト",
+    "empty": "まだ確認した評価がありません。旅の中で一度確認すると、変化リストがここに届きます。",
+    "positionLabel": "いまのあなたの位置",
+    "newLampsLabel": "新しくともされた灯",
+    "noNewLamps": "今回は新しくともれた灯はありません——それも正直な姿です。",
+    "wordsLabel": "あなたへ、それが言いたいこと",
+    "generate": "リストを書いてもらう",
+    "busy": "あなたの言葉と行動を集めています……",
+    "failed": "今回は書ききれませんでした。上のリストはあなたのものです——また試せます。",
+    "back": "← 旅にもどる"
   }
 }

@@ -99,6 +99,19 @@ export interface AssessmentState {
   generatingAt: string | null;
   /** 提议卡首次展示时刻（每纪元一次，供埋点去重） */
   proposedSeenAt: string | null;
+  /** M10 变化清单的对照基线：上一次确认的评估（confirm/advance 时由本次的旧 confirmed 移入） */
+  previousConfirmed?: StageAssessment | null;
+  /** M10 《我变了什么》缓存（forConfirmedAt 变了即重生成） */
+  changeList?: ChangeListEntry | null;
+  /** 变化清单生成的非重入锁（自过期） */
+  changeListLockAt?: string | null;
+}
+
+/** M10 《我变了什么》变化清单缓存项：LLM 叙述段 + 其对应的确认时刻 */
+export interface ChangeListEntry {
+  text: string;
+  generatedAt: string;
+  forConfirmedAt: string;
 }
 
 /** 容忍 '{}'、null 与脏值——JSONB 默认 '{}'，读取侧唯一出入口 */
@@ -107,6 +120,14 @@ export function parseAssessmentState(raw: unknown): AssessmentState {
   const str = (v: unknown): string | null => (typeof v === 'string' && v ? v : null);
   const asmt = (v: unknown): StageAssessment | null =>
     typeof v === 'object' && v !== null ? (v as StageAssessment) : null;
+  const changeList =
+    typeof o.changeList === 'object' && o.changeList !== null
+      ? {
+          text: str((o.changeList as Record<string, unknown>).text) ?? '',
+          generatedAt: str((o.changeList as Record<string, unknown>).generatedAt) ?? '',
+          forConfirmedAt: str((o.changeList as Record<string, unknown>).forConfirmedAt) ?? '',
+        }
+      : null;
   return {
     pending: asmt(o.pending),
     confirmed: asmt(o.confirmed),
@@ -114,6 +135,9 @@ export function parseAssessmentState(raw: unknown): AssessmentState {
     dismissedAt: str(o.dismissedAt),
     generatingAt: str(o.generatingAt),
     proposedSeenAt: str(o.proposedSeenAt),
+    previousConfirmed: asmt(o.previousConfirmed),
+    changeList,
+    changeListLockAt: str(o.changeListLockAt),
   };
 }
 

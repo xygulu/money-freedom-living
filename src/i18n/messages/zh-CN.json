@@ -152,7 +152,10 @@
     "stageLampReview": "自己说出哪里不一样了",
     "stageLampWaiting": "不急，它在等你。",
     "stageStampsLabel": "攒下的心印",
-    "stageNoFinishLine": "这里没有终点线，也没有毕业。活法是把日子过下去——周期回顾会在这里等你。"
+    "stageNoFinishLine": "这里没有终点线，也没有毕业。活法是把日子过下去——周期回顾会在这里等你。",
+    "microSkippable": "这一步可以永远跳过——不做也算数。",
+    "microFreeAlt": "不花这钱也可以：",
+    "changeListLink": "我的变化清单 →"
   },
   "timeline": {
     "title": "成长足迹",
@@ -381,5 +384,17 @@
     "historyView": "回看",
     "historyBack": "全部对话",
     "historyReplayTitle": "那天的对话"
+  },
+  "changes": {
+    "title": "我的变化清单",
+    "empty": "还没有确认过的评估。在旅程里确认一次之后，你的变化清单会在这里等你。",
+    "positionLabel": "你现在的位置",
+    "newLampsLabel": "新点亮的心印",
+    "noNewLamps": "这次没有新点亮的灯——诚实也是一种看见。",
+    "wordsLabel": "它想说的话",
+    "generate": "让它替我写写这份清单",
+    "busy": "正在把你说过的话、做过的事放在一起……",
+    "failed": "它这次没写完。上面的清单还是你的——可以再试一次。",
+    "back": "← 回到我的旅程"
   }
 }

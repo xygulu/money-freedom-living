@@ -152,7 +152,10 @@
     "stageLampReview": "You can say what has changed — in your own words",
     "stageLampWaiting": "No hurry — it's waiting for you.",
     "stageStampsLabel": "Stamps you've collected",
-    "stageNoFinishLine": "No finish line here, and no graduation. This stage is a way of living — a periodic review will wait for you here."
+    "stageNoFinishLine": "No finish line here, and no graduation. This stage is a way of living — a periodic review will wait for you here.",
+    "microSkippable": "This step can wait — skipping it forever is fine too. Not doing it still counts.",
+    "microFreeAlt": "Without spending: ",
+    "changeListLink": "My change list →"
   },
   "timeline": {
     "title": "Your trail",
@@ -381,5 +384,17 @@
     "historyView": "Read again",
     "historyBack": "All conversations",
     "historyReplayTitle": "That day's conversation"
+  },
+  "changes": {
+    "title": "What has changed in me",
+    "empty": "There is no confirmed reflection yet. When you confirm one on your journey, your change list will gather itself here.",
+    "positionLabel": "Where you are",
+    "newLampsLabel": "Lamps newly lit",
+    "noNewLamps": "No new lamps lit this time — and that is the truth, which counts too.",
+    "wordsLabel": "What it wants to say to you",
+    "generate": "Let it write my change list",
+    "busy": "Gathering what you said and did…",
+    "failed": "It couldn't finish writing just now. The list above is still yours — you can try again.",
+    "back": "← Back to my journey"
   }
 }

@@ -21,6 +21,8 @@ advance_when:
   - 7 experiment entries recorded (logging a miss counts as logging)
   - User self-assessment (changed / unchanged / can't tell — all valid)
 ritual: Wax seal「Practicing looseness」+ Portrait v2
+free_alt: "Spend the permission, not the money — say no to one invitation you dread, go to bed an hour early, take one unhurried afternoon off."
+topics: [allowing, boundaries]
 ---
 
 # Stage 3 · Practicing
