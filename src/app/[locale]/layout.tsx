@@ -1,9 +1,13 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { headers, cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 import '../globals.css';
 import { enabledLocales, htmlLang, isLocale } from '@/i18n/config';
 import { getDict } from '@/i18n/get-dict';
+import { resolveIdentity } from '@/lib/identity';
+import { getProfile } from '@/lib/profile';
+import JourneyProgressBar from '@/components/JourneyProgressBar';
 
 export const metadata: Metadata = {
   title: 'Money Freedom Living',
@@ -13,6 +17,8 @@ export const metadata: Metadata = {
 export function generateStaticParams() {
   return enabledLocales.map((locale) => ({ locale }));
 }
+
+export const dynamic = 'force-dynamic'; // 进度条需要身份与档案（cookies）——全站数据页本就动态
 
 export default async function LocaleLayout({
   children,
@@ -25,6 +31,19 @@ export default async function LocaleLayout({
   if (!isLocale(locale) || !enabledLocales.includes(locale)) notFound();
 
   const dict = getDict(locale);
+
+  // 全局进度条数据（用户需求：所有页面固定可见）。layout 绝不因进度条挂掉：
+  // 任何失败（无档案/DB 抖动/身份解析异常）都按 null 处理 → 进度条不渲染。
+  let profile = null;
+  try {
+    const headersList = await headers();
+    const cookieList = await cookies();
+    const identity = await resolveIdentity({ headers: headersList, cookies: cookieList });
+    profile = await getProfile(identity.key);
+  } catch (error) {
+    console.error('[layout] progress bar profile failed:', error);
+  }
+
   const tabs = [
     { href: `/${locale}/journey`, label: dict.nav.journey },
     { href: `/${locale}/chat`, label: dict.nav.chat },
@@ -38,20 +57,21 @@ export default async function LocaleLayout({
         <div className="mx-auto flex min-h-dvh max-w-xl flex-col px-5">
           <main className="flex-1">{children}</main>
 
-          <nav
-            aria-label="Main"
-            className="sticky bottom-0 -mx-5 mt-10 grid grid-cols-4 border-t border-line bg-paper/95 backdrop-blur"
-          >
-            {tabs.map((tab) => (
-              <Link
-                key={tab.href}
-                href={tab.href}
-                className="px-2 py-3 text-center text-sm text-ink-soft transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-accent"
-              >
-                {tab.label}
-              </Link>
-            ))}
-          </nav>
+          {/* 底部 sticky 容器：进度条在上、导航在下，一起贴底全页可见 */}
+          <div className="sticky bottom-0 -mx-5 mt-10 border-t border-line bg-paper/95 backdrop-blur">
+            <JourneyProgressBar locale={locale} dict={dict} profile={profile} />
+            <nav aria-label="Main" className="grid grid-cols-4">
+              {tabs.map((tab) => (
+                <Link
+                  key={tab.href}
+                  href={tab.href}
+                  className="px-2 py-3 text-center text-sm text-ink-soft transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-accent"
+                >
+                  {tab.label}
+                </Link>
+              ))}
+            </nav>
+          </div>
         </div>
       </body>
     </html>

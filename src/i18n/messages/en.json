@@ -211,6 +211,11 @@
     "stayCta": "Stay here, and note how things are",
     "dismissCta": "That's not it"
   },
+  "progress": {
+    "stageLabel": "Stage {n} · {title}",
+    "livingLabel": "Living it",
+    "ariaLabel": "See your journey and where you are"
+  },
   "journal": {
     "title": "Journal",
     "sub": "Write it down, for your eyes only. When you want to be heard, it will respond.",

@@ -211,6 +211,11 @@
     "stayCta": "先留在这里，记下现在的样子",
     "dismissCta": "不是这样的"
   },
+  "progress": {
+    "stageLabel": "阶段 {n} · {title}",
+    "livingLabel": "活法中",
+    "ariaLabel": "查看我的旅程进度与位置"
+  },
   "journal": {
     "title": "心事",
     "sub": "写下来，只给你自己看。想被听见的时候，它会回应。",

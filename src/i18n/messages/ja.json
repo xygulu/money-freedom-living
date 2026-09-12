@@ -211,6 +211,11 @@
     "stayCta": "ここに留まり、いまの姿を記す",
     "dismissCta": "ちがう気がします"
   },
+  "progress": {
+    "stageLabel": "段階 {n} · {title}",
+    "livingLabel": "暮らし方のなか",
+    "ariaLabel": "旅路といまの位置を見る"
+  },
   "journal": {
     "title": "おもい",
     "sub": "書き留めてください。自分だけのものです。聞いてほしいとき、応えてくれます。",
