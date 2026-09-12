@@ -183,6 +183,9 @@ async function doMigrate(): Promise<void> {
   // 画像演进状态（dismissedAt/lastGeneratedAt/proposedSeenAt/generatingAt）。
   // 不放 portrait JSONB——calibrate 的 savePortrait 整体覆盖会把它抹掉
   await sql`ALTER TABLE growth_profiles ADD COLUMN IF NOT EXISTS portrait_evolution JSONB NOT NULL DEFAULT '{}'`;
+  // 阶段评估状态（pending/confirmed/confirmedAt/dismissedAt/generatingAt/proposedSeenAt）。
+  // 同样不放 portrait JSONB（同上）；在 growth_profiles 行内 → 导出/删除/游客迁移级联天然覆盖
+  await sql`ALTER TABLE growth_profiles ADD COLUMN IF NOT EXISTS stage_assessment JSONB NOT NULL DEFAULT '{}'`;
   await sql`CREATE INDEX IF NOT EXISTS idx_chat_sessions_user ON chat_sessions(user_key, created_at DESC)`;
 
   // 对话原文只存这里（用户可删）；日志/safety_events 不含原文（P§9 日志纪律）

@@ -147,16 +147,12 @@
     "stageLampColor": "认一认你的金钱底色",
     "stageLampClaim": "认领那个旧脚本",
     "stageLampTry": "完成一次「不配的小事」",
-    "stageLampVoice": "几次对话，攒下新的记忆",
-    "stageLampSeven": "七次实验记录——没做成的也算",
-    "stageLampReview": "重新看一次自己的画像",
+    "stageLampVoice": "话语里开始出现「我可以选择」",
+    "stageLampSeven": "练习融进了日常——没做成的也算",
+    "stageLampReview": "自己说出哪里不一样了",
     "stageLampWaiting": "不急，它在等你。",
     "stageStampsLabel": "攒下的心印",
-    "stageNoFinishLine": "这里没有终点线，也没有毕业。活法是把日子过下去——周期回顾会在这里等你。",
-    "stageAllLit": "这个阶段的灯都亮了。",
-    "stageNextInvite": "如果你也觉得，下一阶段在等你——{stage}。它的开场是「{ritual}」。",
-    "stageAdvanceCta": "进入下一阶段",
-    "stageStay": "先留在这里"
+    "stageNoFinishLine": "这里没有终点线，也没有毕业。活法是把日子过下去——周期回顾会在这里等你。"
   },
   "timeline": {
     "title": "成长足迹",
@@ -185,8 +181,8 @@
     "stage2_try": "你试了一次「不配的小事」",
     "stage2_voice": "「我可以选择」开始替代「我必须」",
     "stage3_entered": "进入：练习",
-    "stage3_seven": "七次实验都记下了——没做成的也算",
-    "stage3_review": "你重新看了一次自己的画像",
+    "stage3_seven": "练习住进了日常——没做成的，也算数",
+    "stage3_review": "你用自己的话，说出了变化",
     "stage4_entered": "进入：活法"
   },
   "evolve": {
@@ -197,6 +193,23 @@
     "dismiss": "暂不",
     "busy": "它正在重读你们的对话，大概要一分钟。",
     "failed": "这次没画成。你的画像没有变化，想试的时候随时再来。"
+  },
+  "assess": {
+    "label": "旅程的位置",
+    "invite": "这段时间你说的、做的，它都记得。要不要让它看一看——不是数你做了多少次，而是看你实际走到了哪里。",
+    "hint": "点一下就好，大约一分钟。它只描述它看见的样子，像不像，由你说。",
+    "cta": "看看我走到了哪里",
+    "busy": "它正在重读这段旅程，大约需要一分钟。",
+    "failed": "这次没看成。你的旅程没有变化，随时可以再看。",
+    "reviewIntro": "基于你这段时间的话和事，它看到了：",
+    "stageLine": "它看到的位置：阶段 {n} · {title}",
+    "summaryLabel": "它看到的你",
+    "nextLabel": "下一阶段，在远处",
+    "evidenceLead": "它记得：",
+    "confirmCta": "记下现在的样子",
+    "advanceCta": "走进{stage}",
+    "stayCta": "先留在这里，记下现在的样子",
+    "dismissCta": "不是这样的"
   },
   "journal": {
     "title": "心事",

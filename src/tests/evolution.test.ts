@@ -35,6 +35,7 @@ const profile = (over: Partial<GrowthProfile> = {}): GrowthProfile => ({
   letters: [],
   stamps: [],
   evolution: { dismissedAt: null, lastGeneratedAt: null, proposedSeenAt: null, generatingAt: null },
+  assessment: { pending: null, confirmed: null, confirmedAt: null, dismissedAt: null, generatingAt: null, proposedSeenAt: null },
   created_at: '2026-08-01T00:00:00Z',
   dailySeen: [],
   payday: null,

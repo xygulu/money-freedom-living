@@ -53,6 +53,64 @@ export interface PortraitEvolution {
   generatingAt: string | null; // 演进进行中的非重入锁（3 分钟自过期）
 }
 
+/** 阶段评估的一次结果（stage_assessment JSONB 内）。评估的是用户实际表现出的
+ *  认知与行为所处的位置，不是操作次数；灯点亮必须带依据（可追溯素材）。 */
+export interface AssessmentLamp {
+  kind: string;
+  lit: boolean;
+  /** 点亮的依据：引用用户原话或具体的事（lit=false 时为空串） */
+  evidence: string;
+}
+
+export interface StageAssessment {
+  /** 评估出的实际位置；服务端 clamp 到 [当前阶段, 当前阶段+1]，不倒退 */
+  actualStage: number;
+  /** 恰为评估时当前阶段的灯集 */
+  lamps: AssessmentLamp[];
+  /** 镜子式总结（第二人称，不评判不打分） */
+  summary: string;
+  /** 下一阶段在远处长什么样；已在门口时说明 */
+  nextHint: string;
+  assessedAt: string; // ISO
+}
+
+/**
+ * 阶段评估状态（growth_profiles.stage_assessment JSONB）。只存用户动作、锁与
+ * 评估结果；「是否该提议」不落库——journey 渲染时用 shouldOfferAssess 现算
+ * （同 evolution 哲学）。⚠️ 绝不能放进 portrait JSONB：calibrate 的
+ * savePortrait 整体覆盖会把它抹掉。
+ */
+export interface AssessmentState {
+  /** 已生成待用户确认的一次评估 */
+  pending: StageAssessment | null;
+  /** 最近一次用户确认的评估（灯的依据长期居所） */
+  confirmed: StageAssessment | null;
+  /** 最近一次确认时刻 = 下次评估的素材基线 */
+  confirmedAt: string | null;
+  /** 「不是这样的/先不用」→ 冷却期内不再提议 */
+  dismissedAt: string | null;
+  /** 评估生成中的非重入锁（3 分钟自过期） */
+  generatingAt: string | null;
+  /** 提议卡首次展示时刻（每纪元一次，供埋点去重） */
+  proposedSeenAt: string | null;
+}
+
+/** 容忍 '{}'、null 与脏值——JSONB 默认 '{}'，读取侧唯一出入口 */
+export function parseAssessmentState(raw: unknown): AssessmentState {
+  const o = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>;
+  const str = (v: unknown): string | null => (typeof v === 'string' && v ? v : null);
+  const asmt = (v: unknown): StageAssessment | null =>
+    typeof v === 'object' && v !== null ? (v as StageAssessment) : null;
+  return {
+    pending: asmt(o.pending),
+    confirmed: asmt(o.confirmed),
+    confirmedAt: str(o.confirmedAt),
+    dismissedAt: str(o.dismissedAt),
+    generatingAt: str(o.generatingAt),
+    proposedSeenAt: str(o.proposedSeenAt),
+  };
+}
+
 /** 容忍 '{}'、null 与脏值——JSONB 默认 '{}'，读取侧唯一出入口 */
 export function parseEvolution(raw: unknown): PortraitEvolution {
   const o = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>;
@@ -95,6 +153,7 @@ export interface GrowthProfile {
   letters: LetterEntry[];
   stamps: Stamp[];
   evolution: PortraitEvolution;
+  assessment: AssessmentState;
   /** 档案行创建时刻（ISO）——演进基线的最末兜底（无版本行/无 portrait.createdAt 时） */
   created_at: string;
   /** 今日一签去重：最近看过的签文（上限 90 条 ≈ 90 天不重复，docs/02 一签机制） */
@@ -129,6 +188,7 @@ function rowToProfile(row: Record<string, unknown>): GrowthProfile {
     letters: (row.letters as GrowthProfile['letters']) ?? [],
     stamps: (row.stamps as GrowthProfile['stamps']) ?? [],
     evolution: parseEvolution(row.portrait_evolution),
+    assessment: parseAssessmentState(row.stage_assessment),
     created_at: iso(row.created_at),
     dailySeen: (row.daily_seen as GrowthProfile['dailySeen']) ?? [],
     payday: (row.payday as GrowthProfile['payday']) ?? null,
@@ -142,7 +202,7 @@ export async function getProfile(userKey: string): Promise<GrowthProfile | null>
   const rows = await execWithFailover((sql: SqlClient) =>
     sql`SELECT user_key, locale, portrait, concerns, stage, stage_started_at,
                pinned, memories, experiments, letters, stamps, portrait_evolution,
-               created_at, daily_seen, payday, total_active_days, last_active_date
+               stage_assessment, created_at, daily_seen, payday, total_active_days, last_active_date
         FROM growth_profiles WHERE user_key = ${userKey}`
   );
   return rows[0] ? rowToProfile(rows[0]) : null;
@@ -158,7 +218,7 @@ export async function ensureProfile(userKey: string, locale: string): Promise<Gr
       ON CONFLICT (user_key) DO NOTHING
       RETURNING user_key, locale, portrait, concerns, stage, stage_started_at,
                 pinned, memories, experiments, letters, stamps, portrait_evolution,
-                created_at, daily_seen, payday, total_active_days, last_active_date
+                stage_assessment, created_at, daily_seen, payday, total_active_days, last_active_date
     `
   );
   if (rows[0]) return rowToProfile(rows[0]);
@@ -335,8 +395,8 @@ export async function bumpActiveDay(userKey: string): Promise<void> {
 }
 
 /**
- * 心印点亮（M9 阶段进度）：完成推进标志/进入新阶段时发。按 kind 幂等——
- * journey 页每次渲染都会判定 pendingStamps，并发/重复触发不能重复入档。
+ * 心印点亮（M9 阶段进度）：评估确认/推进仪式时发（stamps 即灯的点亮真值）。
+ * 按 kind 幂等——并发/重复触发不能重复入档。
  */
 export async function appendStamps(userKey: string, kinds: string[]): Promise<void> {
   const valid = kinds.filter((k) => k.trim());
@@ -361,7 +421,7 @@ export async function appendStamps(userKey: string, kinds: string[]): Promise<vo
   );
 }
 
-/** 阶段推进（/api/journey/advance）：stage +1 且 stage_started_at 重置为新阶段起点 */
+/** 阶段推进（/api/journey/assess action=advance）：stage +1 且 stage_started_at 重置 */
 export async function saveStage(userKey: string, stage: number): Promise<void> {
   await execWithFailover((sql: SqlClient) =>
     sql`UPDATE growth_profiles

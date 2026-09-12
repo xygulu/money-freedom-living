@@ -12,16 +12,17 @@ import { getDict } from '@/i18n/get-dict';
 import { enabledLocales, isLocale } from '@/i18n/config';
 import { getJourneyStages, pickDaily, pickExercise } from '@/lib/content';
 import { resolveIdentity } from '@/lib/identity';
-import { getProfile, recordDailySeen, appendStamps } from '@/lib/profile';
+import { getProfile, recordDailySeen, type StageAssessment } from '@/lib/profile';
 import { isAnchorDay } from '@/lib/anchor';
 import { track } from '@/lib/analytics';
 import { buildTimeline, formatTimelineDay } from '@/lib/timeline';
-import { computeStageProgress, pendingStamps, MAX_STAGE } from '@/lib/stage';
+import { computeStageProgress, MAX_STAGE } from '@/lib/stage';
 import { baselineFor, countMaterialSince, shouldPropose, saveEvolution, listPortraitVersions } from '@/lib/evolution';
+import { shouldOfferAssess, saveAssessmentState, ASSESS_PENDING_TTL_DAYS } from '@/lib/assess';
 import MicroActionCard from '@/components/MicroActionCard';
 import AnchorCard from '@/components/AnchorCard';
 import TimelineItemView from '@/components/TimelineItemView';
-import AdvanceCard from '@/components/AdvanceCard';
+import AssessCard from '@/components/AssessCard';
 import EvolveCard from '@/components/EvolveCard';
 
 export const dynamic = 'force-dynamic';
@@ -55,23 +56,15 @@ export default async function journeyPage({ params }: { params: Promise<{ locale
   const stages = getJourneyStages(locale);
   const letterCount = profile?.letters.length ?? 0;
 
-  // 阶段进度（M9 需求③）：先补发已达标未颁发的心印（appendStamps 按 kind 幂等，
-  // 渲染即颁发——与 recordDailySeen 同一 GET 写库模式），再算灯。
-  // 颁发后同步本地副本，本次渲染立即可见；打点失败绝不阻塞页面。
-  let progress = null;
-  if (profile) {
-    const pending = pendingStamps(profile);
-    if (pending.length > 0) {
-      try {
-        await appendStamps(identity.key, pending);
-        const now = new Date().toISOString();
-        profile.stamps.push(...pending.map((kind) => ({ kind, earnedAt: now })));
-      } catch (error) {
-        console.error('[journey] appendStamps failed:', error);
-      }
-    }
-    progress = computeStageProgress(stage, profile);
-  }
+  // 阶段进度（M9 需求③，语义修正）：灯 = 认知/行为里程碑，点亮真值是 stamps
+  // （评估确认时才发印，渲染不再补发——操作次数不等于进度）。灯的依据来自
+  // 最近一次确认过的评估（evidence 随 confirmed 评估长期保存）。
+  const progress = profile ? computeStageProgress(stage, profile) : null;
+  const confirmedEvidence = new Map(
+    (profile?.assessment.confirmed?.lamps ?? [])
+      .filter((l) => l.lit && l.evidence)
+      .map((l) => [l.kind, l.evidence])
+  );
   // 渲染侧按 kind 去重兜底（历史行可能带重复；appendStamps 已原子化并自愈存量）
   const seenStampKinds = new Set<string>();
   const stageStamps = (profile?.stamps ?? []).filter((st) => {
@@ -101,6 +94,32 @@ export default async function journeyPage({ params }: { params: Promise<{ locale
       }
     } catch (error) {
       console.error('[journey] evolve proposal failed:', error);
+    }
+  }
+
+  // 阶段评估提议（M9 需求③语义修正）：评估的是「实际表现出的认知与行为」所
+  // 处的位置，不是操作次数。读时现算不落库（同 evolve 哲学）；有待确认的评估
+  // → review 卡（超 30 天 TTL 的遗留 pending 视为过期不再展示）；素材攒够 →
+  // offer 卡，首现写 proposedSeenAt + 埋点。失败不阻塞页面。
+  let assessPending: StageAssessment | null = null;
+  let assessOffer = false;
+  if (profile?.portrait) {
+    try {
+      const nowISO = new Date().toISOString();
+      const st = profile.assessment;
+      if (st.pending && Date.parse(nowISO) - Date.parse(st.pending.assessedAt) < ASSESS_PENDING_TTL_DAYS * 86_400_000) {
+        assessPending = st.pending;
+      } else {
+        const baseline = st.confirmedAt ?? profile.created_at;
+        const counts = await countMaterialSince(identity.key, profile, baseline, nowISO);
+        assessOffer = shouldOfferAssess(profile, st, counts, nowISO);
+        if (assessOffer && !st.proposedSeenAt) {
+          await saveAssessmentState(identity.key, { proposedSeenAt: nowISO });
+          await track(identity.key, 'stage_assessment_proposal_seen', { stage: String(stage) }, locale);
+        }
+      }
+    } catch (error) {
+      console.error('[journey] assess proposal failed:', error);
     }
   }
 
@@ -142,6 +161,19 @@ export default async function journeyPage({ params }: { params: Promise<{ locale
 
       {/* 演进提议卡：素材攒够时「我想重新看看你」——AI 提议，用户确认才重画 */}
       {evolveProposal && <EvolveCard locale={locale} dict={dict} />}
+
+      {/* 阶段评估卡：AI 提议「看看你走到了哪里」——不是数做了多少次，
+          而是看实际表现出的认知与行为。结果待确认时渲染 review 模式 */}
+      {profile?.portrait && (assessPending || assessOffer) && (
+        <AssessCard
+          locale={locale}
+          dict={dict}
+          stage={stage}
+          nextTitle={nextStage?.title ?? ''}
+          actualTitle={stages.find((s) => s.id === (assessPending?.actualStage ?? stage))?.title ?? ''}
+          pending={assessPending}
+        />
+      )}
 
       {daily && (
         <section className="mt-10 border border-line bg-white/60 p-6">
@@ -252,8 +284,9 @@ export default async function journeyPage({ params }: { params: Promise<{ locale
                 <p className="mt-2 text-xs text-accent">● {dict.journey.currentStageNote}</p>
               )}
 
-              {/* 这个阶段的灯（M9 需求③）：量化已做到的里程碑，未点亮只说「它在等你」。
-                  点亮的灯用心印的见证文案（dict.stamps），未点亮用「这盏灯是什么」（dict.journey）。 */}
+              {/* 这个阶段的灯（M9 需求③语义修正）：认知/行为里程碑，点亮真值是
+                  stamps（评估确认时入档）。点亮的灯用心印的见证文案 + 评估依据
+                  （confirmed 里保存的 evidence）；未点亮用「这盏灯是什么」。 */}
               {current && progress && progress.checks.length > 0 && (
                 <div className="mt-5">
                   <p className="text-xs tracking-widest text-ink-soft">
@@ -263,9 +296,17 @@ export default async function journeyPage({ params }: { params: Promise<{ locale
                     {progress.checks.map((c) => (
                       <li key={c.kind} className="text-sm leading-relaxed">
                         {c.done ? (
-                          <span className="text-accent">
-                            ● {(dict.stamps as unknown as Record<string, string>)[c.kind] ?? c.kind}
-                          </span>
+                          <>
+                            <span className="text-accent">
+                              ● {(dict.stamps as unknown as Record<string, string>)[c.kind] ?? c.kind}
+                            </span>
+                            {confirmedEvidence.get(c.kind) && (
+                              <span className="mt-1 block text-xs leading-relaxed text-ink-soft/80">
+                                {dict.assess.evidenceLead}
+                                {confirmedEvidence.get(c.kind)}
+                              </span>
+                            )}
+                          </>
                         ) : (
                           <span className="text-ink-soft">
                             ○ {(dict.journey as unknown as Record<string, string>)[c.labelKey] ?? c.labelKey}
@@ -301,15 +342,8 @@ export default async function journeyPage({ params }: { params: Promise<{ locale
                 </div>
               )}
 
-              {/* 推进提议：三灯全亮才出现；用户确认才推进，「先留」无惩罚 */}
-              {current && progress?.canAdvance && nextStage && (
-                <AdvanceCard
-                  locale={locale}
-                  nextTitle={nextStage.title}
-                  nextRitual={nextStage.ritual}
-                  dict={dict}
-                />
-              )}
+              {/* 推进不再由「灯全亮」触发——走进下一阶段走评估确认流（assess action=advance），
+                  评估说到了门口才出现「走进下一阶段」的按钮（AssessCard review 模式） */}
             </li>
           );
         })}

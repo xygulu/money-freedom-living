@@ -147,16 +147,12 @@
     "stageLampColor": "Your money undertone, named",
     "stageLampClaim": "The old script, claimed as yours",
     "stageLampTry": "One “unworthy” small thing, tried",
-    "stageLampVoice": "New memories from a few more talks",
-    "stageLampSeven": "Seven experiment entries — misses count too",
-    "stageLampReview": "Your portrait, seen again",
+    "stageLampVoice": "“I can choose” showing up in your words",
+    "stageLampSeven": "Experiments woven into your days — misses count too",
+    "stageLampReview": "You can say what has changed — in your own words",
     "stageLampWaiting": "No hurry — it's waiting for you.",
     "stageStampsLabel": "Stamps you've collected",
-    "stageNoFinishLine": "No finish line here, and no graduation. This stage is a way of living — a periodic review will wait for you here.",
-    "stageAllLit": "All the lamps of this stage are lit.",
-    "stageNextInvite": "If you feel it too, the next stage is waiting — {stage}. It opens with: {ritual}.",
-    "stageAdvanceCta": "Step into the next stage",
-    "stageStay": "Stay a little longer"
+    "stageNoFinishLine": "No finish line here, and no graduation. This stage is a way of living — a periodic review will wait for you here."
   },
   "timeline": {
     "title": "Your trail",
@@ -185,8 +181,8 @@
     "stage2_try": "You tried one “unworthy” small thing",
     "stage2_voice": "“I can choose” began to replace “I must”",
     "stage3_entered": "Entered: Practicing",
-    "stage3_seven": "Seven experiments, written down — the misses count too",
-    "stage3_review": "You looked at your portrait again",
+    "stage3_seven": "Practice has settled into your days — the ones that didn't work out count too",
+    "stage3_review": "You saw what has changed, in your own words",
     "stage4_entered": "Entered: A way of living"
   },
   "evolve": {
@@ -197,6 +193,23 @@
     "dismiss": "Not now",
     "busy": "It is rereading your conversations. This takes about a minute.",
     "failed": "It did not come through this time. Your portrait has not changed. Come back whenever you like."
+  },
+  "assess": {
+    "label": "Where you are",
+    "invite": "It remembers what you've said and done these past weeks. Would you like it to take a look — not to count how many times you showed up, but to see where you actually are.",
+    "hint": "One tap, about a minute. It only describes what it sees; whether it rings true is for you to say.",
+    "cta": "See where I am",
+    "busy": "It is rereading this stretch of the journey. This takes about a minute.",
+    "failed": "It didn't come through this time. Nothing about your journey has changed. Come back whenever you like.",
+    "reviewIntro": "From what you've said and done lately, this is what it sees:",
+    "stageLine": "Where it sees you: Stage {n} · {title}",
+    "summaryLabel": "The you it sees",
+    "nextLabel": "The next stage, further along",
+    "evidenceLead": "It remembers: ",
+    "confirmCta": "Note down how things are now",
+    "advanceCta": "Step into {stage}",
+    "stayCta": "Stay here, and note how things are",
+    "dismissCta": "That's not it"
   },
   "journal": {
     "title": "Journal",
