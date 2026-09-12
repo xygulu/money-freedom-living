@@ -3,7 +3,7 @@
 // 本文件：portrait_versions 表访问 + 基线/素材/提议纯函数 + 演进 prompt。
 // 提议与否不落库（journey 渲染时现算，阈值改动立即生效）；
 // growth_profiles.portrait_evolution 只存用户动作与锁（parseEvolution 见 profile.ts）。
-import { ensureSchema, execWithFailover } from '@/lib/db';
+import { ensureSchema, execWithFailover, iso } from '@/lib/db';
 import type { GrowthProfile, Portrait, PortraitEvolution, SessionMemory, ExperimentEntry } from '@/lib/profile';
 import { getJournalEntries, countJournalEntriesSince } from '@/lib/journal';
 import { LOCALE_NAME } from '@/lib/onboarding';
@@ -27,7 +27,7 @@ function rowToVersion(row: Record<string, unknown>): PortraitVersion {
     source: (row.source as PortraitVersionSource) ?? 'onboarding',
     portrait: row.portrait as Portrait,
     material: (row.material as Record<string, unknown> | null) ?? {},
-    createdAt: String(row.created_at),
+    createdAt: iso(row.created_at),
   };
 }
 

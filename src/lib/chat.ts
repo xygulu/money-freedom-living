@@ -1,7 +1,7 @@
 // 对话会话存取（chat_sessions / chat_messages）。
 // kind: 'onboarding_talk'（体检初谈）| 'chat'（正式对话，M4 接配额落账）
 import { randomUUID } from 'crypto';
-import { ensureSchema, execWithFailover } from '@/lib/db';
+import { ensureSchema, execWithFailover, iso } from '@/lib/db';
 
 export type SessionKind = 'onboarding_talk' | 'chat';
 
@@ -24,9 +24,6 @@ export const TALK_MAX_USER_MESSAGES = 6;
 /** 正式对话轮数上限：20 轮 = 40 条消息（用户+AI），到限温和收尾（P§7"1 次 = 一次对话会话"） */
 export const CHAT_MAX_MESSAGES = 40;
 
-const SESSION_COLUMNS =
-  'id, user_key, locale, kind, message_count, quota_consumed, safety_flagged, status, closed_at, created_at';
-
 function rowToSession(row: Record<string, unknown>): ChatSession {
   return {
     id: row.id as string,
@@ -37,8 +34,8 @@ function rowToSession(row: Record<string, unknown>): ChatSession {
     quotaConsumed: row.quota_consumed as boolean,
     safetyFlagged: row.safety_flagged as boolean,
     status: row.status as string,
-    closedAt: row.closed_at ? String(row.closed_at) : null,
-    createdAt: String(row.created_at),
+    closedAt: row.closed_at ? iso(row.closed_at) : null,
+    createdAt: iso(row.created_at),
   };
 }
 
@@ -57,8 +54,10 @@ export async function createSession(input: {
 
 export async function getSession(sessionId: string): Promise<ChatSession | null> {
   await ensureSchema();
+  // 列名清单必须写死字面量：neon sql tag 会把 ${字符串} 参数化成 $1（SELECT $1 返回的是垃圾行）
   const rows = await execWithFailover((sql) =>
-    sql`SELECT ${SESSION_COLUMNS} FROM chat_sessions WHERE id = ${sessionId}`
+    sql`SELECT id, user_key, locale, kind, message_count, quota_consumed, safety_flagged, status, closed_at, created_at
+        FROM chat_sessions WHERE id = ${sessionId}`
   );
   return rows[0] ? rowToSession(rows[0]) : null;
 }
@@ -67,7 +66,7 @@ export async function getSession(sessionId: string): Promise<ChatSession | null>
 export async function findOpenChatSession(userKey: string): Promise<ChatSession | null> {
   await ensureSchema();
   const rows = await execWithFailover((sql) =>
-    sql`SELECT ${SESSION_COLUMNS}
+    sql`SELECT id, user_key, locale, kind, message_count, quota_consumed, safety_flagged, status, closed_at, created_at
         FROM chat_sessions
         WHERE user_key = ${userKey} AND kind = 'chat' AND status = 'open'
         ORDER BY created_at DESC LIMIT 1`
@@ -82,7 +81,7 @@ export async function findOpenChatSession(userKey: string): Promise<ChatSession 
 export async function listClosedChatSessions(userKey: string, limit = 50): Promise<ChatSession[]> {
   await ensureSchema();
   const rows = await execWithFailover((sql) =>
-    sql`SELECT ${SESSION_COLUMNS}
+    sql`SELECT id, user_key, locale, kind, message_count, quota_consumed, safety_flagged, status, closed_at, created_at
         FROM chat_sessions
         WHERE user_key = ${userKey} AND status = 'closed'
         ORDER BY COALESCE(closed_at, created_at) DESC

@@ -321,7 +321,19 @@
     "toFutureTitle": "未来のあなたへ",
     "back": "旅路へ戻る",
     "spokenTitle": "あなたの言葉",
-    "baseColorTitle": "お金の底色"
+    "baseColorTitle": "お金の底色",
+    "historicalBanner": "これは第{n}版の肖像、{date}に描かれたもの。これも本当のあなた——あのときのあなたです。",
+    "backToCurrent": "最新の肖像へ戻る →",
+    "compareLink": "前の肖像と並べてみる →",
+    "versionsLabel": "歩んできた道の肖像",
+    "versionItem": "第{n}版 · {date}",
+    "currentMark": "いまの肖像",
+    "compareTitle": "二つの肖像を並べて",
+    "compareIntro": "二つを並べて、何が変わって、何が残っているのかを見てみましょう。判断するためではなく、ただ見るために。",
+    "compareColPast": "あのとき",
+    "compareColNow": "いま",
+    "compareEmpty": "まだ比べられる前の肖像がありません。次の肖像が描かれたら、ここで会えます。",
+    "compareTrailLink": "二つの肖像の間に何があったか → 成長の足跡を見る"
   },
   "chat": {
     "title": "対話",

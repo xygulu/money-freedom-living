@@ -321,7 +321,19 @@
     "toFutureTitle": "给未来的你",
     "back": "回到旅程",
     "spokenTitle": "你说过的",
-    "baseColorTitle": "你的金钱底色"
+    "baseColorTitle": "你的金钱底色",
+    "historicalBanner": "这是第 {n} 版画像，画于 {date}。它也是真的你——只是那一次的你。",
+    "backToCurrent": "回到最新的一版 →",
+    "compareLink": "和上一版放在一起看看 →",
+    "versionsLabel": "一路走来的画像",
+    "versionItem": "第 {n} 版 · {date}",
+    "currentMark": "现在这一版",
+    "compareTitle": "两版并排",
+    "compareIntro": "把两版放在一起，看看什么变了、什么还在。不评判，只是看见。",
+    "compareColPast": "那一次",
+    "compareColNow": "这一次",
+    "compareEmpty": "还没有可对比的上一版。等下一版画好，它们会在这里见面。",
+    "compareTrailLink": "两版之间发生了什么 → 去成长足迹看看"
   },
   "chat": {
     "title": "对话",

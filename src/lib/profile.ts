@@ -1,7 +1,7 @@
 // 成长档案（growth_profiles）读写层。JSON 字段整体读写：
 // 单用户并发极低（一个人和自己聊），读-改-写可接受；行级锁靠 UPDATE 的
 // WHERE user_key 语义兜底，不引入额外乐观锁复杂度。
-import { ensureSchema, execWithFailover, type SqlClient } from '@/lib/db';
+import { ensureSchema, execWithFailover, iso, type SqlClient } from '@/lib/db';
 
 export interface PortraitMoment {
   title: string;
@@ -122,14 +122,14 @@ function rowToProfile(row: Record<string, unknown>): GrowthProfile {
     portrait: (row.portrait as Portrait | null) ?? null,
     concerns: (row.concerns as GrowthProfile['concerns']) ?? [],
     stage: row.stage as number,
-    stage_started_at: String(row.stage_started_at),
+    stage_started_at: iso(row.stage_started_at),
     pinned: (row.pinned as GrowthProfile['pinned']) ?? [],
     memories: (row.memories as GrowthProfile['memories']) ?? [],
     experiments: (row.experiments as GrowthProfile['experiments']) ?? [],
     letters: (row.letters as GrowthProfile['letters']) ?? [],
     stamps: (row.stamps as GrowthProfile['stamps']) ?? [],
     evolution: parseEvolution(row.portrait_evolution),
-    created_at: String(row.created_at),
+    created_at: iso(row.created_at),
     dailySeen: (row.daily_seen as GrowthProfile['dailySeen']) ?? [],
     payday: (row.payday as GrowthProfile['payday']) ?? null,
     total_active_days: row.total_active_days as number,

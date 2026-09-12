@@ -321,7 +321,19 @@
     "toFutureTitle": "To your future self",
     "back": "Back to journey",
     "spokenTitle": "What you said",
-    "baseColorTitle": "Your money undertone"
+    "baseColorTitle": "Your money undertone",
+    "historicalBanner": "This is portrait v{n}, drawn on {date}. It is also true — just the you of that moment.",
+    "backToCurrent": "Back to the latest portrait →",
+    "compareLink": "See it next to the previous one →",
+    "versionsLabel": "Portraits along the way",
+    "versionItem": "v{n} · {date}",
+    "currentMark": "the one now",
+    "compareTitle": "Two portraits, side by side",
+    "compareIntro": "Put the two together and see what changed, and what stayed. Nothing to judge — only to see.",
+    "compareColPast": "That time",
+    "compareColNow": "This time",
+    "compareEmpty": "There is no earlier portrait to compare yet. When the next one is drawn, they will meet here.",
+    "compareTrailLink": "What happened between the two → the trail"
   },
   "chat": {
     "title": "Conversation",

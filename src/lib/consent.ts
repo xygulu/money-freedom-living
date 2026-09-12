@@ -1,5 +1,5 @@
 import { createHash } from 'crypto';
-import { getSql } from './db';
+import { getSql, iso } from './db';
 
 /**
  * 敏感信息单独同意（docs/02 §9：金钱困扰、童年记忆、心理状态可能构成敏感个人信息，
@@ -43,6 +43,6 @@ export async function latestConsent(userKey: string): Promise<ConsentAnswer | nu
     granted: Boolean(row.granted),
     ipHash: (row.ip_hash as string | null) ?? null,
     policyVersion: String(row.policy_version),
-    createdAt: String(row.created_at),
+    createdAt: iso(row.created_at),
   };
 }

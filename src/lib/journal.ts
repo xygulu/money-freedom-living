@@ -1,7 +1,7 @@
 // 日记（金钱心事）共享逻辑：VIP AI 回应的提示词与结构（docs/02 §5 /journal）。
 // 回应原则与对话一致——接住情绪、回应具体细节，不给理财建议、不诊断、不评判。
 // 安全性：crisis 命中的日记不走 LLM 回应（写库时已标记 safety_hit，回应时直接转介）。
-import { execWithFailover, ensureSchema } from '@/lib/db';
+import { execWithFailover, ensureSchema, iso } from '@/lib/db';
 import { LOCALE_NAME } from '@/lib/onboarding';
 import type { Locale } from '@/i18n/config';
 
@@ -22,8 +22,8 @@ function rowToEntry(row: Record<string, unknown>): JournalEntry {
     content: row.content as string,
     safetyHit: row.safety_hit as boolean,
     aiReply: (row.ai_reply as string | null) ?? null,
-    repliedAt: row.replied_at ? String(row.replied_at) : null,
-    createdAt: String(row.created_at),
+    repliedAt: row.replied_at ? iso(row.replied_at) : null,
+    createdAt: iso(row.created_at),
   };
 }
 

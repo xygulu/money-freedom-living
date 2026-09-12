@@ -18,6 +18,15 @@ import { getDbProviders } from '@/config/db-providers';
 // <false, false>：数组行、非 fullResults，让调用方拿到 Record<string, any>[]
 export type SqlClient = NeonQueryFunction<false, false>;
 
+/**
+ * Neon HTTP 驱动把 timestamptz 解析成 JS Date——直接 String() 会得到
+ * "Fri Sep 11 2026 ..." 这类无法回代 SQL、也没法 slice(0,10) 做日粒度的串。
+ * 所有行映射里的时间戳一律走这里，统一转成 ISO 字符串。
+ */
+export function iso(value: unknown): string {
+  return value instanceof Date ? value.toISOString() : String(value);
+}
+
 // 单例 cache：避免每次请求都重建 client。仅在 provider URL 切换时失效。
 let cachedUrl: string | null = null;
 let cachedClient: SqlClient | null = null;
