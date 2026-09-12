@@ -15,6 +15,7 @@ export interface ChatSession {
   safetyFlagged: boolean;
   status: string;
   closedAt: string | null; // ISO；存量 closed 行为 NULL
+  createdAt: string; // ISO；历史列表的显示日期兜底（closed_at 为 NULL 的存量行）
 }
 
 /** 初谈轮数硬上限（AI 追问 3-5 轮 + buffer；超限引导生成画像） */
@@ -24,7 +25,7 @@ export const TALK_MAX_USER_MESSAGES = 6;
 export const CHAT_MAX_MESSAGES = 40;
 
 const SESSION_COLUMNS =
-  'id, user_key, locale, kind, message_count, quota_consumed, safety_flagged, status, closed_at';
+  'id, user_key, locale, kind, message_count, quota_consumed, safety_flagged, status, closed_at, created_at';
 
 function rowToSession(row: Record<string, unknown>): ChatSession {
   return {
@@ -37,6 +38,7 @@ function rowToSession(row: Record<string, unknown>): ChatSession {
     safetyFlagged: row.safety_flagged as boolean,
     status: row.status as string,
     closedAt: row.closed_at ? String(row.closed_at) : null,
+    createdAt: String(row.created_at),
   };
 }
 
@@ -50,7 +52,7 @@ export async function createSession(input: {
   await execWithFailover((sql) =>
     sql`INSERT INTO chat_sessions (id, user_key, locale, kind) VALUES (${id}, ${input.userKey}, ${input.locale}, ${input.kind})`
   );
-  return { id, userKey: input.userKey, locale: input.locale, kind: input.kind, messageCount: 0, quotaConsumed: false, safetyFlagged: false, status: 'open', closedAt: null };
+  return { id, userKey: input.userKey, locale: input.locale, kind: input.kind, messageCount: 0, quotaConsumed: false, safetyFlagged: false, status: 'open', closedAt: null, createdAt: new Date().toISOString() };
 }
 
 export async function getSession(sessionId: string): Promise<ChatSession | null> {

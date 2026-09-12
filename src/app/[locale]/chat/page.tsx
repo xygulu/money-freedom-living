@@ -2,6 +2,7 @@
 // 服务端取身份/档案/打开中的会话/配额状态 → 无会话时展示开始卡片
 // （配额用完即付费墙触发点①文案），有会话时直接进入对话间。
 import { headers, cookies } from 'next/headers';
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getDict } from '@/i18n/get-dict';
 import { enabledLocales, isLocale } from '@/i18n/config';
@@ -45,6 +46,9 @@ export default async function chatPage({ params }: { params: Promise<{ locale: s
           remaining={quota.remaining}
         />
       </div>
+      <Link href={`/${locale}/chat/history`} className="mt-8 self-start text-sm text-accent underline underline-offset-4">
+        {dict.chat.historyLink} →
+      </Link>
     </div>
   );
 }

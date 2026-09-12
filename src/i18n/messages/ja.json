@@ -310,6 +310,15 @@
     "endToday": "今日の対話を終える",
     "ended": "今日の対話は終わりました。また明日。",
     "wrapUp": "今日はここまでにしましょう。あなたの話したことは、全部覚えています。また明日。",
-    "safetyNote": "今すぐ危険がある場合は、まず現地の緊急通報に連絡してください。"
+    "safetyNote": "今すぐ危険がある場合は、まず現地の緊急通報に連絡してください。",
+    "historyLink": "過去の対話",
+    "historyTitle": "過去の対話",
+    "historySub": "対話はすべてここに残っています。自分の歩んできた道が見たくなったら、いつでも戻ってきてください。",
+    "historyEmpty": "まだ対話はありません。はじめたくなったとき、ここにあります。",
+    "historyOnboarding": "最初のチェック対話",
+    "historyTalk": "対話",
+    "historyView": "読み返す",
+    "historyBack": "対話一覧",
+    "historyReplayTitle": "あの日の対話"
   }
 }

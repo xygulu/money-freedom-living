@@ -310,6 +310,15 @@
     "endToday": "结束今天的对话",
     "ended": "今天的对话结束了。明天见。",
     "wrapUp": "今天先聊到这里吧。你说的那些，我都记着。明天见。",
-    "safetyNote": "如果你此刻处在紧急危险中，请先拨打当地的急救电话。"
+    "safetyNote": "如果你此刻处在紧急危险中，请先拨打当地的急救电话。",
+    "historyLink": "过往对话",
+    "historyTitle": "过往对话",
+    "historySub": "每一次对话都在这里。想看看自己走了多远的时候，回来翻一翻。",
+    "historyEmpty": "还没有对话。想开始的时候，它就在。",
+    "historyOnboarding": "体检初谈",
+    "historyTalk": "一次对话",
+    "historyView": "回看",
+    "historyBack": "全部对话",
+    "historyReplayTitle": "那天的对话"
   }
 }

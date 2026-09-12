@@ -310,6 +310,15 @@
     "endToday": "結束今天的對話",
     "ended": "今天的對話結束了。明天見。",
     "wrapUp": "今天先聊到這裡吧。你說的那些，我都記著。明天見。",
-    "safetyNote": "如果你此刻處在緊急危險中，請先撥打當地的急救電話。"
+    "safetyNote": "如果你此刻處在緊急危險中，請先撥打當地的急救電話。",
+    "historyLink": "過往對話",
+    "historyTitle": "過往對話",
+    "historySub": "每一次對話都在這裡。想看看自己走了多遠的時候，回來翻一翻。",
+    "historyEmpty": "還沒有對話。想開始的時候，它就在。",
+    "historyOnboarding": "體檢初談",
+    "historyTalk": "一次對話",
+    "historyView": "回看",
+    "historyBack": "全部對話",
+    "historyReplayTitle": "那天的對話"
   }
 }

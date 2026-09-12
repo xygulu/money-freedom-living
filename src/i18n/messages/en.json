@@ -310,6 +310,15 @@
     "endToday": "End today's conversation",
     "ended": "Today's conversation has ended. See you tomorrow.",
     "wrapUp": "Let's stop here for today. Everything you said — I'm keeping it. See you tomorrow.",
-    "safetyNote": "If you are in immediate danger, please contact local emergency services first."
+    "safetyNote": "If you are in immediate danger, please contact local emergency services first.",
+    "historyLink": "Past conversations",
+    "historyTitle": "Past conversations",
+    "historySub": "Every talk is kept here. Come back and reread whenever you want to see how far you have come.",
+    "historyEmpty": "No conversations yet. The first one starts whenever you're ready.",
+    "historyOnboarding": "The first talk",
+    "historyTalk": "A conversation",
+    "historyView": "Read again",
+    "historyBack": "All conversations",
+    "historyReplayTitle": "That day's conversation"
   }
 }
