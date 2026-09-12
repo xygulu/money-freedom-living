@@ -12,13 +12,15 @@ import { getDict } from '@/i18n/get-dict';
 import { enabledLocales, isLocale } from '@/i18n/config';
 import { getJourneyStages, pickDaily, pickExercise } from '@/lib/content';
 import { resolveIdentity } from '@/lib/identity';
-import { getProfile, recordDailySeen } from '@/lib/profile';
+import { getProfile, recordDailySeen, appendStamps } from '@/lib/profile';
 import { isAnchorDay } from '@/lib/anchor';
 import { track } from '@/lib/analytics';
 import { buildTimeline, formatTimelineDay } from '@/lib/timeline';
+import { computeStageProgress, pendingStamps, MAX_STAGE } from '@/lib/stage';
 import MicroActionCard from '@/components/MicroActionCard';
 import AnchorCard from '@/components/AnchorCard';
 import TimelineItemView from '@/components/TimelineItemView';
+import AdvanceCard from '@/components/AdvanceCard';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,6 +52,26 @@ export default async function journeyPage({ params }: { params: Promise<{ locale
   const exercise = pickExercise(locale, today, stage, identity.key);
   const stages = getJourneyStages(locale);
   const letterCount = profile?.letters.length ?? 0;
+
+  // 阶段进度（M9 需求③）：先补发已达标未颁发的心印（appendStamps 按 kind 幂等，
+  // 渲染即颁发——与 recordDailySeen 同一 GET 写库模式），再算灯。
+  // 颁发后同步本地副本，本次渲染立即可见；打点失败绝不阻塞页面。
+  let progress = null;
+  if (profile) {
+    const pending = pendingStamps(profile);
+    if (pending.length > 0) {
+      try {
+        await appendStamps(identity.key, pending);
+        const now = new Date().toISOString();
+        profile.stamps.push(...pending.map((kind) => ({ kind, earnedAt: now })));
+      } catch (error) {
+        console.error('[journey] appendStamps failed:', error);
+      }
+    }
+    progress = computeStageProgress(stage, profile);
+  }
+  const stageStamps = (profile?.stamps ?? []).filter((st) => st.kind.startsWith(`stage${stage}_`));
+  const nextStage = stages.find((s) => s.id === stage + 1) ?? null;
 
   // 「旅程中的我」预览（M9 需求①）：画像/足迹下钻入口 + 最近三步。
   // 无档案（还没体检）不显示——足迹从旅程第一步开始才有东西可看
@@ -179,7 +201,7 @@ export default async function journeyPage({ params }: { params: Promise<{ locale
       <h2 className="mt-14 text-sm tracking-widest text-ink-soft">{dict.journey.stages}</h2>
       <ol className="mt-4 flex flex-col">
         {stages.map((s) => {
-          const locked = s.id === 4;
+          const locked = s.id === MAX_STAGE && s.id !== stage;
           const current = s.id === stage;
           return (
             <li key={s.id} className="border-t border-line py-6">
@@ -191,13 +213,72 @@ export default async function journeyPage({ params }: { params: Promise<{ locale
                   {locked
                     ? dict.common.comingSoon
                     : current
-                      ? dict.journey.currentStage
+                      ? dict.journey.stageWeeksRef.replace('{n}', String(s.weeks))
                       : dict.journey.weeks.replace('{n}', String(s.weeks))}
                 </span>
               </div>
               <p className="mt-2 text-sm leading-relaxed text-ink-soft">{s.goal}</p>
               {current && (
                 <p className="mt-2 text-xs text-accent">● {dict.journey.currentStageNote}</p>
+              )}
+
+              {/* 这个阶段的灯（M9 需求③）：量化已做到的里程碑，未点亮只说「它在等你」。
+                  点亮的灯用心印的见证文案（dict.stamps），未点亮用「这盏灯是什么」（dict.journey）。 */}
+              {current && progress && progress.checks.length > 0 && (
+                <div className="mt-5">
+                  <p className="text-xs tracking-widest text-ink-soft">
+                    {dict.journey.stageLampsLabel} · {progress.litCount}/{progress.checks.length}
+                  </p>
+                  <ul className="mt-3 flex flex-col gap-2">
+                    {progress.checks.map((c) => (
+                      <li key={c.kind} className="text-sm leading-relaxed">
+                        {c.done ? (
+                          <span className="text-accent">
+                            ● {(dict.stamps as unknown as Record<string, string>)[c.kind] ?? c.kind}
+                          </span>
+                        ) : (
+                          <span className="text-ink-soft">
+                            ○ {(dict.journey as unknown as Record<string, string>)[c.labelKey] ?? c.labelKey}
+                          </span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                  {progress.litCount < progress.checks.length && (
+                    <p className="mt-3 text-xs text-ink-soft/70">{dict.journey.stageLampWaiting}</p>
+                  )}
+                </div>
+              )}
+
+              {/* 阶段 4：没有灯，没有终点线——活法是把日子过下去 */}
+              {current && s.id === MAX_STAGE && (
+                <p className="mt-4 border-l-2 border-accent/50 pl-4 text-sm leading-relaxed text-ink-soft">
+                  {dict.journey.stageNoFinishLine}
+                </p>
+              )}
+
+              {/* 本阶段攒下的心印（含进入仪式印），有才显示 */}
+              {current && stageStamps.length > 0 && (
+                <div className="mt-4">
+                  <p className="text-xs tracking-widest text-ink-soft">{dict.journey.stageStampsLabel}</p>
+                  <ul className="mt-2 flex flex-wrap gap-2">
+                    {stageStamps.map((st) => (
+                      <li key={st.kind} className="border border-line px-2.5 py-1 text-xs text-ink-soft">
+                        {(dict.stamps as unknown as Record<string, string>)[st.kind] ?? st.kind}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* 推进提议：三灯全亮才出现；用户确认才推进，「先留」无惩罚 */}
+              {current && progress?.canAdvance && nextStage && (
+                <AdvanceCard
+                  locale={locale}
+                  nextTitle={nextStage.title}
+                  nextRitual={nextStage.ritual}
+                  dict={dict}
+                />
               )}
             </li>
           );
