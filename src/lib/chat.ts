@@ -14,6 +14,7 @@ export interface ChatSession {
   quotaConsumed: boolean;
   safetyFlagged: boolean;
   status: string;
+  closedAt: string | null; // ISO；存量 closed 行为 NULL
 }
 
 /** 初谈轮数硬上限（AI 追问 3-5 轮 + buffer；超限引导生成画像） */
@@ -21,6 +22,23 @@ export const TALK_MAX_USER_MESSAGES = 6;
 
 /** 正式对话轮数上限：20 轮 = 40 条消息（用户+AI），到限温和收尾（P§7"1 次 = 一次对话会话"） */
 export const CHAT_MAX_MESSAGES = 40;
+
+const SESSION_COLUMNS =
+  'id, user_key, locale, kind, message_count, quota_consumed, safety_flagged, status, closed_at';
+
+function rowToSession(row: Record<string, unknown>): ChatSession {
+  return {
+    id: row.id as string,
+    userKey: row.user_key as string,
+    locale: row.locale as string,
+    kind: row.kind as SessionKind,
+    messageCount: row.message_count as number,
+    quotaConsumed: row.quota_consumed as boolean,
+    safetyFlagged: row.safety_flagged as boolean,
+    status: row.status as string,
+    closedAt: row.closed_at ? String(row.closed_at) : null,
+  };
+}
 
 export async function createSession(input: {
   userKey: string;
@@ -32,50 +50,43 @@ export async function createSession(input: {
   await execWithFailover((sql) =>
     sql`INSERT INTO chat_sessions (id, user_key, locale, kind) VALUES (${id}, ${input.userKey}, ${input.locale}, ${input.kind})`
   );
-  return { id, userKey: input.userKey, locale: input.locale, kind: input.kind, messageCount: 0, quotaConsumed: false, safetyFlagged: false, status: 'open' };
+  return { id, userKey: input.userKey, locale: input.locale, kind: input.kind, messageCount: 0, quotaConsumed: false, safetyFlagged: false, status: 'open', closedAt: null };
 }
 
 export async function getSession(sessionId: string): Promise<ChatSession | null> {
   await ensureSchema();
   const rows = await execWithFailover((sql) =>
-    sql`SELECT id, user_key, locale, kind, message_count, quota_consumed, safety_flagged, status
-        FROM chat_sessions WHERE id = ${sessionId}`
+    sql`SELECT ${SESSION_COLUMNS} FROM chat_sessions WHERE id = ${sessionId}`
   );
-  const row = rows[0];
-  if (!row) return null;
-  return {
-    id: row.id as string,
-    userKey: row.user_key as string,
-    locale: row.locale as string,
-    kind: row.kind as SessionKind,
-    messageCount: row.message_count as number,
-    quotaConsumed: row.quota_consumed as boolean,
-    safetyFlagged: row.safety_flagged as boolean,
-    status: row.status as string,
-  };
+  return rows[0] ? rowToSession(rows[0]) : null;
 }
 
 /** 用户当前打开的正式对话会话（同一时刻最多一个；健壮性起见取最新一条） */
 export async function findOpenChatSession(userKey: string): Promise<ChatSession | null> {
   await ensureSchema();
   const rows = await execWithFailover((sql) =>
-    sql`SELECT id, user_key, locale, kind, message_count, quota_consumed, safety_flagged, status
+    sql`SELECT ${SESSION_COLUMNS}
         FROM chat_sessions
         WHERE user_key = ${userKey} AND kind = 'chat' AND status = 'open'
         ORDER BY created_at DESC LIMIT 1`
   );
-  const row = rows[0];
-  if (!row) return null;
-  return {
-    id: row.id as string,
-    userKey: row.user_key as string,
-    locale: row.locale as string,
-    kind: row.kind as SessionKind,
-    messageCount: row.message_count as number,
-    quotaConsumed: row.quota_consumed as boolean,
-    safetyFlagged: row.safety_flagged as boolean,
-    status: row.status as string,
-  };
+  return rows[0] ? rowToSession(rows[0]) : null;
+}
+
+/**
+ * 历史会话列表（M9 聊天回看）：closed 会话按"那天的那次对话"倒序。
+ * 存量行 closed_at 为 NULL，用 created_at 兜底；含初谈（前端打「体检初谈」标签）。
+ */
+export async function listClosedChatSessions(userKey: string, limit = 50): Promise<ChatSession[]> {
+  await ensureSchema();
+  const rows = await execWithFailover((sql) =>
+    sql`SELECT ${SESSION_COLUMNS}
+        FROM chat_sessions
+        WHERE user_key = ${userKey} AND status = 'closed'
+        ORDER BY COALESCE(closed_at, created_at) DESC
+        LIMIT ${limit}`
+  );
+  return rows.map(rowToSession);
 }
 
 export async function appendMessage(sessionId: string, role: 'user' | 'assistant', content: string): Promise<void> {
@@ -104,7 +115,9 @@ export async function getSessionMessages(sessionId: string): Promise<ChatTurn[]>
 
 /** 会话关闭（画像生成完成后初谈不再可写） */
 export async function closeSession(sessionId: string): Promise<void> {
-  await execWithFailover((sql) => sql`UPDATE chat_sessions SET status = 'closed' WHERE id = ${sessionId}`);
+  await execWithFailover((sql) =>
+    sql`UPDATE chat_sessions SET status = 'closed', closed_at = now() WHERE id = ${sessionId}`
+  );
 }
 
 /**
@@ -114,7 +127,7 @@ export async function closeSession(sessionId: string): Promise<void> {
  */
 export async function claimSession(sessionId: string): Promise<boolean> {
   const rows = await execWithFailover((sql) =>
-    sql`UPDATE chat_sessions SET status = 'closed' WHERE id = ${sessionId} AND status = 'open' RETURNING id`
+    sql`UPDATE chat_sessions SET status = 'closed', closed_at = now() WHERE id = ${sessionId} AND status = 'open' RETURNING id`
   );
   return rows.length > 0;
 }

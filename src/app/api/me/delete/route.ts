@@ -1,6 +1,6 @@
 // POST /api/me/delete：删除账号（删除权，docs/02 §9「删除权级联承诺」）。
-// 级联范围：业务表（growth_profiles/对话会话与原文/日记/安全事件/事件/同意记录，
-// user_key 无外键须手动删）→ 认证表（session/account，entitlements 与 subscriptions
+// 级联范围：业务表（growth_profiles/画像版本快照/对话会话与原文/日记/安全事件/
+// 事件/同意记录，user_key 无外键须手动删）→ 认证表（session/account，entitlements 与 subscriptions
 // 随 "user" 行外键 CASCADE）。删除前打一条 account_deleted 事件（含在删除范围里，
 // 只是审计口径：用户此前存在过）。删除后登录态全失效（session 表行已清）。
 // 备份滚动清除与模型 provider 零保留承诺在 /privacy 政策文本中写明。
@@ -31,6 +31,7 @@ export async function POST(request: NextRequest) {
 
     // 业务表（无外键，手动级联；chat_messages 随 chat_sessions 外键 CASCADE）
     await sql`DELETE FROM growth_profiles WHERE user_key = ${userKey}`;
+    await sql`DELETE FROM portrait_versions WHERE user_key = ${userKey}`;
     await sql`DELETE FROM chat_sessions WHERE user_key = ${userKey}`;
     await sql`DELETE FROM journal_entries WHERE user_key = ${userKey}`;
     await sql`DELETE FROM safety_events WHERE user_key = ${userKey}`;

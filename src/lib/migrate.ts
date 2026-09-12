@@ -28,6 +28,13 @@ export async function migrateGuestData(guestKey: string, userKey: string): Promi
   } else {
     await sql`DELETE FROM growth_profiles WHERE user_key = ${guestKey}`;
   }
+  // 1b. 画像版本快照与档案同进同出（有 UNIQUE (user_key, version)，账号已有版本行时
+  //     直接换 key 会撞唯一约束）：无档案 → 换 key；有档案 → 随游客档案一起放弃
+  if (hasTarget.length === 0) {
+    await sql`UPDATE portrait_versions SET user_key = ${userKey} WHERE user_key = ${guestKey}`;
+  } else {
+    await sql`DELETE FROM portrait_versions WHERE user_key = ${guestKey}`;
+  }
   // 2. 其余表：无唯一约束，直接换 key（0 行 = 游客期没产生数据，同样幂等）。
   //    表名是上面白名单常量（Neon HTTP 驱动不支持标识符参数化，但这里无外部输入）
   await sql`UPDATE chat_sessions SET user_key = ${userKey} WHERE user_key = ${guestKey}`;

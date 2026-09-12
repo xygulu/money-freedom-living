@@ -78,7 +78,8 @@ export async function settleSession(userKey: string, locale: Locale, sessionId: 
   const digest = await buildSessionDigest(locale, turns);
   if (!digest) return;
   await ensureProfile(userKey, locale);
-  const entry: SessionMemory = { date: new Date().toISOString().slice(0, 10), text: digest.summary };
+  // sessionId 让时间线的对话摘要能跳回原文回看页（存量条目无此字段，渲染为不可点）
+  const entry: SessionMemory = { date: new Date().toISOString().slice(0, 10), text: digest.summary, sessionId };
   await appendMemories(userKey, [entry]);
   if (digest.pinned.length > 0) await addPinned(userKey, digest.pinned);
 }

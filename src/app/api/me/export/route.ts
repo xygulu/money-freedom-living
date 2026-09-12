@@ -1,6 +1,6 @@
 // GET /api/me/export：导出本人全部数据（GDPR/CCPA 数据可携权，docs/02 §9）。
-// 下载一份 JSON：账号信息 + 成长档案（画像/微行动/信件/一签记录）+ 日记原文 +
-// 全部对话原文。原文只给本人（这是删除权与可携权的"权利"主体）。
+// 下载一份 JSON：账号信息 + 成长档案（画像/微行动/信件/一签记录）+ 画像版本快照 +
+// 日记原文 + 全部对话原文。原文只给本人（这是删除权与可携权的"权利"主体）。
 import { NextRequest } from 'next/server';
 import { auth } from '@/lib/auth';
 import { getProfile } from '@/lib/profile';
@@ -33,6 +33,11 @@ export async function GET(request: NextRequest) {
       JOIN chat_sessions s ON s.id = m.session_id
       WHERE s.user_key = ${userKey} ORDER BY m.id
     `;
+    // 画像历代快照（含当前版）：可携权要求"演进过程"同样可带走
+    const portraitVersions = await getSql()`
+      SELECT version, portrait, source, material, created_at
+      FROM portrait_versions WHERE user_key = ${userKey} ORDER BY version
+    `;
 
     const payload = {
       format: 'money-freedom-living-export/v1',
@@ -54,6 +59,7 @@ export async function GET(request: NextRequest) {
           }
         : null,
       journal,
+      portraitVersions,
       conversations: { sessions, messages },
     };
 

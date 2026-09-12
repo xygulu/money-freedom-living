@@ -169,6 +169,11 @@ async function doMigrate(): Promise<void> {
   // 存量库补列（CREATE TABLE IF NOT EXISTS 不会给已存在的表加列）
   await sql`ALTER TABLE chat_sessions ADD COLUMN IF NOT EXISTS safety_flagged BOOLEAN NOT NULL DEFAULT false`;
   await sql`ALTER TABLE growth_profiles ADD COLUMN IF NOT EXISTS daily_seen JSONB NOT NULL DEFAULT '[]'`;
+  // 会话关闭时刻：历史列表按"那天的那次对话"排序用；存量 closed 行为 NULL，读侧 COALESCE(closed_at, created_at)
+  await sql`ALTER TABLE chat_sessions ADD COLUMN IF NOT EXISTS closed_at TIMESTAMPTZ`;
+  // 画像演进状态（dismissedAt/lastGeneratedAt/proposedSeenAt/generatingAt）。
+  // 不放 portrait JSONB——calibrate 的 savePortrait 整体覆盖会把它抹掉
+  await sql`ALTER TABLE growth_profiles ADD COLUMN IF NOT EXISTS portrait_evolution JSONB NOT NULL DEFAULT '{}'`;
   await sql`CREATE INDEX IF NOT EXISTS idx_chat_sessions_user ON chat_sessions(user_key, created_at DESC)`;
 
   // 对话原文只存这里（用户可删）；日志/safety_events 不含原文（P§9 日志纪律）
@@ -212,6 +217,23 @@ async function doMigrate(): Promise<void> {
     )
   `;
   await sql`CREATE INDEX IF NOT EXISTS idx_journal_entries_user ON journal_entries(user_key, created_at DESC)`;
+
+  // 画像版本快照（docs/02「画像不是一次性的」）：收录所有版本含当前版；
+  // growth_profiles.portrait 是当前版的反规范化副本。UNIQUE 保证懒回填/并发演进幂等。
+  // 原文快照属于用户内容：导出/删除/游客迁移三处级联必须同步（M9）。
+  await sql`
+    CREATE TABLE IF NOT EXISTS portrait_versions (
+      id BIGSERIAL PRIMARY KEY,
+      user_key TEXT NOT NULL,
+      version INT NOT NULL,
+      portrait JSONB NOT NULL,
+      source TEXT NOT NULL,               -- 'onboarding' | 'evolve' | 'backfill'
+      material JSONB NOT NULL DEFAULT '{}', -- 该版基于多少新素材 {memories, journals, experiments, daysSince}
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      UNIQUE (user_key, version)
+    )
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS idx_portrait_versions_user ON portrait_versions(user_key, version DESC)`;
 
   // 使用事件（docs/02 §11 验收指标）：只存匿名 user_key + 事件名 + 脱敏元数据，
   // 不存任何用户文本原文（P§9 日志纪律）。user_key 本身不含 PII（u:<uuid>/g:<随机 hex>）。
