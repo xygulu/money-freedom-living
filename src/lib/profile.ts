@@ -430,12 +430,13 @@ export async function bumpActiveDay(userKey: string): Promise<void> {
  */
 export async function appendStamps(userKey: string, kinds: string[]): Promise<void> {
   const valid = kinds.filter((k) => k.trim());
-  if (valid.length === 0) return;
   const incoming = valid.map((k) => ({ kind: k, earnedAt: new Date().toISOString() }));
   // 单条 UPDATE 原子幂等：候选 = 现有 ++ 本次待颁，DISTINCT ON (kind) 只留首现
   // （原有元素的 earnedAt 自然保留）。此前的应用层 read-filter-write 不是原子的，
   // 双标签页/预取并发渲染会各自追加，写出重复 kind（React key 冲突的来源）；
-  // 并发时后到者在行锁上等待，基于最新行版本计算，不会重复。历史重复行也顺带治愈。
+  // 并发时后到者在行锁上等待，基于最新行版本计算，不会重复。
+  // 空 kinds 不早退：确认时 newlyLit 常为空（灯早已入档），这正是清理历史
+  // 重复行的时机——跳过会让「自愈存量」永远轮不到执行。
   await execWithFailover((sql: SqlClient) =>
     sql`UPDATE growth_profiles
         SET stamps = (
