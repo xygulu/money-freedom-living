@@ -53,6 +53,9 @@ export async function GET(request: NextRequest) {
             memories: profile.memories,
             experiments: profile.experiments,
             letters: profile.letters,
+            stamps: profile.stamps,
+            // 阶段评估（含每次点亮的依据与镜子式总结）：评估结果属用户内容，可携权带走
+            assessment: profile.assessment,
             dailySeen: profile.dailySeen,
             payday: profile.payday,
             totalActiveDays: profile.total_active_days,

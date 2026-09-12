@@ -73,15 +73,17 @@ export function validateAssessment(draft: unknown, stage: number): Omit<StageAss
     const r = raw as Record<string, unknown>;
     if (typeof r.kind !== 'string' || typeof r.lit !== 'boolean') return null;
     if (byKind.has(r.kind)) return null; // 重复 kind
-    const evidence = typeof r.evidence === 'string' ? r.evidence.trim().slice(0, 200) : '';
+    const evidence = typeof r.evidence === 'string' ? r.evidence.trim().slice(0, 300) : '';
     if (r.lit && !evidence) return null; // 点亮必须有依据
     byKind.set(r.kind, { lit: r.lit, evidence: r.lit ? evidence : '' });
   }
   if (byKind.size !== rules.length || rules.some((rule) => !byKind.has(rule.kind))) return null;
 
   const summary = typeof d.summary === 'string' ? d.summary.trim() : '';
-  if (summary.length < 10 || summary.length > 400) return null;
-  const nextHint = typeof d.nextHint === 'string' ? d.nextHint.trim().slice(0, 200) : '';
+  // 上限是防失控的结构边界（中文 200 字 ≈ 200 字符，英文 120 词 ≈ 800 字符），
+  // 风格长度由 prompt 的语言感知规则约束（见 buildAssessMessages）
+  if (summary.length < 10 || summary.length > 800) return null;
+  const nextHint = typeof d.nextHint === 'string' ? d.nextHint.trim().slice(0, 300) : '';
   if (!nextHint) return null;
 
   const lamps: AssessmentLamp[] = rules.map((rule) => {
@@ -150,6 +152,11 @@ export function buildAssessMessages(
   const stageBlock = (s: JourneyStage) =>
     `【阶段 ${s.id} · ${s.title}】\n- 这个阶段的样子：${s.goal}\n- 走到下一阶段的标志：${s.advance_when.join('；')}`;
 
+  // 长度规则语言感知：中文按字数、英文按词数——否则英文输出按字符校验必然爆上限
+  const summaryLen = locale === 'en' ? '60-120 words' : '80-200 字';
+  const evidenceLen = locale === 'en' ? '80 words or fewer' : '120 字以内';
+  const nextLen = locale === 'en' ? '30 words or fewer' : '40 字以内';
+
   const system = [
     `你是这段旅程的见证者。你要评估的不是用户操作了多少次、完成了多少任务，而是他从说过的话、写下的事里，实际表现出的认知与行为——他真实走到了旅程的哪个位置。全程用${lang}书写。`,
     '',
@@ -164,9 +171,9 @@ export function buildAssessMessages(
     '输出（严格遵守，不要输出 JSON 以外的内容）：',
     '{',
     `  "actualStage": ${stage} 或 ${Math.min(stage + 1, MAX_STAGE)} 的数字——他实际所处的阶段；认为他已在下一阶段门口才写下一阶段`,
-    '  "lamps": [{"kind": "灯的 kind，与上方清单逐字一致", "lit": true 或 false, "evidence": "点亮依据：引用他的原话或具体的事，120 字以内；没点亮就留空字符串"}]，全部灯都要给，顺序不限',
-    '  "summary": "它看到的你：第二人称，80-200 字，镜子式的描述——说你在哪里、什么在松动，不评判不打分",',
-    '  "nextHint": "下一阶段在远处长什么样：一句话，40 字以内；他已在门口就直说，还没到就诚实描述那段路",',
+    `  "lamps": [{"kind": "灯的 kind，与上方清单逐字一致", "lit": true 或 false, "evidence": "点亮依据：引用他的原话或具体的事，${evidenceLen}；没点亮就留空字符串"}]，全部灯都要给，顺序不限`,
+    `  "summary": "它看到的你：第二人称，${summaryLen}，镜子式的描述——说你在哪里、什么在松动，不评判不打分",`,
+    `  "nextHint": "下一阶段在远处长什么样：一句话，${nextLen}；他已在门口就直说，还没到就诚实描述那段路",`,
     '}',
     '',
     '红线：',

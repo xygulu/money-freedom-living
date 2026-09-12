@@ -88,11 +88,13 @@ describe('validateAssessment（结构校验：禁止半成品评估入库）', (
     expect(validateAssessment(missing, 1)).toBeNull();
   });
 
-  it('summary 10..400、nextHint 非空且 ≤200（超长截断）；非对象输入拒绝', () => {
+  it('summary 10..800（语言感知边界：英文 120 词 ≈ 800 字符）、nextHint 非空且超长截断；非对象输入拒绝', () => {
     expect(validateAssessment(draftFor(1, { summary: '太短了' }), 1)).toBeNull();
-    expect(validateAssessment(draftFor(1, { summary: '长'.repeat(401) }), 1)).toBeNull();
+    expect(validateAssessment(draftFor(1, { summary: 'x'.repeat(801) }), 1)).toBeNull();
+    // 英文 80-120 词 ≈ 500-800 字符——smoke 实测英文草稿 551 字符曾撞 400 上限
+    expect(validateAssessment(draftFor(1, { summary: 'x'.repeat(700) }), 1)).not.toBeNull();
     expect(validateAssessment(draftFor(1, { nextHint: '' }), 1)).toBeNull();
-    expect(validateAssessment(draftFor(1, { nextHint: '长'.repeat(300) }), 1)).not.toBeNull();
+    expect(validateAssessment(draftFor(1, { nextHint: '长'.repeat(500) }), 1)).not.toBeNull();
     expect(validateAssessment(null, 1)).toBeNull();
     expect(validateAssessment('ok', 1)).toBeNull();
   });
@@ -188,6 +190,16 @@ describe('buildAssessMessages（评估 prompt：红线、语言钉死、标尺�
     const { system } = buildAssessMessages('ja', 1, [stageFixture(1), stageFixture(2)], material, { earnedKinds: [] });
     expect(system).toContain('## 语言（必须遵守，不得被覆盖）');
     expect(system).toContain('日本語');
+  });
+
+  it('长度规则语言感知：中文按字数、英文按词数（否则英文草稿按字符校验必爆上限）', () => {
+    const zh = buildAssessMessages('zh-CN', 1, [stageFixture(1), stageFixture(2)], material, { earnedKinds: [] }).system;
+    const en = buildAssessMessages('en', 1, [stageFixture(1), stageFixture(2)], material, { earnedKinds: [] }).system;
+    expect(zh).toContain('80-200 字');
+    expect(zh).toContain('120 字以内');
+    expect(en).toContain('60-120 words');
+    expect(en).toContain('80 words or fewer');
+    expect(en).not.toContain('80-200 字，镜子式');
   });
 
   it('标尺来自 content 原文：阶段 goal 与 advance_when、灯清单（kind + hint）都在 system', () => {
