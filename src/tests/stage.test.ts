@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { computeStageProgress, STAGE_LAMPS, MAX_STAGE } from '@/lib/stage';
+import { computeStageProgress, stageLampScales, STAGE_LAMPS, MAX_STAGE } from '@/lib/stage';
 import type { GrowthProfile } from '@/lib/profile';
 
 // M9 需求③语义修正版：灯 = 认知/行为里程碑，点亮真值是 stamps（评估确认时颁发）。
@@ -83,5 +83,31 @@ describe('computeStageProgress（stamps 即点亮真值）', () => {
     expect(computeStageProgress(4, p)).toEqual({ checks: [], litCount: 0 });
     expect(computeStageProgress(0, p).checks).toHaveLength(0);
     expect(computeStageProgress(9, p).checks).toHaveLength(0);
+  });
+});
+
+describe('stageLampScales（四段刻度：进度条心印刻度的真值）', () => {
+  it('各段 lit/total 按该段灯集统计；混入 stage4_entered 与重复 kind 不多算', () => {
+    const p = profile({
+      stamps: stamps(['stage1_story', 'stage1_story', 'stage1_color', 'stage2_claim', 'stage4_entered']),
+    });
+    expect(stageLampScales(p)).toEqual([
+      { id: 1, lit: 2, total: 3 },
+      { id: 2, lit: 1, total: 3 },
+      { id: 3, lit: 0, total: 2 },
+      { id: 4, lit: 0, total: 0 },
+    ]);
+  });
+
+  it('空 stamps 全零刻度；stage4 total 恒 0（无灯无终点线，进度条整段淡色）', () => {
+    const empty = stageLampScales(profile());
+    expect(empty.map((s) => s.lit)).toEqual([0, 0, 0, 0]);
+    expect(empty[3]).toEqual({ id: 4, lit: 0, total: 0 });
+    // 全点亮：三段满、第四段仍 0
+    const all = profile({
+      stage: 4,
+      stamps: stamps(['stage1_story', 'stage1_script', 'stage1_color', 'stage2_claim', 'stage2_try', 'stage2_voice', 'stage3_seven', 'stage3_review']),
+    });
+    expect(stageLampScales(all).map((s) => [s.lit, s.total])).toEqual([[3, 3], [3, 3], [2, 2], [0, 0]]);
   });
 });

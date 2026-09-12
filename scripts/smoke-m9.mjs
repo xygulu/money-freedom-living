@@ -2,11 +2,14 @@
 // /timeline 六类节点 → 聊天回看越权 404 → 演进提议判定/首现埋点/dismiss 冷却 →
 // 阶段评估流（渲染不再发印=stamps 真值回归锚点；提议首现/幂等；assess generate
 // 并发恰一次、真生成或 502 fail-safe；SQL 注入确定性 pending → review 渲染含
-// 种子依据 → confirm 加印 → advance 200 + 仪式印；越权推进 403/404；dismiss 冷却；
-// 旧 advance 端点 404）→ evolve generate（并发恰一次；真生成 v2 / 无 LLM 502
-// fail-safe）→ /portrait?version= 历史快照 → /portrait/compare 并排 →
+// 种子依据与诊断报告三件套 → confirm 加印 + 常驻报告块 → advance 200 + 仪式印；
+// 心印刻度进度条 data-segment width% / data-lamp-count；越权推进 403/404；dismiss
+// 冷却；旧 advance 端点 404；⑤b 首评前置：体检零素材 → offer 卡 → generate 非 403
+// → confirm 落 confirmedAt → 卡消失）→ evolve generate（并发恰一次；真生成 v2 /
+// 无 LLM 502 fail-safe）→ /portrait?version= 历史快照 → /portrait/compare 并排 →
 // 导出含 portraitVersions → 级联删除归零。文案断言全部用数据驱动边界
-// （种子内容/href）——RSC flight 会把整份词典序列化进 HTML，grep 词典文案必假阳性。
+// （种子内容/href/data-* 属性）——RSC flight 会把整份词典序列化进 HTML，
+// grep 词典文案必假阳性。
 // 运行：dev server 在 3000 + node --env-file=.env.local scripts/smoke-m9.mjs
 import { neon } from '@neondatabase/serverless';
 import * as crypto from 'crypto';
@@ -195,10 +198,14 @@ if (asWinner.status === 200) {
   console.log('⚠ LLM 未成功（token 缺失或上游故障），评估走 fail-safe 分支断言');
 }
 
-// SQL 注入确定性 pending（不依赖 LLM 断言确认流）：两盏点亮带种子依据、一盏未点亮
+// SQL 注入确定性 pending（不依赖 LLM 断言确认流）：两盏点亮带种子依据、一盏未点亮；
+// 诊断式报告三件套（diagnosis/distance/actions）用种子文本断言渲染与确认后落库
 const EVIDENCE_A = 'M9 评估依据：它记得你第一次没带伞也走了';
 const EVIDENCE_B = 'M9 评估依据：你说不是债，是怕花完就没';
-const injectPending = async (actualStage) => {
+const DIAG_SEED = 'M9 诊断种子：没带伞的那个晚上，把「不配」拧成了底色。';
+const DIST_SEED = 'M9 距离种子：你已经敢看这个故事，前面还有几段练习的路标。';
+const ACTION_SEED = 'M9 行动种子：这周把那个场景原样讲给它听一次。';
+const injectPending = async (userKey, actualStage) => {
   const lamps = [
     { kind: 'stage1_story', lit: true, evidence: EVIDENCE_A },
     { kind: 'stage1_script', lit: true, evidence: EVIDENCE_B },
@@ -208,32 +215,44 @@ const injectPending = async (actualStage) => {
     actualStage,
     lamps,
     summary: 'M9 评估总结：它看到你把故事和态度都拿了出来。',
+    diagnosis: DIAG_SEED,
+    distance: DIST_SEED,
+    actions: [ACTION_SEED, 'M9 行动种子：写下一句想对自己说的话。'],
     nextHint: 'M9 下一阶段：再往前一步。',
     assessedAt: new Date().toISOString(),
   };
-  await sql`UPDATE growth_profiles SET stage_assessment = jsonb_set(stage_assessment, '{pending}', ${JSON.stringify(pending)}::jsonb) WHERE user_key = ${main.key}`;
+  await sql`UPDATE growth_profiles SET stage_assessment = jsonb_set(stage_assessment, '{pending}', ${JSON.stringify(pending)}::jsonb) WHERE user_key = ${userKey}`;
 };
-await injectPending(1);
+await injectPending(main.key, 1);
 const reviewHtml = await (await get('/en/journey', main.cookie)).text();
-check('review 卡渲染含种子评估依据（数据驱动断言）', reviewHtml.includes(EVIDENCE_A) && reviewHtml.includes(EVIDENCE_B));
+check(
+  'review 卡渲染含种子依据与诊断报告三件套（数据驱动断言）',
+  reviewHtml.includes(EVIDENCE_A) && reviewHtml.includes(EVIDENCE_B) &&
+    reviewHtml.includes(DIAG_SEED) && reviewHtml.includes(DIST_SEED) && reviewHtml.includes(ACTION_SEED)
+);
 
 const confirmRes = await post('/api/journey/assess', { locale: 'en', action: 'confirm' }, main.cookie);
 let kinds = await stampsAfter();
 asmt = await assessmentOf();
 check(
-  'confirm 200 → 新点亮 stage1_script 入档（story 不重复）、pending 清空、confirmed/confirmedAt 落库',
+  'confirm 200 → 新点亮 stage1_script 入档（story 不重复）、pending 清空、confirmed/confirmedAt 落库（报告三件套随行）',
   confirmRes.status === 200 && JSON.stringify(kinds) === JSON.stringify(['stage1_script', 'stage1_story']) &&
-    !asmt.pending && asmt.confirmed?.actualStage === 1 && Boolean(asmt.confirmedAt),
+    !asmt.pending && asmt.confirmed?.actualStage === 1 && asmt.confirmed?.diagnosis === DIAG_SEED && Boolean(asmt.confirmedAt),
   `status=${confirmRes.status} stamps=${JSON.stringify(kinds)} ${JSON.stringify({ hasConfirmed: Boolean(asmt.confirmed), confirmedAt: Boolean(asmt.confirmedAt) })}`
+);
+const afterConfirmHtml = await (await get('/en/journey', main.cookie)).text();
+check(
+  '确认后 journey 常驻报告块渲染三件套（它看见的你：诊断/距离/行动）',
+  afterConfirmHtml.includes(DIAG_SEED) && afterConfirmHtml.includes(DIST_SEED) && afterConfirmHtml.includes(ACTION_SEED)
 );
 
 // advance 防绕：评估说还在原阶段 → 403
-await injectPending(1);
+await injectPending(main.key, 1);
 const advanceNotReady = await post('/api/journey/assess', { locale: 'en', action: 'advance' }, main.cookie);
 check('actualStage≤stage 的 advance → 403 advance_not_ready', advanceNotReady.status === 403, `status=${advanceNotReady.status}`);
 
 // advance：评估说到了下一阶段门口 → 推进仪式
-await injectPending(2);
+await injectPending(main.key, 2);
 const advanced = await post('/api/journey/assess', { locale: 'en', action: 'advance' }, main.cookie);
 kinds = await stampsAfter();
 const stageRow = (await sql`SELECT stage FROM growth_profiles WHERE user_key = ${main.key}`)[0];
@@ -246,6 +265,19 @@ check(
 const advanceAgain = await post('/api/journey/assess', { locale: 'en', action: 'advance' }, main.cookie);
 check('无 pending 的 advance → 404', advanceAgain.status === 404, `status=${advanceAgain.status}`);
 
+// 心印刻度进度条（数据驱动锚点）：stage=2，灯 = stage1×2 + stage2×0 + 仪式印不进刻度
+// seg1 2/3 → Math.round(66.7)=67%；seg2 0/3 → 0%；右值当前阶段「0/3」
+const seg = (html, id) => {
+  const start = html.indexOf(`data-segment="${id}"`);
+  if (start === -1) return '';
+  const next = html.indexOf('data-segment=', start + 1);
+  return html.slice(start, next === -1 ? start + 2000 : next);
+};
+const barHtml = await (await get('/en/journey', main.cookie)).text();
+check('进度条 seg1 按实际点亮比例填充（2/3 → width:67%）', seg(barHtml, 1).includes('width:67%'), seg(barHtml, 1).match(/width:\d+%/) ?? 'no width');
+check('进度条 seg2 尚未点亮（width:0%）', seg(barHtml, 2).includes('width:0%'));
+check('进度条右值 = 当前阶段灯数 data-lamp-count="0/3"', barHtml.includes('data-lamp-count="0/3"'));
+
 // dismiss → 冷却；冷却内 generate 403；旧 advance 端点已删 → 404
 const dismissRes = await post('/api/journey/assess', { locale: 'en', action: 'dismiss' }, main.cookie);
 asmt = await assessmentOf();
@@ -254,6 +286,53 @@ const asgInCooldown = await post('/api/journey/assess', { locale: 'en', action: 
 check('冷却内 generate → 403 assess_not_proposed', asgInCooldown.status === 403, `status=${asgInCooldown.status}`);
 const oldAdvance = await post('/api/journey/advance', { locale: 'en' }, main.cookie);
 check('旧 /api/journey/advance 端点已删 → 404', oldAdvance.status === 404, `status=${oldAdvance.status}`);
+
+// ───────────────────── ⑤b 首评前置：体检完零素材也评估 ─────────────────────
+console.log('\n—— ⑤b 首评前置：新号种子画像 + 全空素材 → offer 卡 → generate 非 403 → confirm 落 confirmedAt ——');
+const first = await signUp('first');
+const firstPortrait = {
+  questionnaire: { script_source: 'M9 首评问卷：小时候家里为钱吵过', concerns_seed: 'M9 首评问卷：一发钱就心慌' },
+  spoken: ['M9 首评原话：我一花钱就有罪恶感'],
+  baseColor: 'M9 首评底色：总觉得自己不配',
+  moments: [],
+  script: '也许钱是要还的债',
+  toFuture: '',
+  version: 1,
+  calibrations: [],
+  scriptStatus: 'pending',
+  createdAt: daysAgo(1),
+};
+await sql`
+  INSERT INTO growth_profiles (user_key, locale, portrait, concerns, stage, stage_started_at,
+    pinned, memories, experiments, letters, stamps, portrait_evolution, stage_assessment, created_at, daily_seen)
+  VALUES (${first.key}, 'en', ${JSON.stringify(firstPortrait)}::jsonb, '[]'::jsonb, 1, ${daysAgo(1)},
+    '[]'::jsonb, '[]'::jsonb, '[]'::jsonb, '[]'::jsonb, '[]'::jsonb, '{}'::jsonb, '{}'::jsonb, ${daysAgo(1)}, '[]'::jsonb)`;
+const firstAssessmentOf = () =>
+  sql`SELECT stage_assessment FROM growth_profiles WHERE user_key = ${first.key}`.then((r) => r[0].stage_assessment ?? {});
+
+const fj1 = await (await get('/en/journey', first.cookie)).text();
+let fasmt = await firstAssessmentOf();
+check('首评：体检后零素材零天数 → offer 卡渲染（data-assess-offer）', fj1.includes('data-assess-offer'));
+check('首评：proposedSeenAt 首现落库', Boolean(fasmt.proposedSeenAt), JSON.stringify(fasmt));
+
+const fGen = await post('/api/journey/assess', { locale: 'en', action: 'generate' }, first.cookie);
+check(
+  '首评 generate 不被素材闸拦（200 真生成 / 502 fail-safe，绝不是 403）',
+  fGen.status === 200 || fGen.status === 502,
+  `status=${fGen.status}`
+);
+
+// 注入确定性 pending 再 confirm（不依赖 LLM 产出），确认后 confirmedAt 关闭首评闸
+await injectPending(first.key, 1);
+const fConfirm = await post('/api/journey/assess', { locale: 'en', action: 'confirm' }, first.cookie);
+fasmt = await firstAssessmentOf();
+check(
+  '首评 confirm 200 → confirmedAt 落库（首评闸关闭）、pending 清空',
+  fConfirm.status === 200 && Boolean(fasmt.confirmedAt) && !fasmt.pending,
+  `status=${fConfirm.status} ${JSON.stringify({ confirmedAt: Boolean(fasmt.confirmedAt), hasPending: Boolean(fasmt.pending) })}`
+);
+const fj2 = await (await get('/en/journey', first.cookie)).text();
+check('首评确认后 offer 卡消失（confirmedAt 非空 + 零素材 → 不再提议）', !fj2.includes('data-assess-offer'));
 
 // ───────────────────── ⑥ evolve generate：并发恰一次；真生成或 fail-safe ─────────────────────
 console.log('\n—— ⑥ 画像演进：解除冷却后 generate（并发恰一次非 429）——');
@@ -321,6 +400,11 @@ check(
 );
 const strangerDel = await post('/api/me/delete', { confirm: 'DELETE' }, stranger.cookie);
 check('越权测试号一并清理', strangerDel.status === 200);
+const firstDel = await post('/api/me/delete', { confirm: 'DELETE' }, first.cookie);
+const firstLeft = await sql`
+  SELECT (SELECT count(*)::int FROM growth_profiles WHERE user_key = ${first.key}) AS p,
+         (SELECT count(*)::int FROM "user" WHERE id = ${first.userId}) AS u`;
+check('首评测试号一并清理（档案/账号归零）', firstDel.status === 200 && firstLeft[0].p === 0 && firstLeft[0].u === 0, JSON.stringify(firstLeft[0]));
 
 console.log(failures === 0 ? '\n全部通过 ✅' : `\n${failures} 处失败 ❌`);
 process.exit(failures === 0 ? 0 : 1);

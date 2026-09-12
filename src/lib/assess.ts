@@ -33,7 +33,10 @@ const DAY_MS = 86_400_000;
 
 /**
  * 是否该亮出阶段评估提议。锁未过期 / 冷却期内 / 有待确认的新评估 → 不亮；
- * pending 超 TTL 视为遗留物不再阻塞。素材闸：新素材 ≥3 条，或 ≥14 天且有任意新素材。
+ * pending 超 TTL 视为遗留物不再阻塞。首评闸：从未确认过任何评估（confirmedAt 为空）
+ * → 体检画像本身就是评估素材（阶段 1 三盏灯的判定 hint 本就对应问卷原话/spoken/
+ * moments/baseColor/旧脚本），不受素材闸限制——否则新用户在攒够 3 条素材前永远
+ * 没有第一次评估。素材闸：新素材 ≥3 条，或 ≥14 天且有任意新素材。
  */
 export function shouldOfferAssess(
   profile: GrowthProfile,
@@ -47,6 +50,7 @@ export function shouldOfferAssess(
   if (state.generatingAt && now - Date.parse(state.generatingAt) < ASSESS_LOCK_MS) return false;
   if (state.dismissedAt && now - Date.parse(state.dismissedAt) < ASSESS_DISMISS_COOLDOWN_DAYS * DAY_MS) return false;
   if (state.pending && now - Date.parse(state.pending.assessedAt) < ASSESS_PENDING_TTL_DAYS * DAY_MS) return false;
+  if (!state.confirmedAt) return true; // 首评闸：只看是否确认过——冷却过期仍会再提，pending 超 TTL 可覆盖重评
   const material = counts.memories + counts.journals + counts.experiments;
   if (material >= ASSESS_MIN_MATERIAL) return true;
   return counts.daysSince >= ASSESS_MIN_DAYS && material > 0;
@@ -83,6 +87,16 @@ export function validateAssessment(draft: unknown, stage: number): Omit<StageAss
   // 上限是防失控的结构边界（中文 200 字 ≈ 200 字符，英文 120 词 ≈ 800 字符），
   // 风格长度由 prompt 的语言感知规则约束（见 buildAssessMessages）
   if (summary.length < 10 || summary.length > 800) return null;
+
+  // 诊断式报告三件套：为什么是这里 / 离活法多远 / 下一步做什么（缺一不可）
+  const diagnosis = typeof d.diagnosis === 'string' ? d.diagnosis.trim() : '';
+  if (diagnosis.length < 10 || diagnosis.length > 800) return null;
+  const distance = typeof d.distance === 'string' ? d.distance.trim() : '';
+  if (distance.length < 10 || distance.length > 600) return null;
+  if (!Array.isArray(d.actions) || d.actions.length < 1 || d.actions.length > 4) return null;
+  const actions = d.actions.map((a) => (typeof a === 'string' ? a.trim() : '')).filter(Boolean);
+  if (actions.length !== d.actions.length || actions.some((a) => a.length > 200)) return null;
+
   const nextHint = typeof d.nextHint === 'string' ? d.nextHint.trim().slice(0, 300) : '';
   if (!nextHint) return null;
 
@@ -90,12 +104,28 @@ export function validateAssessment(draft: unknown, stage: number): Omit<StageAss
     const e = byKind.get(rule.kind);
     return { kind: rule.kind, lit: e!.lit, evidence: e!.evidence };
   });
-  return { actualStage, lamps, summary, nextHint };
+  return { actualStage, lamps, summary, diagnosis, distance, actions, nextHint };
 }
 
 // ---------- prompt ----------
 
+/** 体检画像中可作为评估证据的部分（不参与基线过滤——画像是当前态）。
+ *  choice 类问卷答案不进：选项码无语义，且 stage1_color 的 hint 明写「不是被问才
+ *  挤出一句」，喂自报选项会诱导违规点灯；toFuture 是愿望不是表现出的认知，不进。 */
+export interface PortraitEvidence {
+  scriptSource?: string; // questionnaire.script_source：童年金钱场景原文
+  concernsSeed?: string; // questionnaire.concerns_seed：最近的担心原文
+  spoken: string[]; // 用户原话直接引用
+  moments: { title: string; detail: string }[];
+  baseColor: string; // 金钱底色（可追溯原话）
+  script: string; // 旧脚本候选
+  scriptStatus: 'pending' | 'confirmed' | 'rejected'; // 必须随 script 陈述，防候选被当认可
+  confirmedSections: string[]; // 校准中 verdict==='hit' 的段落名（用户确认「说中了」）
+}
+
 export interface AssessMaterial {
+  /** 体检画像证据（首评时往往是他仅有的素材；诊断「为什么是这里」的地基） */
+  portrait: PortraitEvidence | null;
   memories: SessionMemory[]; // ≤20
   journals: { createdAt: string; content: string }[]; // ≤10
   experiments: ExperimentEntry[]; // ≤10
@@ -106,8 +136,9 @@ export interface AssessMaterial {
 }
 
 /**
- * 组评估素材（generate 用）：基线后 摘要≤20 / 日记≤10 / 微行动≤10（各取最近），
- * 信取最近 3 封，加上画像里 miss 且给了修正的段落（同段多次修正取最新）。
+ * 组评估素材（generate 用）：体检画像证据（不过滤基线，画像是当前态）+ 基线后
+ * 摘要≤20 / 日记≤10 / 微行动≤10（各取最近），信取最近 3 封，加上画像里 miss 且给了
+ * 修正的段落（同段多次修正取最新）。
  * 全部素材入库时已过 checkSafety，这里无新自由文本入口，不再过安全层（对齐 evolve）。
  */
 export async function gatherAssessMaterial(
@@ -122,7 +153,22 @@ export async function gatherAssessMaterial(
   for (const c of profile.portrait?.calibrations ?? []) {
     if (c.verdict === 'miss' && c.correction?.trim()) bySection.set(c.section, c.correction.trim());
   }
+  const p = profile.portrait;
+  const q = p?.questionnaire ?? {};
+  const portrait: PortraitEvidence | null = p
+    ? {
+        scriptSource: q.script_source?.trim().slice(0, 300) || undefined,
+        concernsSeed: q.concerns_seed?.trim().slice(0, 200) || undefined,
+        spoken: p.spoken.map((s) => s.trim().slice(0, 160)).filter(Boolean),
+        moments: p.moments.map((m) => ({ title: m.title.slice(0, 60), detail: m.detail.trim().slice(0, 160) })),
+        baseColor: p.baseColor.trim().slice(0, 240),
+        script: p.script.trim().slice(0, 240),
+        scriptStatus: p.scriptStatus,
+        confirmedSections: p.calibrations.filter((c) => c.verdict === 'hit').map((c) => c.section),
+      }
+    : null;
   return {
+    portrait,
     memories: profile.memories.filter((m) => after(m.date.slice(0, 10))).slice(-20),
     journals: journals
       .filter((j) => after(j.createdAt.slice(0, 10)))
@@ -135,8 +181,11 @@ export async function gatherAssessMaterial(
 
 /**
  * 评估 prompt：见证者视角——评估的是他实际表现出的认知与行为，不是操作次数、
- * 不是完成度考核。阶段样子用 content 原文（goal + advance_when），灯清单用
- * stage.ts 的判定表（kind + 中文 hint）。system 脚手架是中文（内部备注），
+ * 不是完成度考核。产出诊断式报告四问：他在哪（actualStage+lamps）/为什么是这里
+ * （diagnosis，书的机制框架）/离「一辈子不愁钱的活法」还有多远（distance，路标式）/
+ * 下一步做什么（actions，2-3 个具体小步）。阶段样子用 content 原文（goal +
+ * advance_when），灯清单用 stage.ts 的判定表（kind + 中文 hint），画像证据置顶进
+ * user 消息（首评时往往是他仅有的素材）。system 脚手架是中文（内部备注），
  * 输出语言由语言钉死行控制（模式同 evolution.ts）。
  */
 export function buildAssessMessages(
@@ -152,13 +201,43 @@ export function buildAssessMessages(
   const stageBlock = (s: JourneyStage) =>
     `【阶段 ${s.id} · ${s.title}】\n- 这个阶段的样子：${s.goal}\n- 走到下一阶段的标志：${s.advance_when.join('；')}`;
 
+  // scriptStatus 必须随 script 陈述——候选/已否决不得被当作他已认可
+  const scriptStatusNote = (status: PortraitEvidence['scriptStatus']) =>
+    status === 'confirmed'
+      ? '已确认（用户认可这是他的旧脚本）'
+      : status === 'rejected'
+        ? '已否决（用户的否认本身也是态度）'
+        : '待确认（只是候选，用户尚未表态，不得当作他已认可）';
+
+  const portraitBlock = (p: PortraitEvidence) =>
+    [
+      `问卷原话：`,
+      p.scriptSource ? `- 童年金钱场景：${p.scriptSource}` : null,
+      p.concernsSeed ? `- 最近的担心：${p.concernsSeed}` : null,
+      !p.scriptSource && !p.concernsSeed ? '(无)' : null,
+      p.spoken.length > 0 ? `他说过的话（原话）：\n${p.spoken.map((s) => `- 「${s}」`).join('\n')}` : null,
+      p.moments.length > 0
+        ? `他和钱的瞬间：\n${p.moments.map((m) => `- ${m.title}：${m.detail}`).join('\n')}`
+        : null,
+      p.baseColor ? `金钱底色：${p.baseColor}` : null,
+      p.script ? `旧脚本（${scriptStatusNote(p.scriptStatus)}）：${p.script}` : null,
+      p.confirmedSections.length > 0 ? `用户确认「说中了」的画像段落：${p.confirmedSections.join('、')}` : null,
+    ]
+      .filter((line): line is string => line !== null)
+      .join('\n');
+
   // 长度规则语言感知：中文按字数、英文按词数——否则英文输出按字符校验必然爆上限
   const summaryLen = locale === 'en' ? '60-120 words' : '80-200 字';
+  const diagLen = locale === 'en' ? '60-120 words' : '80-200 字';
+  const distLen = locale === 'en' ? '30-80 words' : '40-120 字';
+  const actionLen = locale === 'en' ? '20 words or fewer' : '30 字以内';
   const evidenceLen = locale === 'en' ? '80 words or fewer' : '120 字以内';
   const nextLen = locale === 'en' ? '30 words or fewer' : '40 字以内';
 
   const system = [
     `你是这段旅程的见证者。你要评估的不是用户操作了多少次、完成了多少任务，而是他从说过的话、写下的事里，实际表现出的认知与行为——他真实走到了旅程的哪个位置。全程用${lang}书写。`,
+    '',
+    '你要给出的是一份诊断式评估，回答四个问题：他在哪（actualStage + lamps）；为什么是这里（diagnosis）；离「一辈子不愁钱的活法」还有多远（distance）；下一步可以做什么（actions）。',
     '',
     '旅程的四个阶段：1 看见 → 2 松动 → 3 练习 → 4 活法（活法没有终点线）。',
     `他当前在阶段 ${stage}。下面是这个阶段与下一阶段的样子（来自内容层，作为评估标尺）：`,
@@ -173,14 +252,19 @@ export function buildAssessMessages(
     `  "actualStage": ${stage} 或 ${Math.min(stage + 1, MAX_STAGE)} 的数字——他实际所处的阶段；认为他已在下一阶段门口才写下一阶段`,
     `  "lamps": [{"kind": "灯的 kind，与上方清单逐字一致", "lit": true 或 false, "evidence": "点亮依据：引用他的原话或具体的事，${evidenceLen}；没点亮就留空字符串"}]，全部灯都要给，顺序不限`,
     `  "summary": "它看到的你：第二人称，${summaryLen}，镜子式的描述——说你在哪里、什么在松动，不评判不打分",`,
+    `  "diagnosis": "为什么是这里：用旅程的机制框架解释——他的早期场景、金钱底色、旧脚本如何连成现在的模式（引用他的原话作证据）；这是镜子不是判决。第二人称，${diagLen}",`,
+    `  "distance": "离「一辈子不愁钱的活法」还有多远：以它为方向，说他已经走到了哪里、前面还有哪些路标；不恐吓、不许诺「很快就好」。第二人称，${distLen}",`,
+    `  "actions": ["下一步可以做什么：2-3 个具体小步，对齐他所在阶段的练习方法（观察任务/微实验/允许清单/改写台词），小到今天就能开始；每条一句话，${actionLen}"],`,
     `  "nextHint": "下一阶段在远处长什么样：一句话，${nextLen}；他已在门口就直说，还没到就诚实描述那段路",`,
     '}',
     '',
     '红线：',
     '- 证据必须来自素材：引用原话或具体的事，禁止编造',
+    '- 体检画像也是素材：引用其中他说的原话作依据是允许的；但画像是他在体检时的自我陈述，判断他现在的样子时，要与这段时间的言行放在一起看',
     '- 没看到就如实说没看到（lit: false、evidence 留空）——这不是考试，不必把灯点满',
-    '- 不评判、不打分、不比较：没有「落后/领先/做得好/不够好」这类话',
-    '- 不出现任何理财建议、诊断、病症词汇',
+    '- 不评判、不打分、不比较：没有「落后/领先/做得好/不够好」这类话；diagnosis 只解释心理机制，不做医疗诊断、不用病症词汇、不评判人格',
+    '- distance 不给数字承诺、不制造焦虑',
+    '- 不出现任何理财建议',
     '- 素材少就诚实地少点亮；宁可点得少，不可编造',
     '',
     ...(context.confirmed
@@ -199,6 +283,9 @@ export function buildAssessMessages(
   ].join('\n');
 
   const user = [
+    '## 体检画像（他说过的关于自己的话）',
+    material.portrait ? portraitBlock(material.portrait) : '(无)',
+    '',
     '## 已经点亮的心印',
     context.earnedKinds.length > 0 ? context.earnedKinds.map((k) => `- ${k}`).join('\n') : '(无)',
     '',

@@ -60,6 +60,7 @@ export default async function journeyPage({ params }: { params: Promise<{ locale
   // （评估确认时才发印，渲染不再补发——操作次数不等于进度）。灯的依据来自
   // 最近一次确认过的评估（evidence 随 confirmed 评估长期保存）。
   const progress = profile ? computeStageProgress(stage, profile) : null;
+  const confirmed = profile?.assessment.confirmed ?? null;
   const confirmedEvidence = new Map(
     (profile?.assessment.confirmed?.lamps ?? [])
       .filter((l) => l.lit && l.evidence)
@@ -317,6 +318,31 @@ export default async function journeyPage({ params }: { params: Promise<{ locale
                   </ul>
                   {progress.litCount < progress.checks.length && (
                     <p className="mt-3 text-xs text-ink-soft/70">{dict.journey.stageLampWaiting}</p>
+                  )}
+                </div>
+              )}
+
+              {/* 它看见的你：最近一次确认的评估报告（灯之外的诊断部分——为什么是
+                  这里/离活法多远/下一步做什么）。确认后的评估不消失，常驻旅程页。 */}
+              {current && confirmed && (
+                <div className="mt-6 border-l-2 border-accent/50 pl-4">
+                  <p className="text-xs tracking-widest text-ink-soft">{dict.assess.latestLabel}</p>
+                  <p className="mt-2 text-sm leading-relaxed">{confirmed.summary}</p>
+                  <p className="mt-3 text-xs tracking-widest text-ink-soft">{dict.assess.diagnosisLabel}</p>
+                  <p className="mt-1.5 text-sm leading-relaxed text-ink-soft">{confirmed.diagnosis}</p>
+                  <p className="mt-3 text-xs tracking-widest text-ink-soft">{dict.assess.distanceLabel}</p>
+                  <p className="mt-1.5 text-sm leading-relaxed text-ink-soft">{confirmed.distance}</p>
+                  {confirmed.actions.length > 0 && (
+                    <>
+                      <p className="mt-3 text-xs tracking-widest text-ink-soft">{dict.assess.actionsLabel}</p>
+                      <ul className="mt-1.5 flex flex-col gap-1">
+                        {confirmed.actions.map((a, i) => (
+                          <li key={i} className="text-sm leading-relaxed">
+                            · {a}
+                          </li>
+                        ))}
+                      </ul>
+                    </>
                   )}
                 </div>
               )}

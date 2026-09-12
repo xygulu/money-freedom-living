@@ -69,6 +69,12 @@ export interface StageAssessment {
   lamps: AssessmentLamp[];
   /** 镜子式总结（第二人称，不评判不打分） */
   summary: string;
+  /** 为什么是这里：用书的机制框架解释（早期场景→底色→旧脚本→现在的模式），引素材原话；镜子不是判决 */
+  diagnosis: string;
+  /** 离「一辈子不愁钱的活法」还有多远：以它为北极星的路标式描述，不恐吓不许诺 */
+  distance: string;
+  /** 下一步行动建议：2-3 个对齐本阶段练习方法的具体小步，今天就能开始 */
+  actions: string[];
   /** 下一阶段在远处长什么样；已在门口时说明 */
   nextHint: string;
   assessedAt: string; // ISO

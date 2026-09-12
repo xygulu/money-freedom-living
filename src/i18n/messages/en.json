@@ -196,7 +196,7 @@
   },
   "assess": {
     "label": "Where you are",
-    "invite": "It remembers what you've said and done these past weeks. Would you like it to take a look — not to count how many times you showed up, but to see where you actually are.",
+    "invite": "It remembers what you told it in your check-up, and what you've said and done since. Would you like it to take a look — not to count how many times you showed up, but to see where you actually are.",
     "hint": "One tap, about a minute. It only describes what it sees; whether it rings true is for you to say.",
     "cta": "See where I am",
     "busy": "It is rereading this stretch of the journey. This takes about a minute.",
@@ -209,12 +209,17 @@
     "confirmCta": "Note down how things are now",
     "advanceCta": "Step into {stage}",
     "stayCta": "Stay here, and note how things are",
-    "dismissCta": "That's not it"
+    "dismissCta": "That's not it",
+    "diagnosisLabel": "Why here",
+    "distanceLabel": "How far to the living",
+    "actionsLabel": "What you can do next",
+    "latestLabel": "What it sees in you"
   },
   "progress": {
     "stageLabel": "Stage {n} · {title}",
     "livingLabel": "Living it",
-    "ariaLabel": "See your journey and where you are"
+    "ariaLabel": "See your journey and where you are",
+    "lampCount": "{lit}/{total} lit"
   },
   "journal": {
     "title": "Journal",

@@ -70,10 +70,10 @@ export async function POST(request: NextRequest) {
           earnedKinds: profile.stamps.map((s) => s.kind),
         });
 
-        let draft = validateAssessment(await llmCompleteJson({ system, messages, maxTokens: 1500 }), profile.stage);
+        let draft = validateAssessment(await llmCompleteJson({ system, messages, maxTokens: 2600 }), profile.stage);
         if (!draft) {
           console.warn('[api/journey/assess] first draft invalid, retrying once');
-          draft = validateAssessment(await llmCompleteJson({ system, messages, maxTokens: 1500 }), profile.stage);
+          draft = validateAssessment(await llmCompleteJson({ system, messages, maxTokens: 2600 }), profile.stage);
         }
         if (!draft) {
           // 现状态不动、提议不消失：只清锁

@@ -1,8 +1,9 @@
 'use client';
 
 // 阶段评估卡（M9 需求③语义修正）：评估的是「实际表现出的认知与行为」所处的
-// 位置，不是操作次数。offer 模式（pending=null）= AI 提议，素材攒够才亮；
-// review 模式 = 评估结果待确认：位置 + 灯 + 依据 + 镜子式总结。
+// 位置，不是操作次数。offer 模式（pending=null）= AI 提议（首评在体检后就亮，
+// 复评由素材闸控制）；review 模式 = 诊断式评估报告待确认：位置 + 灯 + 依据 +
+// 总结 + 为什么是这里（diagnosis）+ 离活法多远（distance）+ 下一步做什么（actions）。
 // 「记下现在的样子」才点亮新灯（只增不减）；「走进下一阶段」= 确认 + 推进；
 // 「不是这样的」→ 14 天冷却，无惩罚。生成约 45-90 秒，busy 期不给按钮。
 import { useState } from 'react';
@@ -58,7 +59,7 @@ export default function AssessCard({
   if (!pending) {
     // offer 模式：AI 提议，用户点头才评估
     return (
-      <div className="mt-6 border border-accent/50 bg-white/70 p-6">
+      <div className="mt-6 border border-accent/50 bg-white/70 p-6" data-assess-offer>
         <p className="text-xs tracking-widest text-ink-soft">{t.label}</p>
         <p className="mt-3 text-base leading-relaxed">{t.invite}</p>
         <p className="mt-3 text-sm leading-relaxed text-ink-soft">{t.hint}</p>
@@ -116,6 +117,18 @@ export default function AssessCard({
 
       <p className="mt-5 text-xs tracking-widest text-ink-soft">{t.summaryLabel}</p>
       <p className="mt-2 text-sm leading-relaxed">{pending.summary}</p>
+      <p className="mt-4 text-xs tracking-widest text-ink-soft">{t.diagnosisLabel}</p>
+      <p className="mt-2 text-sm leading-relaxed">{pending.diagnosis}</p>
+      <p className="mt-4 text-xs tracking-widest text-ink-soft">{t.distanceLabel}</p>
+      <p className="mt-2 text-sm leading-relaxed">{pending.distance}</p>
+      <p className="mt-4 text-xs tracking-widest text-ink-soft">{t.actionsLabel}</p>
+      <ul className="mt-2 flex flex-col gap-1.5">
+        {pending.actions.map((a, i) => (
+          <li key={i} className="text-sm leading-relaxed">
+            · {a}
+          </li>
+        ))}
+      </ul>
       <p className="mt-4 text-xs tracking-widest text-ink-soft">{t.nextLabel}</p>
       <p className="mt-2 text-sm leading-relaxed text-ink-soft">{pending.nextHint}</p>
 

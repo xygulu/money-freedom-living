@@ -92,3 +92,13 @@ export function computeStageProgress(stage: number, profile: GrowthProfile): Sta
   }));
   return { checks, litCount: checks.filter((c) => c.done).length };
 }
+
+/** 四段刻度（全局进度条用）：各阶段已点亮/灯总数；stage4 total=0（无灯无刻度）。
+ *  stage{n}_entered 等非灯印天然被过滤。 */
+export function stageLampScales(profile: GrowthProfile): { id: number; lit: number; total: number }[] {
+  const earned = new Set(profile.stamps.map((s) => s.kind));
+  return [1, 2, 3, 4].map((id) => {
+    const rules = STAGE_LAMPS[id] ?? [];
+    return { id, lit: rules.filter((r) => earned.has(r.kind)).length, total: rules.length };
+  });
+}

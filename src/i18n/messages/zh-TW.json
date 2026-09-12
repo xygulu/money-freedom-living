@@ -196,7 +196,7 @@
   },
   "assess": {
     "label": "旅程的位置",
-    "invite": "這段時間你說的、做的，它都記得。要不要讓它看一看——不是數你做了多少次，而是看你實際走到了哪裡。",
+    "invite": "它記得你體檢時說的話，也記得這段時間你說過、做過的事。要不要讓它看看——不是數你來了多少次，而是看你實際走到了哪裡。",
     "hint": "點一下就好，大約一分鐘。它只描述它看見的樣子，像不像，由你說。",
     "cta": "看看我走到了哪裡",
     "busy": "它正在重讀這段旅程，大約需要一分鐘。",
@@ -209,12 +209,17 @@
     "confirmCta": "記下現在的樣子",
     "advanceCta": "走進{stage}",
     "stayCta": "先留在這裡，記下現在的樣子",
-    "dismissCta": "不是這樣的"
+    "dismissCta": "不是這樣的",
+    "diagnosisLabel": "為什麼是這裡",
+    "distanceLabel": "離「一輩子不愁錢的活法」還有多遠",
+    "actionsLabel": "下一步可以做什麼",
+    "latestLabel": "它看見的你"
   },
   "progress": {
     "stageLabel": "階段 {n} · {title}",
     "livingLabel": "活法中",
-    "ariaLabel": "查看我的旅程進度與位置"
+    "ariaLabel": "查看我的旅程進度與位置",
+    "lampCount": "已點亮 {lit}/{total} 盞"
   },
   "journal": {
     "title": "心事",
