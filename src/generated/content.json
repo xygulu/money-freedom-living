@@ -27,9 +27,9 @@
           ]
         },
         "advance_when": [
-          "The user shares at least one concrete early money memory or family scene",
-          "The user confirms (or corrects) one \"here's what I think I heard\"",
-          "The user can describe a recurring money feeling, not just an event"
+          "The user sees where today's money patterns come from — early scenes still running in them now, not just remembering one event",
+          "The user hears the old voice and holds their own stance toward it — confirming (or correcting) one \"here's what I think I heard\"",
+          "The user recognizes and owns the recurring undertone feeling around money, not just retelling one incident"
         ],
         "ritual": "First draft of the Money Portrait (What you said / What I think I heard)",
         "topics": [
@@ -66,9 +66,9 @@
           ]
         },
         "advance_when": [
-          "The user claims and states their script in their own words (not AI's summary)",
-          "The user has done at least one \"unearned\" thing or reframed one inner line",
-          "The user starts replacing I-must with I-can-choose when describing money decisions"
+          "The user claims their old script in their own words (not AI's summary) — it has turned from \"an obvious fact\" into \"something of mine\"",
+          "Permission has really happened — after one \"unearned\" small thing or a rewritten inner line, they felt it loosen a little (guilt or fumbling counts)",
+          "Their words show the loosening — \"I can choose\" starting to replace \"I must\" when talking about money"
         ],
         "ritual": "Script rewrite — turn the claimed script into a sentence they choose to keep",
         "free_alt": "Finally use the thing you have been saving for later, or give yourself a half-day off — allowing yourself does not have to cost money.",
@@ -103,8 +103,8 @@
           ]
         },
         "advance_when": [
-          "7 experiment entries recorded (logging a miss counts as logging)",
-          "User self-assessment (changed / unchanged / can't tell — all valid)"
+          "The new way has settled into ordinary days — they use it naturally with money, without white-knuckling (logging successes or misses both count; rounds are only evidence)",
+          "The user can see the change themselves — self-assessing \"what's different now\" (changed / unchanged / can't tell — all valid)"
         ],
         "ritual": "Wax seal「Practicing looseness」+ Portrait v2",
         "free_alt": "Spend the permission, not the money — say no to one invitation you dread, go to bed an hour early, take one unhurried afternoon off.",
@@ -180,9 +180,9 @@
           ]
         },
         "advance_when": [
-          "用户说出至少一个具体的早期金钱记忆或家庭场景",
-          "用户认可（或修正）了一个\"我听到的可能\"",
-          "用户能描述一种反复出现的金钱感受，而不只是事件"
+          "他看得见今天的钱模式有来历——认出早期场景至今还在自己身上运行，而不只是记得一件事",
+          "他听得见那个旧声音并对它有了自己的态度——认可（或修正）了一个\"我听到的可能\"",
+          "他认得出并承认自己面对钱时反复泛起的底色感受，而不只是复述一次事件"
         ],
         "ritual": "金钱画像初稿（你说过的 / 我听到的可能）",
         "topics": [
@@ -219,9 +219,9 @@
           ]
         },
         "advance_when": [
-          "用户亲口认领并说出自己的旧脚本（不是 AI 替他总结）",
-          "用户完成过至少一次\"不配的小事\"或改写一句内在台词",
-          "用户开始用\"我可以选择\"替代\"我必须\"描述金钱决定"
+          "他亲口认领了自己的旧脚本（不是 AI 替他总结）——它从\"天经地义的事实\"变成\"我的东西\"",
+          "允许真的在他身上发生过——做过一件\"不配的小事\"或改写一句台词后，体感松了一点（心虚、做砸都算）",
+          "他的话语里看得见松动——开始用\"我可以选择\"替代\"我必须\"谈论钱"
         ],
         "ritual": "脚本改写——把认领的旧脚本，改写成自己愿意带走的新句子",
         "free_alt": "把一直舍不得用的一件东西用起来，或给自己放半天假——允许自己，不一定要花钱。",
@@ -256,8 +256,8 @@
           ]
         },
         "advance_when": [
-          "完成 7 次实验记录（记成功或记没做都算）",
-          "用户自评（有变化/没变化/说不清 均可）"
+          "新做法在他的日子里稳定成日常——与钱打交道时自然用它，不再靠硬撑和提醒（记成功或记没做都算，做过几轮只是证据）",
+          "他能自己看见变化——自评\"哪里不一样了\"（有变化/没变化/说不清 均可）"
         ],
         "ritual": "心印「练习松弛」+ 画像 v2",
         "free_alt": "把「允许」用在不花钱的事上：拒绝一个不想去的邀约、睡前提前一小时躺下、白白休息一个下午。",
@@ -1930,5 +1930,5 @@
       }
     }
   },
-  "builtAt": "2026-09-12T13:36:01.389Z"
+  "builtAt": "2026-09-12T23:44:49.061Z"
 }

@@ -19,9 +19,9 @@ ai_stance:
     - Push toward "change" before the user has claimed the script
     - Dismiss the old way of living — the script was the best survival strategy back then; thank it first
 advance_when:
-  - The user claims and states their script in their own words (not AI's summary)
-  - The user has done at least one "unearned" thing or reframed one inner line
-  - The user starts replacing I-must with I-can-choose when describing money decisions
+  - The user claims their old script in their own words (not AI's summary) — it has turned from "an obvious fact" into "something of mine"
+  - Permission has really happened — after one "unearned" small thing or a rewritten inner line, they felt it loosen a little (guilt or fumbling counts)
+  - Their words show the loosening — "I can choose" starting to replace "I must" when talking about money
 ritual: Script rewrite — turn the claimed script into a sentence they choose to keep
 free_alt: "Finally use the thing you have been saving for later, or give yourself a half-day off — allowing yourself does not have to cost money."
 topics: [self-worth, allowing]

@@ -244,7 +244,7 @@ export function buildAssessMessages(
     current ? stageBlock(current) : '',
     next ? stageBlock(next) : '',
     '',
-    `当前阶段的灯（评估对象，每盏是一个认知/行为里程碑）：`,
+    `当前阶段的灯（评估对象，每盏是本阶段应达程度的一个切面——判定的是他到达了这个状态没有，不是他做过哪些动作）：`,
     ...(STAGE_LAMPS[stage] ?? []).map((r) => `- ${r.kind}：${r.hint}`),
     ...(current?.topics?.length
       ? [`本阶段涉及的命题：${current.topics.map((t) => TOPICS_ZH[t] ?? t).join('、')}（diagnosis 归属参考，不必点名）`]
@@ -263,6 +263,7 @@ export function buildAssessMessages(
     '',
     '红线：',
     '- 证据必须来自素材：引用原话或具体的事，禁止编造',
+    '- 判定程度，不数动作：灯的标准是「离活法在本阶段应达的程度」，他做过什么只是判断程度的证据——不要核对任务清单、不要数次数',
     '- 体检画像也是素材：引用其中他说的原话作依据是允许的；但画像是他在体检时的自我陈述，判断他现在的样子时，要与这段时间的言行放在一起看',
     '- 没看到就如实说没看到（lit: false、evidence 留空）——这不是考试，不必把灯点满',
     '- 不评判、不打分、不比较：没有「落后/领先/做得好/不够好」这类话；diagnosis 只解释心理机制，不做医疗诊断、不用病症词汇、不评判人格',

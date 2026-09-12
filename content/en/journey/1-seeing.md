@@ -19,9 +19,9 @@ ai_stance:
     - Ask several things at once; dig into one thing at a time
     - Rush to conclude "your script is X" — scripts are candidates until the user confirms
 advance_when:
-  - The user shares at least one concrete early money memory or family scene
-  - The user confirms (or corrects) one "here's what I think I heard"
-  - The user can describe a recurring money feeling, not just an event
+  - The user sees where today's money patterns come from — early scenes still running in them now, not just remembering one event
+  - The user hears the old voice and holds their own stance toward it — confirming (or correcting) one "here's what I think I heard"
+  - The user recognizes and owns the recurring undertone feeling around money, not just retelling one incident
 ritual: First draft of the Money Portrait (What you said / What I think I heard)
 topics: [money-safety, parents, self-worth]
 skippable: true
