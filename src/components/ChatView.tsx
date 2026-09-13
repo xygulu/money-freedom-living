@@ -157,8 +157,10 @@ export default function ChatView({ locale, dict, openSessionId, initialMessages,
     }
     return (
       <div className="flex flex-col gap-3">
-        {busy && autoStart ? (
-          // 自动开聊进行中：这里是「正在打开」而不是一颗还要再按一次的按钮
+        {autoStart && !error ? (
+          // 带着「我要聊」的意图进来：从首帧起就是「正在打开」，不给一颗还要再按的按钮。
+          // 关键是不要等 effect 跑完才切——SSR 首帧到 hydration 之间那一小段里，
+          // 旧写法（busy && autoStart）仍会画出开始按钮，用户就会以为还得点一次。
           <p data-chat-opening className="text-sm text-ink-soft">
             {t.opening}
           </p>
