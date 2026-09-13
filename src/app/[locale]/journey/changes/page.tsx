@@ -13,6 +13,7 @@ import { getJourneyStages } from '@/lib/content';
 import { buildChangeListView } from '@/lib/changes';
 import { track } from '@/lib/analytics';
 import ChangeListGenerate from '@/components/ChangeListGenerate';
+import ActionRecordList from '@/components/ActionRecordList';
 
 export const dynamic = 'force-dynamic';
 
@@ -96,17 +97,11 @@ export default async function changesPage({ params }: { params: Promise<{ locale
             )}
           </div>
 
-          {/* 下一步：沿用本次确认评估的行动建议 */}
+          {/* 下一步：沿用本次确认评估的行动建议——与旅程页同一组件，每条是按钮，
+              点开就地记录真实发生的事，而不是一句只能看的建议 */}
           {view.actions.length > 0 && (
             <div className="mt-8">
-              <p className="text-xs tracking-widest text-ink-soft">{dict.assess.actionsLabel}</p>
-              <ul className="mt-2 flex flex-col gap-1">
-                {view.actions.map((a, i) => (
-                  <li key={i} className="text-sm leading-relaxed">
-                    · {a}
-                  </li>
-                ))}
-              </ul>
+              <ActionRecordList locale={locale} dict={dict} actions={view.actions} label={dict.assess.actionsLabel} />
             </div>
           )}
 

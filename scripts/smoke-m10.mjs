@@ -207,6 +207,10 @@ check('changes 页 200', changesHtml.length > 500);
 check('新灯差集渲染：script + color 的种子依据在场', changesHtml.includes(NEW_EVIDENCE_B) && changesHtml.includes(NEW_EVIDENCE_C));
 check('旧灯不进新灯清单（story 的旧依据不在 changes 页）', !changesHtml.includes(OLD_EVIDENCE));
 if (narrationText) check('叙述段（LLM）直出渲染', changesHtml.includes(narrationText.slice(0, 40)));
+check(
+  '下一步是按钮不是干条目：行动按钮锚点在场且文案是本次确认的行动',
+  changesHtml.includes('data-action-cta="0"') && changesHtml.includes(ACTION_SEED)
+);
 check('viewed 埋点落库', (await eventCount(main.key, 'change_list_viewed')) === 1);
 
 // 幂等：缓存命中不重烧 LLM（仅真生成成功时断言）
