@@ -225,7 +225,8 @@
     "diagnosisLabel": "為什麼是這裡",
     "distanceLabel": "離「一輩子不愁錢的活法」還有多遠",
     "actionsLabel": "下一步可以做什麼",
-    "latestLabel": "它看見的你"
+    "latestLabel": "它看見的你",
+    "latestStageNote": "上次評估 · 階段 {n}"
   },
   "progress": {
     "stageLabel": "階段 {n} · {title}",

@@ -225,7 +225,8 @@
     "diagnosisLabel": "なぜここにいるのか",
     "distanceLabel": "「一生お金に困らない生き方」までの距離",
     "actionsLabel": "次にできること",
-    "latestLabel": "見つめているあなた"
+    "latestLabel": "見つめているあなた",
+    "latestStageNote": "前回の評価 · ステージ {n}"
   },
   "progress": {
     "stageLabel": "段階 {n} · {title}",

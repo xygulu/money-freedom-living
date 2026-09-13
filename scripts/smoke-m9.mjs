@@ -279,6 +279,32 @@ check('进度条 seg1 走过的段整段填充（width:100%）', seg(barHtml, 1)
 check('进度条 seg2 尚未点亮（width:0%）', seg(barHtml, 2).includes('width:0%'));
 check('进度条右值 = 当前阶段灯数 data-lamp-count="0/3"', barHtml.includes('data-lamp-count="0/3"'));
 
+// 走过的段也展示灯（2026-09-13 拍板）：阶段 1 走过后整段点亮——三盏灯全 ●
+// （评估没亮的也不灭，走过即「程度已达成」），已亮灯的依据随灯显示，hint 收起；
+// 「它看见的你」报告常驻当前段（阶段 2）并标注评估所处阶段（actualStage 随行）
+const lampsLabel = 'The lamps of this stage';
+const w1 = barHtml.indexOf(lampsLabel);
+const w2 = barHtml.indexOf(lampsLabel, w1 + 1);
+const walkedBlock = w1 === -1 ? '' : barHtml.slice(w1, w2 === -1 ? barHtml.length : w2);
+check(
+  '走过段灯块：阶段 1 三盏灯全 ●（走过即整段点亮，评估未亮的 color 也不灭）',
+  (walkedBlock.match(/●/g) ?? []).length >= 3 && walkedBlock.includes('Recognizing your money undertone'),
+  `dots=${(walkedBlock.match(/●/g) ?? []).length}`
+);
+check(
+  '走过段灯块：已亮灯的依据随灯显示（评估还在时）',
+  walkedBlock.includes(EVIDENCE_A) && walkedBlock.includes(EVIDENCE_B)
+);
+check('走过段灯块：点亮标准收起（不显示 hint）', !walkedBlock.includes('The bar: '));
+check(
+  '走过段心印块：阶段 1 的心印仍在走过段显示',
+  walkedBlock.includes('You told your story') && walkedBlock.includes('You answered what it heard')
+);
+check(
+  '报告块标注评估所处阶段（上次评估 · Stage 2，actualStage 随行）',
+  barHtml.includes('Last assessment · Stage 2')
+);
+
 // dismiss → 冷却；冷却内 generate 403；旧 advance 端点已删 → 404
 const dismissRes = await post('/api/journey/assess', { locale: 'en', action: 'dismiss' }, main.cookie);
 asmt = await assessmentOf();

@@ -225,7 +225,8 @@
     "diagnosisLabel": "为什么是这里",
     "distanceLabel": "离「一辈子不愁钱的活法」还有多远",
     "actionsLabel": "下一步可以做什么",
-    "latestLabel": "它看见的你"
+    "latestLabel": "它看见的你",
+    "latestStageNote": "上次评估 · 阶段 {n}"
   },
   "progress": {
     "stageLabel": "阶段 {n} · {title}",

@@ -225,7 +225,8 @@
     "diagnosisLabel": "Why here",
     "distanceLabel": "How far to the living",
     "actionsLabel": "What you can do next",
-    "latestLabel": "What it sees in you"
+    "latestLabel": "What it sees in you",
+    "latestStageNote": "Last assessment · Stage {n}"
   },
   "progress": {
     "stageLabel": "Stage {n} · {title}",

@@ -60,21 +60,14 @@ export default async function journeyPage({ params }: { params: Promise<{ locale
   // 阶段进度：灯 = 认知/行为里程碑，点亮真值是最近一次确认的评估
   // （assessment.confirmed.lamps——评估结论，不是动作档案；stamps 只是确认仪式
   // 同步留下的心印存档）。灯的依据来自同一份评估（evidence 随 confirmed 长期
-  // 保存）；评估没说亮的灯一律未点亮。
-  const progress = profile ? computeStageProgress(stage, profile) : null;
+  // 保存）；评估没说亮的灯一律未点亮。走过的段（s.id < stage）整段点亮——
+  // 推进本身就是评估结论「本阶段程度已达成」。
   const confirmed = profile?.assessment.confirmed ?? null;
   const confirmedEvidence = new Map(
     (profile?.assessment.confirmed?.lamps ?? [])
       .filter((l) => l.lit && l.evidence)
       .map((l) => [l.kind, l.evidence])
   );
-  // 渲染侧按 kind 去重兜底（历史行可能带重复；appendStamps 已原子化并自愈存量）
-  const seenStampKinds = new Set<string>();
-  const stageStamps = (profile?.stamps ?? []).filter((st) => {
-    if (!st.kind.startsWith(`stage${stage}_`) || seenStampKinds.has(st.kind)) return false;
-    seenStampKinds.add(st.kind);
-    return true;
-  });
   const nextStage = stages.find((s) => s.id === stage + 1) ?? null;
 
   // 「旅程中的我」预览（M9 需求①）：画像/足迹下钻入口 + 最近三步。
@@ -271,6 +264,15 @@ export default async function journeyPage({ params }: { params: Promise<{ locale
         {stages.map((s) => {
           const locked = s.id === MAX_STAGE && s.id !== stage;
           const current = s.id === stage;
+          const walked = s.id < stage;
+          const stProgress = profile ? computeStageProgress(s.id, profile) : null;
+          // 渲染侧按 kind 去重兜底（历史行可能带重复；appendStamps 已原子化并自愈存量）
+          const seenStampKinds = new Set<string>();
+          const stageStamps = (profile?.stamps ?? []).filter((st) => {
+            if (!st.kind.startsWith(`stage${s.id}_`) || seenStampKinds.has(st.kind)) return false;
+            seenStampKinds.add(st.kind);
+            return true;
+          });
           return (
             <li key={s.id} className="border-t border-line py-6">
               <div className="flex items-baseline justify-between gap-4">
@@ -290,16 +292,39 @@ export default async function journeyPage({ params }: { params: Promise<{ locale
                 <p className="mt-2 text-xs text-accent">● {dict.journey.currentStageNote}</p>
               )}
 
+              {/* 走过的段：整段点亮（推进即评估结论「程度已达成」），灯不灭在呈现层
+                  也成立——● + 依据（评估还在时显示），收起点亮标准，附该段心印 */}
+              {walked && stProgress && stProgress.checks.length > 0 && (
+                <div className="mt-5">
+                  <p className="text-xs tracking-widest text-ink-soft">
+                    {dict.journey.stageLampsLabel} · {stProgress.checks.length}/{stProgress.checks.length}
+                  </p>
+                  <ul className="mt-3 flex flex-col gap-2">
+                    {stProgress.checks.map((c) => (
+                      <li key={c.kind} className="text-sm leading-relaxed">
+                        <span className="text-accent">● {(dict.journey as unknown as Record<string, string>)[c.labelKey] ?? c.labelKey}</span>
+                        {confirmedEvidence.get(c.kind) && (
+                          <span className="mt-1 block text-xs leading-relaxed text-ink-soft/80">
+                            {dict.assess.evidenceLead}
+                            {confirmedEvidence.get(c.kind)}
+                          </span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
               {/* 这个阶段的灯：灯 = 评估结论（最近一次确认评估的 lamps：亮/不亮 +
                   依据），不是用户动作的记录——评估没说亮的灯一律未点亮。点亮标准
                   （hint）与评估 LLM 用的是同一张判定表（STAGE_LAMPS），标准透明。 */}
-              {current && progress && progress.checks.length > 0 && (
+              {current && stProgress && stProgress.checks.length > 0 && (
                 <div className="mt-5">
                   <p className="text-xs tracking-widest text-ink-soft">
-                    {dict.journey.stageLampsLabel} · {progress.litCount}/{progress.checks.length}
+                    {dict.journey.stageLampsLabel} · {stProgress.litCount}/{stProgress.checks.length}
                   </p>
                   <ul className="mt-3 flex flex-col gap-2">
-                    {progress.checks.map((c) => {
+                    {stProgress.checks.map((c) => {
                       // 点亮标准（hint）与评估 LLM 同一张判定表（STAGE_LAMPS），
                       // 键名约定 = labelKey + 'Hint'；点亮/未点亮都展示。
                       const hint = (dict.journey as unknown as Record<string, string>)[`${c.labelKey}Hint`];
@@ -325,17 +350,21 @@ export default async function journeyPage({ params }: { params: Promise<{ locale
                       );
                     })}
                   </ul>
-                  {progress.litCount < progress.checks.length && (
+                  {stProgress.litCount < stProgress.checks.length && (
                     <p className="mt-3 text-xs text-ink-soft/70">{dict.journey.stageLampWaiting}</p>
                   )}
                 </div>
               )}
 
               {/* 它看见的你：最近一次确认的评估报告（灯之外的诊断部分——为什么是
-                  这里/离活法多远/下一步做什么）。确认后的评估不消失，常驻旅程页。 */}
+                  这里/离活法多远/下一步做什么）。确认后的评估不消失，常驻当前段，
+                  标注评估当时的阶段——内容仍属那次评估，不因推进而改挂新段。 */}
               {current && confirmed && (
                 <div className="mt-6 border-l-2 border-accent/50 pl-4">
                   <p className="text-xs tracking-widest text-ink-soft">{dict.assess.latestLabel}</p>
+                  <p className="mt-1 text-xs text-ink-soft/70">
+                    {dict.assess.latestStageNote.replace('{n}', String(confirmed.actualStage))}
+                  </p>
                   <p className="mt-2 text-sm leading-relaxed">{confirmed.summary}</p>
                   <p className="mt-3 text-xs tracking-widest text-ink-soft">{dict.assess.diagnosisLabel}</p>
                   <p className="mt-1.5 text-sm leading-relaxed text-ink-soft">{confirmed.diagnosis}</p>
@@ -369,8 +398,8 @@ export default async function journeyPage({ params }: { params: Promise<{ locale
                 </p>
               )}
 
-              {/* 本阶段攒下的心印（含进入仪式印），有才显示 */}
-              {current && stageStamps.length > 0 && (
+              {/* 本段攒下的心印（含进入仪式印）——当前段与走过的段都显示，有才显示 */}
+              {(current || walked) && stageStamps.length > 0 && (
                 <div className="mt-4">
                   <p className="text-xs tracking-widest text-ink-soft">{dict.journey.stageStampsLabel}</p>
                   <ul className="mt-2 flex flex-wrap gap-2">
@@ -383,8 +412,11 @@ export default async function journeyPage({ params }: { params: Promise<{ locale
                 </div>
               )}
 
-              {/* 推进不再由「灯全亮」触发——走进下一阶段走评估确认流（assess action=advance），
-                  评估说到了门口才出现「走进下一阶段」的按钮（AssessCard review 模式） */}
+              {/* 程度制联动：确认评估判本阶段灯全亮 ⇒ 下一阶段随之自动开启
+                  （validate 硬约束 + confirm 收口 + getProfile 自愈，见 stage.ts
+                  stageAdvanceTarget / assess.ts validateAssessment）——不需要用户
+                  再做任何动作；评估判在门口（有灯未亮）才走 AssessCard 的
+                  advance 确认流。 */}
             </li>
           );
         })}
