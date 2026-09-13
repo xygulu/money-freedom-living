@@ -38,10 +38,9 @@ export default function JourneyProgressBar({
           const isStage4 = id >= MAX_STAGE;
           const isCurrent = id === stage;
           const isWalked = id < stage;
+          // 四段统一「阶段 n·标题」——阶段 4 的标题就是「活法」，不再用状态词特例
           const title = getJourneyStage(locale, id)?.title ?? '';
-          const name = isStage4
-            ? dict.progress.livingLabel
-            : dict.progress.stageLabel.replace('{n}', String(id)).replace('{title}', title);
+          const name = dict.progress.stageLabel.replace('{n}', String(id)).replace('{title}', title);
           const pct = total > 0 ? Math.round((lit / total) * 100) : 0;
           return (
             <span key={id} data-stage-cell={id} className="flex min-w-0 flex-1 flex-col gap-1">

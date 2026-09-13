@@ -281,7 +281,7 @@ check('进度条 seg2 尚未点亮（width:0%）', seg(barHtml, 2).includes('wid
 check(
   '进度栏全阶段可见：四段格子 + 段名（Stage 1..4 · 各段标题）都在',
   (barHtml.match(/data-stage-cell="\d"/g) ?? []).length === 4 &&
-    ['Stage 1 · Seeing', 'Stage 2 · Loosening', 'Stage 3 · Practicing', 'Living it'].every((n) => barHtml.includes(n)),
+    ['Stage 1 · Seeing', 'Stage 2 · Loosening', 'Stage 3 · Practicing', 'Stage 4 · Living'].every((n) => barHtml.includes(n)),
   `cells=${(barHtml.match(/data-stage-cell="/g) ?? []).length}`
 );
 check(
