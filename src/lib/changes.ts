@@ -84,7 +84,7 @@ export function buildChangeListMessages(locale: string, material: AssessMaterial
     material.portrait?.script ? `- 旧脚本：${material.portrait.script}` : null,
     '',
     `## 这次确认的评估（位置：阶段 ${c.actualStage}）`,
-    `它看到的你：${c.summary}`,
+    `我看到的你：${c.summary}`,
     c.diagnosis ? `为什么是这里：${c.diagnosis}` : null,
     c.distance ? `离「一辈子不愁钱的活法」还有多远：${c.distance}` : null,
     '新点亮的心印（依据是你的原话）：',
@@ -96,7 +96,7 @@ export function buildChangeListMessages(locale: string, material: AssessMaterial
     prev
       ? [
           `## 上一次确认的评估（位置：阶段 ${prev.actualStage}）`,
-          `它当时看到的你：${prev.summary}`,
+          `我当时看到的你：${prev.summary}`,
           `当时点亮的灯：${prev.lamps.filter((l) => l.lit).map((l) => l.kind).join('、') || '（无）'}`,
           '',
         ].join('\n')
