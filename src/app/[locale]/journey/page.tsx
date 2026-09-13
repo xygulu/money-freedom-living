@@ -65,8 +65,13 @@ export default async function journeyPage({ params }: { params: Promise<{ locale
   // 保存）；评估没说亮的灯一律未点亮。走过的段（s.id < stage）整段点亮——
   // 推进本身就是评估结论「本阶段程度已达成」。
   const confirmed = profile?.assessment.confirmed ?? null;
+  // 灯的依据：当前确认评估优先；走过的段（灯 kind 已不在当前评估的灯集里）回落到
+  // 上一次确认的报告——否则一推进，上一段三盏灯的依据就整段消失，只剩光秃秃的 ●
   const confirmedEvidence = new Map(
-    (profile?.assessment.confirmed?.lamps ?? [])
+    [
+      ...(profile?.assessment.previousConfirmed?.lamps ?? []),
+      ...(profile?.assessment.confirmed?.lamps ?? []),
+    ]
       .filter((l) => l.lit && l.evidence)
       .map((l) => [l.kind, l.evidence])
   );
