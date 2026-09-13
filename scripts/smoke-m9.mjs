@@ -106,6 +106,17 @@ await sql`
   VALUES (${sessionId}, ${main.key}, 'en', 'talk', 2, 'closed', ${daysAgo(30)}, ${daysAgo(30)})`;
 check('档案/快照/日记/对话落库', true);
 
+// 首页体检感知（用户反馈：做过体检进来还是体检落地页）：画像存在 → 根路径
+// 307 → 旅程页。断言看最终 URL 与旅程页渲染（dict 整包会进 RSC flight payload，
+// 「落地页文案不出现」级断言不可行，也不需要）
+const homeRes = await get('/en', main.cookie);
+const homeHtml = await homeRes.text();
+check(
+  '已体检访问根路径 → 直达旅程页（重定向到 /en/journey 并渲染灯图）',
+  homeRes.url.endsWith('/en/journey') && homeHtml.includes('data-lamp-chart'),
+  `url=${homeRes.url} chart=${homeHtml.includes('data-lamp-chart')}`
+);
+
 // ───────────────────── ② /timeline：六类节点 + 回看链接 ─────────────────────
 console.log('\n—— ② 成长足迹页：六类节点齐全，链接直达 ——');
 const timelineRes = await get('/en/timeline', main.cookie);
