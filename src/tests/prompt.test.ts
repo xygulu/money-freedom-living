@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildChatContext, HISTORY_BUDGET } from '@/lib/prompt';
-import { validateDigest } from '@/lib/memory';
+import { validateDigest, DIGEST_SYSTEM } from '@/lib/memory';
 import type { Portrait, SessionMemory } from '@/lib/profile';
 import type { Locale } from '@/i18n/config';
 
@@ -130,5 +130,33 @@ describe('validateDigest（会话摘要结构校验）', () => {
     expect(validateDigest({ summary: '太短', pinned: [] })).toBeNull();
     expect(validateDigest({})).toBeNull();
     expect(validateDigest('hello')).toBeNull();
+  });
+});
+
+describe('DIGEST_SYSTEM（会话摘要人称）', () => {
+  // 摘要会原样出现在成长历程「那天聊到的」里念给本人听：必须第二人称。
+  // 断言切在红线之前——指令正文本身就不许拿第三人称当行文样板，模型会照抄。
+  it('zh 正文用「你」而不是「用户/他」，并带第三人称红线', () => {
+    for (const locale of ['zh-CN', 'zh-TW'] as const) {
+      const zh = locale === 'zh-CN';
+      const sys = DIGEST_SYSTEM[locale];
+      const brief = sys.slice(0, sys.indexOf(zh ? '红线：' : '紅線：'));
+      expect(brief, locale).toContain(zh ? '你说了什么' : '你說了什麼');
+      expect(brief, locale).not.toContain('用户说了什么');
+      expect(brief, locale).not.toContain('用戶說了什麼');
+      expect(sys, locale).toContain(zh ? '第三人称' : '第三人稱');
+    }
+  });
+
+  it('en 正文对本人说 you，不写 the user', () => {
+    const brief = DIGEST_SYSTEM.en.slice(0, DIGEST_SYSTEM.en.indexOf('Red line:'));
+    expect(brief).toContain('what you said and felt');
+    expect(brief).not.toContain('what the user said');
+    expect(DIGEST_SYSTEM.en).toContain('second person');
+  });
+
+  it('ja 正文用「あなた」', () => {
+    expect(DIGEST_SYSTEM.ja).toContain('あなたが何を言い');
+    expect(DIGEST_SYSTEM.ja).not.toContain('ユーザーが何を言い');
   });
 });
