@@ -75,6 +75,22 @@ describe('validateAssessment（结构校验：禁止半成品评估入库）', (
     expect(validateAssessment(draftFor(3, { actualStage: 4 }), 3)).not.toBeNull();
   });
 
+  it('程度制硬约束：本阶段灯全亮 ⇒ actualStage 必须判下一阶段（阶段完成即开启）；有灯未点亮不受限', () => {
+    const allLit = (stage: number) => ({
+      ...draftFor(stage),
+      lamps: (STAGE_LAMPS[stage] ?? []).map((r) => ({ kind: r.kind, lit: true, evidence: '程度达成的依据。' })),
+    });
+    // 全亮 + 停在原地 → 拒绝（不允许「程度全达成却不开下一阶段」的结论存在）
+    expect(validateAssessment(allLit(1), 1)).toBeNull();
+    expect(validateAssessment(allLit(3), 3)).toBeNull();
+    // 全亮 + 下一阶段 → 合法（stage 3 全亮开到 4，封顶不越界）
+    expect(validateAssessment({ ...allLit(1), actualStage: 2 }, 1)).not.toBeNull();
+    expect(validateAssessment({ ...allLit(3), actualStage: 4 }, 3)).not.toBeNull();
+    // 有灯未点亮 → 写当前阶段合法（评估未完成，等素材补充），判在门口也合法
+    expect(validateAssessment(draftFor(1, { actualStage: 1 }), 1)).not.toBeNull();
+    expect(validateAssessment(draftFor(1, { actualStage: 2 }), 1)).not.toBeNull();
+  });
+
   it('lamps 必须恰好覆盖当前阶段灯集：缺/多/重复/未知 kind 都拒绝', () => {
     const short = draftFor(1);
     short.lamps = short.lamps.slice(1);
@@ -235,6 +251,8 @@ describe('buildAssessMessages（评估 prompt：诊断四问、红线、语言�
     expect(system).toContain('为什么是这里（diagnosis）');
     expect(system).toContain('离「一辈子不愁钱的活法」还有多远（distance）');
     expect(system).toContain('下一步可以做什么（actions）');
+    expect(system).toContain('本阶段全部灯点亮时必须写');
+    expect(system).toContain('下一阶段随之开启');
     expect(system).toContain('"diagnosis"');
     expect(system).toContain('"distance"');
     expect(system).toContain('"actions"');

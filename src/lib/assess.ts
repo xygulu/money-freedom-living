@@ -83,6 +83,12 @@ export function validateAssessment(draft: unknown, stage: number): Omit<StageAss
   }
   if (byKind.size !== rules.length || rules.some((rule) => !byKind.has(rule.kind))) return null;
 
+  // 程度制硬约束：本阶段灯全亮 = 应达程度全达成 → 位置必须判下一阶段（阶段完成
+  // 即开启，不由素材/动作门槛决定）；反过来不必成立（评估可以自由判在门口）。
+  if (rules.length > 0 && rules.every((rule) => byKind.get(rule.kind)?.lit === true)) {
+    if (actualStage !== Math.min(stage + 1, MAX_STAGE)) return null;
+  }
+
   const summary = typeof d.summary === 'string' ? d.summary.trim() : '';
   // 上限是防失控的结构边界（中文 200 字 ≈ 200 字符，英文 120 词 ≈ 800 字符），
   // 风格长度由 prompt 的语言感知规则约束（见 buildAssessMessages）
@@ -252,7 +258,7 @@ export function buildAssessMessages(
     '',
     '输出（严格遵守，不要输出 JSON 以外的内容）：',
     '{',
-    `  "actualStage": ${stage} 或 ${Math.min(stage + 1, MAX_STAGE)} 的数字——他实际所处的阶段；认为他已在下一阶段门口才写下一阶段`,
+    `  "actualStage": ${stage} 或 ${Math.min(stage + 1, MAX_STAGE)} 的数字——本阶段全部灯点亮时必须写 ${Math.min(stage + 1, MAX_STAGE)}（本阶段应达程度已达成，下一阶段随之开启，不需要更多素材证明）；有灯未点亮时写 ${stage}（没点亮的那面就是还没到的程度）`,
     `  "lamps": [{"kind": "灯的 kind，与上方清单逐字一致", "lit": true 或 false, "evidence": "点亮依据：用「你」对他说（第二人称），引用他的原话或具体的事，${evidenceLen}；没点亮就留空字符串"}]，全部灯都要给，顺序不限`,
     `  "summary": "它看到的你：第二人称，${summaryLen}，镜子式的描述——说你在哪里、什么在松动，不评判不打分",`,
     `  "diagnosis": "为什么是这里：用旅程的机制框架解释——他的早期场景、金钱底色、旧脚本如何连成现在的模式（引用他的原话作证据）；这是镜子不是判决。第二人称，${diagLen}",`,

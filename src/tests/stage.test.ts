@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { computeStageProgress, stageLampScales, STAGE_LAMPS, MAX_STAGE } from '@/lib/stage';
+import { computeStageProgress, stageLampScales, stageAdvanceTarget, STAGE_LAMPS, MAX_STAGE } from '@/lib/stage';
 import type { GrowthProfile } from '@/lib/profile';
 
 // 灯 = 评估结论：点亮真值是最近一次确认评估的 lamps（assessment.confirmed），
@@ -155,5 +155,31 @@ describe('stageLampScales（四段刻度 = 评估结论：走过段满、当前�
     const empty = stageLampScales(profile());
     expect(empty.map((s) => s.lit)).toEqual([0, 0, 0, 0]);
     expect(empty[3]).toEqual({ id: 4, lit: 0, total: 0 });
+  });
+});
+
+describe('stageAdvanceTarget（程度制联动：本阶段灯全亮 → 下一阶段开启）', () => {
+  const litAll = (stage: number) => STAGE_LAMPS[stage].map((r) => ({ kind: r.kind, lit: true, evidence: '程度达成的依据。' }));
+  const litSome = (stage: number, n: number) =>
+    STAGE_LAMPS[stage].map((r, i) => ({ kind: r.kind, lit: i < n, evidence: i < n ? '依据。' : '' }));
+
+  it('本阶段灯全亮且已确认 → 推进到下一阶段（stage1→2、stage3→4 封顶）', () => {
+    expect(stageAdvanceTarget({ ...profile(), assessment: confirmedWith(litAll(1)) })).toBe(2);
+    expect(stageAdvanceTarget({ ...profile(), stage: 3, assessment: confirmedWith(litAll(3)) })).toBe(4);
+  });
+
+  it('有灯未点亮 / 无确认评估 / stage4（无灯无终点线）→ null', () => {
+    expect(stageAdvanceTarget({ ...profile(), assessment: confirmedWith(litSome(1, 2)) })).toBeNull();
+    expect(stageAdvanceTarget(profile())).toBeNull();
+    expect(stageAdvanceTarget({ ...profile(), stage: 4 })).toBeNull();
+  });
+
+  it('只认本阶段灯集：下一阶段的灯全亮不代表本阶段完成（推进后不连环跳）', () => {
+    // 站在阶段 2，确认评估是阶段 2 的评估（三盏全亮属于阶段 2）→ 才推进；
+    // 阶段 1 的旧评估灯再亮也管不到阶段 2 的判定
+    const stage2Assessment = { ...confirmedWith(litAll(2)), actualStage: 2 };
+    expect(stageAdvanceTarget({ ...profile(), stage: 2, assessment: stage2Assessment })).toBe(3);
+    const stage1OldAssessment = { ...confirmedWith(litAll(1)), actualStage: 1 };
+    expect(stageAdvanceTarget({ ...profile(), stage: 2, assessment: stage1OldAssessment })).toBeNull();
   });
 });

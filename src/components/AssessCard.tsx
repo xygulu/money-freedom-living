@@ -147,14 +147,18 @@ export default function AssessCard({
                 {t.advanceCta.replace('{stage}', nextTitle)}
               </button>
             )}
-            <button
-              type="button"
-              disabled={Boolean(busy)}
-              onClick={() => void act('confirm')}
-              className={canAdvance ? 'text-sm text-ink-soft underline underline-offset-4 hover:text-ink' : 'border border-ink px-5 py-2.5 text-sm transition-colors hover:bg-ink hover:text-paper'}
-            >
-              {canAdvance ? t.stayCta : t.confirmCta}
-            </button>
+            {/* 程度制：评估判定到下一阶段（本阶段灯全亮）时不再提供「留在阶段 n」
+                ——阶段完成即开启；不同意这份评估走 dismiss（14 天冷却） */}
+            {!canAdvance && (
+              <button
+                type="button"
+                disabled={Boolean(busy)}
+                onClick={() => void act('confirm')}
+                className="border border-ink px-5 py-2.5 text-sm transition-colors hover:bg-ink hover:text-paper"
+              >
+                {t.confirmCta}
+              </button>
+            )}
             <button
               type="button"
               disabled={Boolean(busy)}

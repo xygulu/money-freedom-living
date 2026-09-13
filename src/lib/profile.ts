@@ -2,6 +2,8 @@
 // 单用户并发极低（一个人和自己聊），读-改-写可接受；行级锁靠 UPDATE 的
 // WHERE user_key 语义兜底，不引入额外乐观锁复杂度。
 import { ensureSchema, execWithFailover, iso, type SqlClient } from '@/lib/db';
+import { stageAdvanceTarget } from '@/lib/stage';
+import { track } from '@/lib/analytics';
 
 export interface PortraitMoment {
   title: string;
@@ -235,7 +237,19 @@ export async function getProfile(userKey: string): Promise<GrowthProfile | null>
                stage_assessment, created_at, daily_seen, payday, total_active_days, last_active_date
         FROM growth_profiles WHERE user_key = ${userKey}`
   );
-  return rows[0] ? rowToProfile(rows[0]) : null;
+  const profile = rows[0] ? rowToProfile(rows[0]) : null;
+  if (!profile) return null;
+  // 程度制联动（含存量自愈）：确认评估里本阶段灯全亮 = 程度全达成 → 下一阶段
+  // 自动开启，镜像 advance 语义（心印入档 + 埋点）。幂等——推进后灯集属新阶段，
+  // 条件不再成立；并发请求各写一遍同值（心印 DISTINCT ON 去重）。
+  const to = stageAdvanceTarget(profile);
+  if (to !== null) {
+    await appendStamps(userKey, [`stage${to}_entered`]);
+    await saveStage(userKey, to);
+    await track(userKey, 'stage_advanced', { from: String(profile.stage), to: String(to), selfHeal: '1' }, profile.locale);
+    profile.stage = to;
+  }
+  return profile;
 }
 
 /** 取档案，无则建（问卷提交/微行动完成/写信时触发，locale 取当前界面语言） */

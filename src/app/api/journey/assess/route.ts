@@ -110,6 +110,16 @@ export async function POST(request: NextRequest) {
       await saveAssessmentState(identity.key, { pending: null, confirmed: pending, confirmedAt: now, previousConfirmed: state.confirmed });
       await bumpActiveDay(identity.key);
       await track(identity.key, 'stage_assessment_confirmed', { stage: profile.stage, lit: newlyLit.length }, locale);
+      // 程度制联动：评估判定位置已在下一阶段（本阶段灯全亮）→ 随确认开启下一阶段，
+      // 不再需要单独的 advance 动作（API 层兜底，防旧缓存 UI 造出「全亮但停在原地」）
+      const from = profile.stage;
+      if (from < MAX_STAGE && pending.actualStage > from) {
+        const to = from + 1;
+        await appendStamps(identity.key, [`stage${to}_entered`]);
+        await saveStage(identity.key, to);
+        await track(identity.key, 'stage_advanced', { from: String(from), to: String(to) }, locale);
+        return respond({ ok: true, stage: to });
+      }
       return respond({ ok: true });
     }
 

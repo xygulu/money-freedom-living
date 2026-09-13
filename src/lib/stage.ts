@@ -110,3 +110,15 @@ export function stageLampScales(profile: GrowthProfile): { id: number; lit: numb
     return { id, lit, total: rules.length };
   });
 }
+
+/** 程度制联动：确认评估里本阶段灯全亮 = 本阶段应达程度全达成 → 下一阶段随之
+ *  开启（不由素材/动作门槛决定，也不需要单独的推进动作）。返回应推进到的阶段
+ *  号；无需推进返回 null。纯函数，getProfile 落库自愈与 confirm 收口共用同一判定。 */
+export function stageAdvanceTarget(profile: GrowthProfile): number | null {
+  const stage = profile.stage;
+  if (stage >= MAX_STAGE) return null;
+  const rules = STAGE_LAMPS[stage] ?? [];
+  if (rules.length === 0) return null;
+  const lit = new Set((profile.assessment.confirmed?.lamps ?? []).filter((l) => l.lit).map((l) => l.kind));
+  return rules.every((r) => lit.has(r.kind)) ? stage + 1 : null;
+}
