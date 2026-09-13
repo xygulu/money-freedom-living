@@ -4,14 +4,16 @@
 // （虚线）= 这个阶段应达的程度（标准），点亮顶点的连线范围 = 用户现在的位置，
 // 差距一眼可见（哪几面亮了、哪几面还空着）。不画数值刻度：灯只有亮/不亮 +
 // 依据（程度制），「差距」由图形表达，不由百分比表达。图下每盏灯一行：
-// 未亮的展开点亮标准 + 「对它说说这件事」的行动入口；已亮的展开评估依据。
-// 再往下是评估报告的「下一步可以做什么」——每条直接是按钮（触发对话入口），
-// 不是建议文案。走过的段不用这张图（陈列用文字灯即可），阶段 4 无灯不画。
+// 未亮的展开点亮标准 + 真实记录入口（RecordForm：行为/事件/场景 + 感受）；
+// 已亮的展开评估依据。评估的行动列表（ActionRecordList）挂在图下方——按钮
+// 不跳通用聊天，就地展开同一张记录表单。走过的段不用这张图（陈列用文字灯
+// 即可），阶段 4 无灯不画图（行动列表在页内单独给）。
 import { useState } from 'react';
-import Link from 'next/link';
 import type { Dict } from '@/i18n/get-dict';
 import type { StageCheck } from '@/lib/stage';
 import { lampChartPoints } from '@/lib/stage';
+import RecordForm from '@/components/RecordForm';
+import ActionRecordList from '@/components/ActionRecordList';
 
 const CX = 110; // SVG 视窗中心/半径（viewBox 220×200，顶点落在圆上，四周留标签余量）
 const CY = 100;
@@ -28,7 +30,7 @@ export default function StageLampChart({
   dict: Dict;
   checks: StageCheck[];
   evidence: Record<string, string>; // 评估依据随灯显示（服务端已按 kind 摘好；对象可跨 RSC 边界）
-  actions: string[]; // 最近一次确认评估的下一步行动（每条一个按钮）
+  actions: string[]; // 最近一次确认评估的下一步行动（每条直接展开记录表单）
 }) {
   const t = dict.journey;
   const lampName = (labelKey: string) => (dict.journey as unknown as Record<string, string>)[labelKey] ?? labelKey;
@@ -38,7 +40,7 @@ export default function StageLampChart({
     const i = checks.findIndex((c) => !c.done);
     return i === -1 ? null : i;
   });
-  const chatHref = `/${locale}/chat`;
+  const [lampForm, setLampForm] = useState(false); // 该行是否正在记录
 
   const pts = lampChartPoints(checks.length).map((p) => ({
     x: CX + (p.x - 0.5) * 2 * R,
@@ -109,13 +111,18 @@ export default function StageLampChart({
                           {hint}
                         </p>
                       )}
-                      <Link
-                        href={chatHref}
-                        data-lamp-cta={c.kind}
-                        className="mt-2 inline-block border border-ink px-4 py-1.5 text-sm transition-colors hover:bg-ink hover:text-paper"
-                      >
-                        {t.lampActCta} →
-                      </Link>
+                      {lampForm ? (
+                        <RecordForm locale={locale} dict={dict} onDone={() => setLampForm(false)} />
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setLampForm(true)}
+                          data-lamp-cta={c.kind}
+                          className="mt-2 inline-block border border-ink px-4 py-1.5 text-sm transition-colors hover:bg-ink hover:text-paper"
+                        >
+                          {t.lampActCta} →
+                        </button>
+                      )}
                     </>
                   )}
                 </div>
@@ -128,20 +135,7 @@ export default function StageLampChart({
 
       {actions.length > 0 && (
         <div className="mt-5 border-t border-line pt-4">
-          <p className="text-xs tracking-widest text-ink-soft">{dict.assess.actionsLabel}</p>
-          <div className="mt-3 flex flex-col gap-2">
-            {actions.map((a, i) => (
-              <Link
-                key={i}
-                href={chatHref}
-                data-action-cta={String(i)}
-                className="flex items-center justify-between gap-3 border border-ink px-4 py-2.5 text-sm leading-relaxed transition-colors hover:bg-ink hover:text-paper"
-              >
-                <span>{a}</span>
-                <span aria-hidden>→</span>
-              </Link>
-            ))}
-          </div>
+          <ActionRecordList locale={locale} dict={dict} actions={actions} label={dict.assess.actionsLabel} />
         </div>
       )}
     </div>

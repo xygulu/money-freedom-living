@@ -267,7 +267,8 @@ check('无 pending 的 advance → 404', advanceAgain.status === 404, `status=${
 
 // 进度条（数据驱动锚点）：stage=2，确认评估是推进时的那份阶段 1 评估（2 亮 1 未亮）。
 // 评估结论语义：seg1 走过的段整段填充（width:100%）；seg2 当前段按确认评估 =
-// 0/3（width:0%）；右值当前阶段「0/3」
+// 0/3（width:0%）。全阶段可见布局（用户指令）：四段各占一列 = 段名 + 该段进度
+// + 该段灯数，不再只标当前位置
 const seg = (html, id) => {
   const start = html.indexOf(`data-segment="${id}"`);
   if (start === -1) return '';
@@ -277,7 +278,19 @@ const seg = (html, id) => {
 const barHtml = await (await get('/en/journey', main.cookie)).text();
 check('进度条 seg1 走过的段整段填充（width:100%）', seg(barHtml, 1).includes('width:100%'), seg(barHtml, 1).match(/width:\d+%/) ?? 'no width');
 check('进度条 seg2 尚未点亮（width:0%）', seg(barHtml, 2).includes('width:0%'));
-check('进度条右值 = 当前阶段灯数 data-lamp-count="0/3"', barHtml.includes('data-lamp-count="0/3"'));
+check(
+  '进度栏全阶段可见：四段格子 + 段名（Stage 1..4 · 各段标题）都在',
+  (barHtml.match(/data-stage-cell="\d"/g) ?? []).length === 4 &&
+    ['Stage 1 · Seeing', 'Stage 2 · Loosening', 'Stage 3 · Practicing', 'Living it'].every((n) => barHtml.includes(n)),
+  `cells=${(barHtml.match(/data-stage-cell="/g) ?? []).length}`
+);
+check(
+  '进度栏各段进度：走过段计数 3/3、当前段 data-lamp-count="0/3" 唯一锚点、阶段 4 无计数',
+  seg(barHtml, 1).includes('3/3') &&
+    (barHtml.match(/data-lamp-count=/g) ?? []).length === 1 &&
+    barHtml.includes('data-lamp-count="0/3"'),
+  `seg1Has33=${seg(barHtml, 1).includes('3/3')} countAttrs=${(barHtml.match(/data-lamp-count=/g) ?? []).length} hasAnchor=${barHtml.includes('data-lamp-count="0/3"')}`
+);
 
 // 走过的段也展示灯（2026-09-13 拍板）：阶段 1 走过后整段点亮——三盏灯全 ●
 // （评估没亮的也不灭，走过即「程度已达成」），已亮灯的依据随灯显示，hint 收起；
@@ -325,11 +338,11 @@ check(
   barHtml.includes('The lit shape is where you are now') && barHtml.includes('data-lamp-row="stage2_claim"')
 );
 check(
-  '灯图：未亮灯默认展开——点亮标准（The bar:）+ 行动按钮直达对话',
-  barHtml.includes('data-lamp-cta="stage2_claim"') && barHtml.includes('The bar: ')
+  '灯图：未亮灯默认展开——点亮标准（The bar:）+ 真实记录入口（不跳通用聊天）',
+  barHtml.includes('data-lamp-cta="stage2_claim"') && barHtml.includes('The bar: ') && !barHtml.includes('Talk it over')
 );
 check(
-  '评估行动 = 直接按钮（下一步可以做什么，2 条各一个入口）',
+  '评估行动 = 直接按钮（下一步可以做什么，2 条各一个记录入口）',
   (barHtml.match(/data-action-cta=/g) ?? []).length === 2 && barHtml.includes(ACTION_SEED)
 );
 

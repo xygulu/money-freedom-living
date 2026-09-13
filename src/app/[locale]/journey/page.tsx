@@ -21,6 +21,7 @@ import { baselineFor, countMaterialSince, shouldPropose, saveEvolution, listPort
 import { shouldOfferAssess, saveAssessmentState, ASSESS_PENDING_TTL_DAYS } from '@/lib/assess';
 import MicroActionCard from '@/components/MicroActionCard';
 import StageLampChart from '@/components/StageLampChart';
+import ActionRecordList from '@/components/ActionRecordList';
 import AnchorCard from '@/components/AnchorCard';
 import TimelineItemView from '@/components/TimelineItemView';
 import AssessCard from '@/components/AssessCard';
@@ -329,23 +330,15 @@ export default async function journeyPage({ params }: { params: Promise<{ locale
                   actions={confirmed?.actions ?? []}
                 />
               )}
-              {/* 阶段 4 无灯不画图，行动按钮单独给（same buttons，入口不变） */}
+              {/* 阶段 4 无灯不画图，行动记录列表单独给（与灯图同一组件同一管线） */}
               {current && stProgress && stProgress.checks.length === 0 && confirmed && confirmed.actions.length > 0 && (
                 <div className="mt-5">
-                  <p className="text-xs tracking-widest text-ink-soft">{dict.assess.actionsLabel}</p>
-                  <div className="mt-3 flex flex-col gap-2">
-                    {confirmed.actions.map((a, i) => (
-                      <Link
-                        key={i}
-                        href={`/${locale}/chat`}
-                        data-action-cta={String(i)}
-                        className="flex items-center justify-between gap-3 border border-ink px-4 py-2.5 text-sm leading-relaxed transition-colors hover:bg-ink hover:text-paper"
-                      >
-                        <span>{a}</span>
-                        <span aria-hidden>→</span>
-                      </Link>
-                    ))}
-                  </div>
+                  <ActionRecordList
+                    locale={locale}
+                    dict={dict}
+                    actions={confirmed.actions}
+                    label={dict.assess.actionsLabel}
+                  />
                 </div>
               )}
 
