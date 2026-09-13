@@ -202,7 +202,7 @@ export default async function journeyPage({ params }: { params: Promise<{ locale
           <p className="mt-4 text-sm text-ink-soft">{dict.journey.microNone}</p>
         )}
         <div className="mt-5 flex flex-wrap gap-3 text-sm">
-          <Link href={`/${locale}/chat`} className="text-accent underline underline-offset-4">
+          <Link href={`/${locale}/chat?start=1`} className="text-accent underline underline-offset-4">
             {dict.journey.microChatAlt}
           </Link>
           <span aria-hidden className="text-line">·</span>
@@ -214,7 +214,7 @@ export default async function journeyPage({ params }: { params: Promise<{ locale
         <p className="text-xs tracking-widest text-ink-soft">{dict.journey.chatLabel}</p>
         <p className="mt-4 text-sm leading-relaxed text-ink-soft">{dict.journey.chatHint}</p>
         <Link
-          href={`/${locale}/chat`}
+          href={`/${locale}/chat?start=1`}
           className="mt-5 inline-block border border-ink px-5 py-2.5 text-sm transition-colors hover:bg-ink hover:text-paper"
         >
           {dict.journey.chatCta}

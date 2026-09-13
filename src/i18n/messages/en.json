@@ -380,6 +380,7 @@
     "title": "Conversation",
     "subtitle": "I remember where you left off. Just talk.",
     "start": "Start today's conversation",
+    "opening": "Opening…",
     "remaining": "conversations left today",
     "quotaExhausted": "That's all for today. I'll still be here tomorrow.",
     "vipHint": "VIP keeps talking, anytime.",

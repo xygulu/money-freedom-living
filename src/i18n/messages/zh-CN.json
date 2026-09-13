@@ -380,6 +380,7 @@
     "title": "对话",
     "subtitle": "我记得你上次说到哪了。想说什么就说。",
     "start": "开始今天的对话",
+    "opening": "正在打开……",
     "remaining": "今日剩余对话次数",
     "quotaExhausted": "今天先到这里，明天我还在。",
     "vipHint": "升级 VIP，随时继续。",

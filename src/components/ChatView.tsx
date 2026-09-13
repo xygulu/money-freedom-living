@@ -3,7 +3,7 @@
 // 陪伴对话视图（M4）：开始卡片（配额预检）↔ 对话间（SSE 流式）。
 // 会话建立后立即请求 AI 开场（opener）——归来问候自然接上 memories 里的上次内容。
 // 危机命中（safety 事件）时该轮回复是服务端定死的转介文案，样式区分并附安全提示。
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { readSse } from '@/lib/sse-client';
 import type { Dict } from '@/i18n/get-dict';
@@ -19,9 +19,11 @@ interface Props {
   openSessionId: string | null;
   initialMessages: Turn[];
   remaining: number;
+  /** 从旅程页点「随便聊聊」进来：落地即开聊，不再要第二次点击 */
+  autoStart?: boolean;
 }
 
-export default function ChatView({ locale, dict, openSessionId, initialMessages, remaining }: Props) {
+export default function ChatView({ locale, dict, openSessionId, initialMessages, remaining, autoStart = false }: Props) {
   const t = dict.chat;
   const [sessionId, setSessionId] = useState<string | null>(openSessionId);
   const [messages, setMessages] = useState<Turn[]>(initialMessages);
@@ -32,8 +34,19 @@ export default function ChatView({ locale, dict, openSessionId, initialMessages,
   const [left, setLeft] = useState(remaining);
   const [safetyShown, setSafetyShown] = useState(false);
   const [error, setError] = useState('');
+  // 自动开聊只许一次：StrictMode 下 effect 会跑两遍，ref 同实例保留，避免建出两个会话
+  const autoStarted = useRef(false);
 
   const inputDisabled = busy || ended || !sessionId;
+
+  // 落地即开聊（?start=1）：旅程页那一下点击已经是「我想聊」，这里不该再要一次点击。
+  // 只在没有进行中的会话时建；失败会落回开始按钮（下面的 error 分支）。
+  useEffect(() => {
+    if (!autoStart || autoStarted.current || openSessionId) return;
+    autoStarted.current = true;
+    void start();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // 发消息（text）或请求开场（null）：SSE 增量合并到末条 assistant
   async function stream(text: string | null) {
@@ -144,14 +157,21 @@ export default function ChatView({ locale, dict, openSessionId, initialMessages,
     }
     return (
       <div className="flex flex-col gap-3">
-        <button
-          type="button"
-          disabled={busy}
-          onClick={start}
-          className="self-start rounded-full bg-accent px-8 py-3 text-base text-paper hover:opacity-90 disabled:opacity-40"
-        >
-          {t.start}
-        </button>
+        {busy && autoStart ? (
+          // 自动开聊进行中：这里是「正在打开」而不是一颗还要再按一次的按钮
+          <p data-chat-opening className="text-sm text-ink-soft">
+            {t.opening}
+          </p>
+        ) : (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={start}
+            className="self-start rounded-full bg-accent px-8 py-3 text-base text-paper hover:opacity-90 disabled:opacity-40"
+          >
+            {t.start}
+          </button>
+        )}
         <p className="text-xs text-ink-soft">
           {t.remaining}: {left}
         </p>

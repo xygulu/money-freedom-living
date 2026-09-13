@@ -147,6 +147,12 @@ check('0 元替代语随卡渲染（stage2 free_alt 数据驱动）', journeyHtm
 check('其他阶段的替代语不串场（stage3 free_alt 不在场）', !journeyHtml.includes(FREE_ALT_STAGE3));
 check('changes 入口在场（已确认评估 → 确认报告块尾部链接）', journeyHtml.includes('href="/zh-CN/journey/changes"'));
 check('确认报告块渲染（总结/诊断种子在场）', journeyHtml.includes(SUMMARY_SEED) && journeyHtml.includes(DIAG_SEED));
+// 旅程页两个聊天入口都带 ?start=1：落地即建会话，不再要第二次点击
+// （只数带意图的入口；导航栏那个裸 /chat 是「逛进来」的口，保持原样）
+check(
+  '聊天入口带落地即开聊意图（随便聊聊 + 开始今天的对话 两处）',
+  (journeyHtml.match(/\/zh-CN\/chat\?start=1/g) ?? []).length >= 2
+);
 
 // ───────────────────── ③④ 微行动：即时见证回应 + 首次埋点 ─────────────────────
 console.log('\n—— ③④ 微行动：receipt 非空 + 首次埋点恰一次 ——');

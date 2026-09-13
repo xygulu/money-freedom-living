@@ -13,10 +13,19 @@ import ChatView from '@/components/ChatView';
 
 export const dynamic = 'force-dynamic';
 
-export default async function chatPage({ params }: { params: Promise<{ locale: string }> }) {
+export default async function chatPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ locale: string }>;
+  searchParams: Promise<{ start?: string }>;
+}) {
   const { locale } = await params;
   if (!isLocale(locale) || !enabledLocales.includes(locale)) notFound();
   const dict = getDict(locale);
+  // ?start=1 = 从旅程页「随便聊聊 / 开始今天的对话」点进来的：已经表达过要聊了，
+  // 不再要求第二次点击，落地即建会话（建会话不扣配额，落账仍在首条 AI 回复）。
+  const autoStart = (await searchParams).start === '1';
 
   const headersList = await headers();
   const cookieList = await cookies();
@@ -44,6 +53,7 @@ export default async function chatPage({ params }: { params: Promise<{ locale: s
           openSessionId={open?.id ?? null}
           initialMessages={messages}
           remaining={quota.remaining}
+          autoStart={autoStart}
         />
       </div>
       <Link href={`/${locale}/chat/history`} className="mt-8 self-start text-sm text-accent underline underline-offset-4">
