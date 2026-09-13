@@ -254,6 +254,14 @@ describe('buildAssessMessages（评估 prompt：诊断四问、红线、语言�
     expect(system).toContain('宁可点得少，不可编造');
   });
 
+  it('人称钉死：所有给用户看的字段一律第二人称——报告念给他听，不是向第三方汇报', () => {
+    const { system } = buildAssessMessages('zh-CN', 1, [stageFixture(1), stageFixture(2)], material, { earnedKinds: [] });
+    expect(system).toContain('一律用第二人称「你」直接对他说话');
+    expect(system).toContain('不是向第三方汇报他');
+    expect(system).toContain('"evidence": "点亮依据：用「你」对他说（第二人称）');
+    expect(system).toContain('第二人称，用「你」开头');
+  });
+
   it('scriptStatus 三态陈述随 script 进素材：候选不得当认可、否决也是态度、确认是认可', () => {
     const base = { ...material };
     const pending = buildAssessMessages('zh-CN', 1, [stageFixture(1), stageFixture(2)], base, { earnedKinds: [] }).messages[0].content;
