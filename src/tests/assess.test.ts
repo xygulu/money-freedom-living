@@ -276,7 +276,8 @@ describe('buildAssessMessages（评估 prompt：诊断四问、红线、语言�
     const { system } = buildAssessMessages('zh-CN', 1, [stageFixture(1), stageFixture(2)], material, { earnedKinds: [] });
     expect(system).toContain('一律用第二人称「你」直接对他说话');
     expect(system).toContain('不是向第三方汇报他');
-    expect(system).toContain('"evidence": "点亮依据：用「你」对他说（第二人称）');
+    expect(system).toContain('一处都不许出现「他/她/这位用户」这类第三人称指代');
+    expect(system).toContain('"evidence": "点亮依据：第二人称，用「你」直接对他说');
     expect(system).toContain('第二人称，用「你」开头');
   });
 

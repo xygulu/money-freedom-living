@@ -145,8 +145,26 @@ describe('buildChangeListMessages（叙述段 prompt：素材与红线）', () =
     const first = buildChangeListMessages('zh-CN', material, {
       confirmed: curr, previousConfirmed: null, newLamps: [], earnedKinds: [],
     });
-    expect(first.system).toContain('这是他的第一份清单');
+    expect(first.system).toContain('这是你的第一份清单');
     expect(first.messages[0].content).not.toContain('上一次确认的评估');
+  });
+
+  it('人称钉死：叙述段是念给他本人听的，通篇第二人称——指令与素材标题都不得用「他」带节奏', () => {
+    const withPrev = buildChangeListMessages('zh-CN', material, {
+      confirmed: assessment({ actualStage: 2 }), previousConfirmed: assessment({ actualStage: 1 }), newLamps: [], earnedKinds: [],
+    });
+    expect(withPrev.system).toContain('全程用第二人称「你」直接对他说');
+    expect(withPrev.system).toContain('一处都不许出现「他/她/这位用户」这类第三人称指代');
+    expect(withPrev.system).toContain('不是向第三方汇报他');
+    // 指令正文（红线段之前）不得用第三人称描述他做过什么——那会把行文带成汇报口吻
+    const brief = withPrev.system.slice(0, withPrev.system.indexOf('红线：'));
+    expect(brief).toContain('你走到了哪里');
+    expect(brief).toContain('你做过的具体的事');
+    expect(brief).not.toContain('他走到了哪里');
+    expect(brief).not.toContain('他做过的具体的事');
+    // 素材标题同理：喂进去的抬头也是行文样板
+    expect(withPrev.messages[0].content).toContain('## 体检画像（你说过的关于自己的话）');
+    expect(withPrev.messages[0].content).toContain('新点亮的心印（依据是你的原话）：');
   });
 
   it('红线逐字在场：禁编造/不评判不打分不比较/没变化就诚实/无理财建议；长度语言感知', () => {

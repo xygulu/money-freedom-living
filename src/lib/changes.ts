@@ -61,15 +61,16 @@ export function buildChangeListMessages(locale: string, material: AssessMaterial
   const prev = context.previousConfirmed;
 
   const system = [
-    '你是这段旅程的见证者。用户要一份《我的变化清单》——把他这段时间自己说过的话、做过的事，拼成一段他亲眼能看见变化的文字。',
+    '你是这段旅程的见证者。用户要一份《我的变化清单》——把他这段时间自己说过的话、做过的事，拼成一段他亲眼能看见变化的文字。这段文字是念给他本人听的，全程用第二人称「你」直接对他说。',
     `全程用${lang}书写。`,
     '写什么（自然行文，不要标题、表格或列表符号——页面已有结构）：',
     prev
-      ? `- 从上次评估到现在，他走到了哪里：上次在阶段 ${prev.actualStage}，这次在阶段 ${c.actualStage}；如果素材里有他两次面对同类场景的不同说法，可以并排放（引他原话），让变化自己浮现`
-      : '- 这是他的第一份清单：从旅程开始讲起——他刚来时是什么样（画像/体检原话），现在走到了哪里',
-    '- 他做过的具体的事：引用微行动、日记、信或对话摘要里的原话，至少两三件，用他自己的话',
+      ? `- 从上次评估到现在，你走到了哪里：上次在阶段 ${prev.actualStage}，这次在阶段 ${c.actualStage}；如果素材里有你两次面对同类场景的不同说法，可以并排放（引你的原话），让变化自己浮现`
+      : '- 这是你的第一份清单：从旅程开始讲起——你刚来时是什么样（画像/体检原话），现在走到了哪里',
+    '- 你做过的具体的事：引用微行动、日记、信或对话摘要里的原话，至少两三件，用你自己的话',
     '- 什么在松动：对照体检画像与这段时间的言行，只说看得见的',
     '红线：',
+    '- 通篇第二人称「你」（英文用 you），一处都不许出现「他/她/这位用户」这类第三人称指代——这是写给他本人的信，不是向第三方汇报他；本提示词里用「他」指代他只是内部视角，不得带进正文',
     '- 全部用素材里的原话与事，禁止编造',
     '- 不评判、不打分、不比较：没有「进步很大/还不够/做得好」这类话；只描述，不定性',
     '- 没变化就说没变化——诚实也是陪伴；不恐吓、不许诺',
@@ -78,7 +79,7 @@ export function buildChangeListMessages(locale: string, material: AssessMaterial
   ].join('\n');
 
   const user = [
-    '## 体检画像（他说过的关于自己的话）',
+    '## 体检画像（你说过的关于自己的话）',
     material.portrait?.spoken.length ? material.portrait.spoken.map((s) => `- 「${s}」`).join('\n') : '(无)',
     material.portrait?.script ? `- 旧脚本：${material.portrait.script}` : null,
     '',
@@ -86,11 +87,11 @@ export function buildChangeListMessages(locale: string, material: AssessMaterial
     `它看到的你：${c.summary}`,
     c.diagnosis ? `为什么是这里：${c.diagnosis}` : null,
     c.distance ? `离「一辈子不愁钱的活法」还有多远：${c.distance}` : null,
-    '新点亮的心印（依据是他的原话）：',
+    '新点亮的心印（依据是你的原话）：',
     context.newLamps.length > 0
       ? context.newLamps.map((l) => `- ${l.kind}：${l.evidence}`).join('\n')
       : '(这次没有新点亮的灯——就诚实说没有)',
-    c.actions.length > 0 ? `他清单上的下一步：${c.actions.join('；')}` : null,
+    c.actions.length > 0 ? `你清单上的下一步：${c.actions.join('；')}` : null,
     '',
     prev
       ? [
