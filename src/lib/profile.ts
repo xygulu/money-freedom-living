@@ -118,7 +118,13 @@ export interface ChangeListEntry {
 
 /** 容忍 '{}'、null 与脏值——JSONB 默认 '{}'，读取侧唯一出入口 */
 export function parseAssessmentState(raw: unknown): AssessmentState {
-  const o = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>;
+  // 必须是纯对象：数组也满足 typeof === 'object'，但取键全是 undefined——列被
+  // 外部手工编辑成数组/字符串时会静默退化成「什么都没有」（评估报告凭空消失）。
+  // 显式判型 + 告警，让损坏看得见（写入侧 saveAssessmentState 会自愈回对象）。
+  if (Array.isArray(raw)) {
+    console.warn('[profile] stage_assessment is an array (corrupted shape) — treated as empty state');
+  }
+  const o = (typeof raw === 'object' && raw !== null && !Array.isArray(raw) ? raw : {}) as Record<string, unknown>;
   const str = (v: unknown): string | null => (typeof v === 'string' && v ? v : null);
   const asmt = (v: unknown): StageAssessment | null =>
     typeof v === 'object' && v !== null ? (v as StageAssessment) : null;

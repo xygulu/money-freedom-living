@@ -141,15 +141,21 @@ export function gatherChangeListMaterial(userKey: string, profile: GrowthProfile
   return gatherAssessMaterial(userKey, profile, profile.assessment.confirmedAt!);
 }
 
-/** 生成中的非重入锁（自过期，镜像 claimAssessment；独立键不与评估锁互斥） */
+/** 生成中的非重入锁（自过期，镜像 claimAssessment；独立键不与评估锁互斥）。
+ *  列非对象时同样自愈成干净对象——`||` 对非对象是追加语义（见 assess.ts 注释） */
 export async function claimChangeList(userKey: string, nowISO: string): Promise<boolean> {
   const rows = await execWithFailover((sql) =>
     sql`UPDATE growth_profiles
-        SET stage_assessment = stage_assessment || ${JSON.stringify({ changeListLockAt: nowISO })}::jsonb,
+        SET stage_assessment = CASE
+              WHEN jsonb_typeof(stage_assessment) = 'object'
+                THEN stage_assessment || ${JSON.stringify({ changeListLockAt: nowISO })}::jsonb
+              ELSE ${JSON.stringify({ changeListLockAt: nowISO })}::jsonb
+            END,
             updated_at = now()
         WHERE user_key = ${userKey}
           AND (
-            (stage_assessment->>'changeListLockAt') IS NULL
+            jsonb_typeof(stage_assessment) <> 'object'
+            OR (stage_assessment->>'changeListLockAt') IS NULL
             OR (now() - (stage_assessment->>'changeListLockAt')::timestamptz) > make_interval(secs => (${CHANGE_LIST_LOCK_MS / 1000})::double precision)
           )
         RETURNING user_key`

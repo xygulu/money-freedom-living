@@ -326,12 +326,26 @@ export function buildAssessMessages(
 
 // ---------- stage_assessment 写入 ----------
 
-/** 合并写评估状态（只该动的键，JSONB || 语义）；generatingAt: null 表示清锁 */
+/**
+ * 合并写评估状态（只该动的键，JSONB || 语义）；generatingAt: null 表示清锁。
+ *
+ * 列必须是 JSON 对象才能合并：`jsonb || jsonb` 对非对象是**追加/拼接**语义
+ * （array||obj = 追加一个元素、string||obj = 变成二元数组、NULL||obj = NULL）——
+ * 一旦列被外部手工编辑成字符串/数组，此后每次写入都只是静默追加，读取侧
+ * （parseAssessmentState 取 o.pending/o.confirmed）全取不到，表现为「评估生成
+ * 成功但页面永远停在提议卡、报告消失」。所以这里显式判型：不是对象就用本次
+ * patch 重置（自愈回干净对象），而不是让损坏状态无限累积。
+ */
 export async function saveAssessmentState(userKey: string, patch: Partial<AssessmentState>): Promise<void> {
   await ensureSchema();
   await execWithFailover((sql) =>
     sql`UPDATE growth_profiles
-        SET stage_assessment = stage_assessment || ${JSON.stringify(patch)}::jsonb, updated_at = now()
+        SET stage_assessment = CASE
+              WHEN jsonb_typeof(stage_assessment) = 'object'
+                THEN stage_assessment || ${JSON.stringify(patch)}::jsonb
+              ELSE ${JSON.stringify(patch)}::jsonb
+            END,
+            updated_at = now()
         WHERE user_key = ${userKey}`
   );
 }
@@ -339,15 +353,22 @@ export async function saveAssessmentState(userKey: string, patch: Partial<Assess
 /**
  * 原子占锁（模式同 evolution.claimEvolution / chat.claimSession）：generatingAt
  * 为空或已过自过期才能占到，双击/并发下只有一次 LLM 生成。占不到由路由返回 429。
+ * 列非对象时（外部手工编辑损坏）`->>'generatingAt'` 恒为 NULL 会误判「没锁」，
+ * 所以占锁同时把列自愈成干净对象（同 saveAssessmentState 的判型）。
  */
 export async function claimAssessment(userKey: string, nowISO: string): Promise<boolean> {
   const rows = await execWithFailover((sql) =>
     sql`UPDATE growth_profiles
-        SET stage_assessment = stage_assessment || ${JSON.stringify({ generatingAt: nowISO })}::jsonb,
+        SET stage_assessment = CASE
+              WHEN jsonb_typeof(stage_assessment) = 'object'
+                THEN stage_assessment || ${JSON.stringify({ generatingAt: nowISO })}::jsonb
+              ELSE ${JSON.stringify({ generatingAt: nowISO })}::jsonb
+            END,
             updated_at = now()
         WHERE user_key = ${userKey}
           AND (
-            (stage_assessment->>'generatingAt') IS NULL
+            jsonb_typeof(stage_assessment) <> 'object'
+            OR (stage_assessment->>'generatingAt') IS NULL
             OR (now() - (stage_assessment->>'generatingAt')::timestamptz) > make_interval(secs => (${ASSESS_LOCK_MS / 1000})::double precision)
           )
         RETURNING user_key`

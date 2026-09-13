@@ -421,4 +421,15 @@ describe('parseAssessmentState（容脏读取）', () => {
     expect(dirty.confirmedAt).toBeNull();
     expect(dirty.dismissedAt).toBe('2026-09-01T00:00:00Z');
   });
+
+  it('数组形态（列被手工编辑损坏：jsonb || 非对象是追加语义）→ 全空，不当对象读', () => {
+    // 实战踩过：列被外部编辑成 JSON 字符串后，每次 `stage_assessment || patch`
+    // 都变成往数组追加一个元素；读取侧 typeof [] === 'object' 会蒙混过关，
+    // 取键全 undefined → 评估生成成功但页面永远停在提议卡、报告凭空消失。
+    const corrupted = ['{"confirmed":{"actualStage":1}}', { pending: { actualStage: 2 } }];
+    const parsed = parseAssessmentState(corrupted);
+    expect(parsed.pending).toBeNull();
+    expect(parsed.confirmed).toBeNull();
+    expect(parsed.confirmedAt).toBeNull();
+  });
 });
