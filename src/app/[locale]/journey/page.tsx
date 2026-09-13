@@ -20,6 +20,7 @@ import { computeStageProgress, MAX_STAGE } from '@/lib/stage';
 import { baselineFor, countMaterialSince, shouldPropose, saveEvolution, listPortraitVersions } from '@/lib/evolution';
 import { shouldOfferAssess, saveAssessmentState, ASSESS_PENDING_TTL_DAYS } from '@/lib/assess';
 import MicroActionCard from '@/components/MicroActionCard';
+import StageLampChart from '@/components/StageLampChart';
 import AnchorCard from '@/components/AnchorCard';
 import TimelineItemView from '@/components/TimelineItemView';
 import AssessCard from '@/components/AssessCard';
@@ -315,44 +316,36 @@ export default async function journeyPage({ params }: { params: Promise<{ locale
                 </div>
               )}
 
-              {/* 这个阶段的灯：灯 = 评估结论（最近一次确认评估的 lamps：亮/不亮 +
-                  依据），不是用户动作的记录——评估没说亮的灯一律未点亮。点亮标准
-                  （hint）与评估 LLM 用的是同一张判定表（STAGE_LAMPS），标准透明。 */}
+              {/* 这个阶段的灯：以图为中心——外圈=标准，点亮范围=现在的位置，
+                  差距直观可见；未亮的灯展开点亮标准 + 行动入口，报告的行动
+                  每条直接是按钮。灯 = 评估结论（最近一次确认评估的 lamps：
+                  亮/不亮 + 依据），不是用户动作的记录。 */}
               {current && stProgress && stProgress.checks.length > 0 && (
+                <StageLampChart
+                  locale={locale}
+                  dict={dict}
+                  checks={stProgress.checks}
+                  evidence={Object.fromEntries(confirmedEvidence)}
+                  actions={confirmed?.actions ?? []}
+                />
+              )}
+              {/* 阶段 4 无灯不画图，行动按钮单独给（same buttons，入口不变） */}
+              {current && stProgress && stProgress.checks.length === 0 && confirmed && confirmed.actions.length > 0 && (
                 <div className="mt-5">
-                  <p className="text-xs tracking-widest text-ink-soft">
-                    {dict.journey.stageLampsLabel} · {stProgress.litCount}/{stProgress.checks.length}
-                  </p>
-                  <ul className="mt-3 flex flex-col gap-2">
-                    {stProgress.checks.map((c) => {
-                      // 点亮标准（hint）与评估 LLM 同一张判定表（STAGE_LAMPS），
-                      // 键名约定 = labelKey + 'Hint'；点亮/未点亮都展示。
-                      const hint = (dict.journey as unknown as Record<string, string>)[`${c.labelKey}Hint`];
-                      return (
-                        <li key={c.kind} className="text-sm leading-relaxed">
-                          <span className={c.done ? 'text-accent' : 'text-ink-soft'}>
-                            {c.done ? '●' : '○'}{' '}
-                            {(dict.journey as unknown as Record<string, string>)[c.labelKey] ?? c.labelKey}
-                          </span>
-                          {c.done && confirmedEvidence.get(c.kind) && (
-                            <span className="mt-1 block text-xs leading-relaxed text-ink-soft/80">
-                              {dict.assess.evidenceLead}
-                              {confirmedEvidence.get(c.kind)}
-                            </span>
-                          )}
-                          {hint && (
-                            <span className="mt-1 block text-xs leading-relaxed text-ink-soft/60">
-                              {dict.journey.stageLampHintLead}
-                              {hint}
-                            </span>
-                          )}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                  {stProgress.litCount < stProgress.checks.length && (
-                    <p className="mt-3 text-xs text-ink-soft/70">{dict.journey.stageLampWaiting}</p>
-                  )}
+                  <p className="text-xs tracking-widest text-ink-soft">{dict.assess.actionsLabel}</p>
+                  <div className="mt-3 flex flex-col gap-2">
+                    {confirmed.actions.map((a, i) => (
+                      <Link
+                        key={i}
+                        href={`/${locale}/chat`}
+                        data-action-cta={String(i)}
+                        className="flex items-center justify-between gap-3 border border-ink px-4 py-2.5 text-sm leading-relaxed transition-colors hover:bg-ink hover:text-paper"
+                      >
+                        <span>{a}</span>
+                        <span aria-hidden>→</span>
+                      </Link>
+                    ))}
+                  </div>
                 </div>
               )}
 
@@ -370,18 +363,8 @@ export default async function journeyPage({ params }: { params: Promise<{ locale
                   <p className="mt-1.5 text-sm leading-relaxed text-ink-soft">{confirmed.diagnosis}</p>
                   <p className="mt-3 text-xs tracking-widest text-ink-soft">{dict.assess.distanceLabel}</p>
                   <p className="mt-1.5 text-sm leading-relaxed text-ink-soft">{confirmed.distance}</p>
-                  {confirmed.actions.length > 0 && (
-                    <>
-                      <p className="mt-3 text-xs tracking-widest text-ink-soft">{dict.assess.actionsLabel}</p>
-                      <ul className="mt-1.5 flex flex-col gap-1">
-                        {confirmed.actions.map((a, i) => (
-                          <li key={i} className="text-sm leading-relaxed">
-                            · {a}
-                          </li>
-                        ))}
-                      </ul>
-                    </>
-                  )}
+                  {/* 行动（actions）不再以文字列出——上方灯图的「下一步可以做什么」
+                      按钮组承担（直接触发对话入口，非建议文案）；无灯阶段有独立按钮块 */}
                   <Link
                     href={`/${locale}/journey/changes`}
                     className="mt-4 inline-block text-sm text-accent underline underline-offset-4"

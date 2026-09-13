@@ -305,6 +305,34 @@ check(
   barHtml.includes('Last assessment · Stage 2')
 );
 
+// 以图为中心（用户指令②③④）：当前段灯区换成雷达式灯图——虚线外圈=这个阶段
+// 应达的程度（标准），点亮顶点的连线范围=现在的位置；未亮灯默认展开点亮标准 +
+// 行动按钮；评估的行动每条直接是按钮（触发对话入口），不是建议文案
+const chartHtml = (() => {
+  const s = barHtml.indexOf('data-lamp-chart');
+  const e = barHtml.indexOf('data-lamp-row', s);
+  return s === -1 ? '' : barHtml.slice(s, e);
+})();
+check(
+  '灯图渲染：当前段（阶段 2）3 个顶点全未亮、0 盏亮不连形（无 polygon）',
+  (barHtml.match(/data-lamp-node="stage2_[a-z]+" data-lit="0"/g) ?? []).length === 3 &&
+    !chartHtml.includes('data-lit="1"') &&
+    !chartHtml.includes('<polygon'),
+  `nodes=${(barHtml.match(/data-lamp-node=/g) ?? []).length}`
+);
+check(
+  '灯图：标准说明随图（caption）+ 灯行按 kind 锚定',
+  barHtml.includes('The lit shape is where you are now') && barHtml.includes('data-lamp-row="stage2_claim"')
+);
+check(
+  '灯图：未亮灯默认展开——点亮标准（The bar:）+ 行动按钮直达对话',
+  barHtml.includes('data-lamp-cta="stage2_claim"') && barHtml.includes('The bar: ')
+);
+check(
+  '评估行动 = 直接按钮（下一步可以做什么，2 条各一个入口）',
+  (barHtml.match(/data-action-cta=/g) ?? []).length === 2 && barHtml.includes(ACTION_SEED)
+);
+
 // dismiss → 冷却；冷却内 generate 403；旧 advance 端点已删 → 404
 const dismissRes = await post('/api/journey/assess', { locale: 'en', action: 'dismiss' }, main.cookie);
 asmt = await assessmentOf();

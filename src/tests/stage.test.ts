@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { computeStageProgress, stageLampScales, stageAdvanceTarget, STAGE_LAMPS, MAX_STAGE } from '@/lib/stage';
+import { computeStageProgress, stageLampScales, stageAdvanceTarget, lampChartPoints, STAGE_LAMPS, MAX_STAGE } from '@/lib/stage';
 import type { GrowthProfile } from '@/lib/profile';
 
 // 灯 = 评估结论：点亮真值是最近一次确认评估的 lamps（assessment.confirmed），
@@ -181,5 +181,30 @@ describe('stageAdvanceTarget（程度制联动：本阶段灯全亮 → 下一�
     expect(stageAdvanceTarget({ ...profile(), stage: 2, assessment: stage2Assessment })).toBe(3);
     const stage1OldAssessment = { ...confirmedWith(litAll(1)), actualStage: 1 };
     expect(stageAdvanceTarget({ ...profile(), stage: 2, assessment: stage1OldAssessment })).toBeNull();
+  });
+});
+
+describe('lampChartPoints（灯图顶点布局：单位圆均布，外圈=标准）', () => {
+  it('3 盏灯 = 三角：首顶点在正上方，全部落在单位圆上（圆心 0.5/0.5 半径 0.5）', () => {
+    const pts = lampChartPoints(3);
+    expect(pts).toHaveLength(3);
+    expect(pts[0].x).toBeCloseTo(0.5, 10);
+    expect(pts[0].y).toBeCloseTo(0, 10); // 顶部起始
+    for (const p of pts) {
+      expect(Math.hypot(p.x - 0.5, p.y - 0.5)).toBeCloseTo(0.5, 10);
+    }
+    // 顶点间角距 120°：相邻点积 = r²·cos120° = -0.125
+    const dot = (a: { x: number; y: number }, b: { x: number; y: number }) =>
+      (a.x - 0.5) * (b.x - 0.5) + (a.y - 0.5) * (b.y - 0.5);
+    expect(dot(pts[0], pts[1])).toBeCloseTo(-0.125, 10);
+    expect(dot(pts[1], pts[2])).toBeCloseTo(-0.125, 10);
+  });
+
+  it('2 盏灯（阶段 3）= 上下两点；0 盏（阶段 4）= 空不画图', () => {
+    const pts = lampChartPoints(2);
+    expect(pts).toHaveLength(2);
+    expect(pts[0].y).toBeCloseTo(0, 10);
+    expect(pts[1].y).toBeCloseTo(1, 10);
+    expect(lampChartPoints(0)).toEqual([]);
   });
 });
