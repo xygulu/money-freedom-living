@@ -32,6 +32,7 @@
 
 .ball {
   pointer-events: auto;
+  position: relative;
   width: 54px;
   height: 54px;
   appearance: none;
@@ -42,9 +43,10 @@
   display: grid;
   place-items: center;
   cursor: pointer;
+  /* 原型 line 99-112 三层 box-shadow：近阴影 + 远阴影 + 6px glow 圈 */
   box-shadow:
-    0 2px 6px rgba(0, 0, 0, 0.06),
-    0 12px 28px rgba(0, 0, 0, 0.07),
+    0 1px 3px rgba(0, 0, 0, 0.05),
+    0 8px 22px rgba(0, 0, 0, 0.07),
     0 0 0 6px var(--scene-glow);
   transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
@@ -55,6 +57,22 @@
 
 .ball:active {
   transform: scale(0.96);
+}
+
+/* 呼吸圈：breathe 动画；层级在 SVG 之下 */
+.pulse {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  background: var(--scene-glow);
+  opacity: 0.5;
+  animation: breathe 3.6s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  0%, 100% { transform: scale(0.92); opacity: 0.45; }
+  50% { transform: scale(1.05); opacity: 0.18; }
 }
 
 @keyframes nudge {
@@ -70,8 +88,8 @@
 
 .wrap[data-nudge-state='open'] .ball {
   box-shadow:
-    0 2px 6px rgba(0, 0, 0, 0.06),
-    0 12px 28px rgba(0, 0, 0, 0.07),
+    0 1px 3px rgba(0, 0, 0, 0.05),
+    0 8px 22px rgba(0, 0, 0, 0.07),
     0 0 0 6px var(--scene-glow),
     inset 0 0 0 2px var(--scene-accent);
 }

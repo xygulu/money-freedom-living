@@ -12,6 +12,7 @@ import { getProfile } from '@/lib/profile';
 import { getJourneyStages } from '@/lib/content';
 import { buildChangeListView } from '@/lib/changes';
 import { track } from '@/lib/analytics';
+import { getUiVersion, withJourneyHref } from '@/lib/ui-version';
 import ChangeListGenerate from '@/components/ChangeListGenerate';
 import ActionRecordList from '@/components/ActionRecordList';
 
@@ -20,7 +21,7 @@ export const dynamic = 'force-dynamic';
 export default async function changesPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   if (!isLocale(locale) || !enabledLocales.includes(locale)) notFound();
-  const dict = getDict(locale);
+  const dict = withJourneyHref(getDict(locale), locale, await getUiVersion());
 
   const headersList = await headers();
   const cookieList = await cookies();
@@ -47,7 +48,7 @@ export default async function changesPage({ params }: { params: Promise<{ locale
       {!view ? (
         <>
           <p className="mt-4 text-sm leading-relaxed text-ink-soft">{dict.changes.empty}</p>
-          <Link href={`/${locale}/journey`} className="mt-6 inline-block text-sm text-accent underline underline-offset-4">
+          <Link href={dict.nav.journeyHref} className="mt-6 inline-block text-sm text-accent underline underline-offset-4">
             {dict.changes.back}
           </Link>
         </>
@@ -105,7 +106,7 @@ export default async function changesPage({ params }: { params: Promise<{ locale
             </div>
           )}
 
-          <Link href={`/${locale}/journey`} className="mt-10 inline-block text-sm text-accent underline underline-offset-4">
+          <Link href={dict.nav.journeyHref} className="mt-10 inline-block text-sm text-accent underline underline-offset-4">
             {dict.changes.back}
           </Link>
         </>

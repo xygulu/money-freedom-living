@@ -10,9 +10,15 @@
 // - nudge：组件 mount 时 fetch /api/companion/nudge 一次，命中即触发晃 + 写 seen cookie
 //   频次闸：24h 内不重（cookie `mfl_nudge_seen`，document.cookie 写读）
 // - 递归防呆：/chat 路由内 display:none（layout 端 + 本组件 usePathname 双保险）
+//
+// 70-2 加固（A/K/L 项）：
+// - SVG 双 path 改为原型 §5 已定形（"人"肩到头 + 上半圆线）；不再是 circle+path 占位。
+// - 加 <span className="pulse"> 元素（呼吸圈），box-shadow 三层顺序照原型 line 99-112。
+// - 接收 todayStepDone：true 且 nudge 命中时，弹层切 hintToday 模式（§6 唯一例外）。
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { usePathname } from 'next/navigation';
-import CompanionChat from '@/components/CompanionChat';
+import CompanionChat, { type CompanionChatMode } from '@/components/CompanionChat';
+import type { Dict } from '@/i18n/get-dict';
 import styles from './Companion.module.css';
 
 const NUDGE_SEEN_COOKIE = 'mfl_nudge_seen';
@@ -36,7 +42,14 @@ interface NudgePayload {
   hitRedLine: boolean;
 }
 
-export default function Companion() {
+interface Props {
+  /** 今天这一步做没做。true 且 nudge 命中 → 弹层切 hintToday 模式（§6 例外文案） */
+  todayStepDone?: boolean;
+  /** 字典（用于弹层四件套：title/sub/bubble/foot） */
+  dict: Dict;
+}
+
+export default function Companion({ todayStepDone = false, dict }: Props) {
   const pathname = usePathname() ?? '';
 
   // 递归防呆：chat 路由内不挂载（CompanionChat 走自己的状态）
@@ -84,6 +97,10 @@ export default function Companion() {
     return () => window.clearTimeout(timer);
   }, [fetchNudge]);
 
+  // §6 例外文案触发：今天这一步没做 + nudge 命中 + 用户点开球 → hintToday
+  const chatMode: CompanionChatMode =
+    !todayStepDone && nudge && nudge.source !== 'fallback' ? 'hintToday' : 'presence';
+
   return (
     <>
       <div
@@ -100,26 +117,37 @@ export default function Companion() {
         <button
           type="button"
           className={styles.ball}
-          aria-label="陪伴者"
+          aria-label={dict.companion.aria}
           aria-expanded={open}
           onClick={() => setOpen((v) => !v)}
         >
-          <svg viewBox="0 0 36 36" width="22" height="22" aria-hidden="true">
-            {/* "人" 双 path：原型 §5 用户已定形 */}
-            <circle cx="18" cy="9" r="4" fill="currentColor" />
+          {/* 呼吸圈：breathe 动画，layer 在 SVG 下 */}
+          <span className={styles.pulse} aria-hidden="true" />
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+            {/* 原型 §5 用户定形的「人」双 path：
+                肩到头 + 上半圆线。原型 v1 line 409-411 */}
             <path
-              d="M6 30 C 8 22, 12 18, 18 18 C 24 18, 28 22, 30 30"
+              d="M12 4.6c-2.6 0-4.6 2-4.6 4.6 0 3.6 3 5.1 3 7.9 0 1.4-.7 2.3-.7 2.3h4.6s-.7-.9-.7-2.3c0-2.8 3-4.3 3-7.9 0-2.6-2-4.6-4.6-4.6z"
+              fill="currentColor"
+            />
+            <path
+              d="M9.6 4.2c.6-.9 1.5-1.4 2.4-1.4s1.8.5 2.4 1.4"
               stroke="currentColor"
-              strokeWidth="2.5"
-              fill="none"
+              strokeWidth="1.6"
               strokeLinecap="round"
+              fill="none"
             />
           </svg>
         </button>
       </div>
 
       {open && (
-        <CompanionChat onClose={() => setOpen(false)} dictNudge={nudge?.text ?? null} />
+        <CompanionChat
+          onClose={() => setOpen(false)}
+          dictNudge={nudge?.text ?? null}
+          mode={chatMode}
+          dict={dict}
+        />
       )}
     </>
   );

@@ -8,7 +8,8 @@
     "journey": "Journey",
     "chat": "Talk",
     "journal": "Journal",
-    "me": "Me"
+    "me": "Me",
+    "journeyHref": ""
   },
   "landing": {
     "hero": "Way of living without money worry",
@@ -91,6 +92,8 @@
     "deleteConfirmBtn": "Delete forever",
     "deleteCancel": "Keep it",
     "privacyLink": "Privacy policy",
+    "signOut": "Sign out",
+    "signOutConfirm": "Sign out now?",
     "error": "Something went wrong, please try again"
   },
   "touch": {
@@ -554,16 +557,47 @@
     "doorLink": "Want to say a little more",
     "doorFallback": "Today has come to a close. Say whatever you want — I am here.",
     "chatEmpty": "The companion opens. Take your time — nothing needs to be said.",
-    "nudgeSeenToday": "Today has been seen."
+    "nudgeSeenToday": "Today has been seen.",
+    "chatMode": {
+      "presence": {
+        "title": "I am here.",
+        "sub": "No rush. Whenever you speak, I am listening.",
+        "foot": "Not answering is also completely fine"
+      },
+      "hint": {
+        "title": "Something I wanted to ask",
+        "sub": "You said it yourself, and I remember.",
+        "foot": "Not today is also fine"
+      },
+      "hintToday": {
+        "title": "Today's step hasn't been done yet",
+        "sub": "No rush. Whenever you can.",
+        "foot": "Not today is also fine"
+      },
+      "door": {
+        "title": "Want to say a little more",
+        "sub": "Today's stretch ends here.",
+        "foot": "Not answering is also completely fine"
+      }
+    },
+    "hintBubble": {
+      "hint": "You said last week you wanted to try \"not paying off your credit card first.\" Up for touching it today?",
+      "hintToday": "Say a word when you want to; skipping today also counts — both count.",
+      "doorWithLine": "You just said \"{line}\" — which part would you like to say more about?",
+      "doorNoLine": "Today has come to a close. Say whatever you want — I am here."
+    }
   },
   "newJourney": {
     "dailyEyebrow": "Today",
     "actEyebrow": "This step today",
     "actChoices": {
-      "done": "Did it",
-      "partial": "Halfway",
-      "missed": "Not today"
+      "did": "Did it",
+      "swap": "Another",
+      "skip": "Skip today"
     },
+    "actSwapText": "Another: recall one moment after spending that made your chest tighten — what was happening that day?",
+    "actSwapNote": "No need to write it down. The noticing is the doing.",
+    "actSkipNote": "Skipped. That also counts — this stretch still counts as walked.",
     "doneEyebrow": "Today's end",
     "done": "Today, here.",
     "doneSub": "One glance counts too. Come back whenever.",
@@ -572,11 +606,22 @@
     "mirrorEchoFallback": "I heard it. That's enough for today.",
     "pathEyebrow": "Your path",
     "stageNames": ["Seeing", "Loosening", "Practicing", "Living"],
-    "pathHint": "Tap a node to see what makes it count",
+    "pathHintLit": "{n} lit. No percentages, no \"days to go\".",
+    "pathHintZero": "Not yet walked. No rush.",
     "noMirror": "Skipped for today — that also counts.",
     "echoPreparing": "Companion is thinking…",
     "echoFailed": "The companion could not echo back just now. What you wrote is still yours.",
-    "actDoneCta": "Mark this step"
+    "actDoneCta": "Mark this step",
+    "commitEyebrow": "Today's one square",
+    "commitQ1": "① I did it",
+    "commitDidOptions": ["Did it", "Started, didn't finish", "Not today"],
+    "commitQ2": "② Something I noticed",
+    "commitQ2Placeholder": "One sentence, one thing — both fine",
+    "commitQ3": "③ The first line in my head",
+    "commitQ3Placeholder": "It's fine if you can't recall",
+    "commitQ3Hint": "This is for your eyes only. Leaving it blank still counts.",
+    "commitSubmit": "Today ends here",
+    "commitAllEmptyHint": "All three can stay blank"
   },
   "archivePage": {
     "title": "Archive",
@@ -591,11 +636,16 @@
     },
     "settingsGroup": {
       "versionLabel": "Interface",
-      "themeLabel": "Tone"
+      "themeLabel": "Tone",
+      "accountLabel": "Settings and account",
+      "emailNotif": "Email and notification preferences",
+      "emailNotifHint": "Only on your own moments — payday, month-end, the thing you said you'd try",
+      "exportDelete": "Export / delete my records",
+      "langRecoveryVip": "Language · recovery code · membership"
     },
     "versions": { "new": "New", "classic": "Classic" },
     "themes": { "plain": "Plain", "paper": "Paper", "night": "Night" },
-    "backToJourney": "Back to the journey"
+    "backToJourney": "Back to today"
   },
   "nudge": {
     "fallback": "I am here."

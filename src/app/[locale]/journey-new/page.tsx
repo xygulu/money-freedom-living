@@ -4,9 +4,9 @@
 // 否则：服务端取档案 + 今日一签 + 今日微行动 + 当前阶段进度 → 交给 NewJourneyView。
 //
 // 五个段（按从上到下顺序）：
-//   [topbar] 日期 + 「看回看」链接 → /archive
+//   [topbar] 日期 + SVG 存档图标按钮（C 项：原型 line 222-228，不是文字链接） → /archive
 //   [daily] 今日一签（pickDaily）+ reflection
-//   [act]   今天这一步（pickExercise + 三选一提交，ActCard）
+//   [act]   今天这一步（pickExercise + 三选一：做了/换一个/跳过 → commitSheet 弹层）
 //   [mirror] 提交后：用户原话 + 陪伴者一句 echo + 「想多说两句」门（MirrorCard）
 //   [path]  14 格 + 4 阶段节点（PathBar）
 //
@@ -80,7 +80,7 @@ export default async function journeyNewPage({
 
   return (
     <div className="flex flex-col pt-12" data-step="root">
-      {/* 顶部：日期 + 存档入口（C3 §4「存档作为聚合入口」） */}
+      {/* 顶部：日期 + SVG 存档图标按钮（C 项：原型 line 222-228） */}
       <header className="mb-8 flex items-baseline justify-between">
         <time
           className="text-xs uppercase tracking-[0.18em] text-ink-soft"
@@ -90,10 +90,25 @@ export default async function journeyNewPage({
         </time>
         <Link
           href={`/${locale}/archive`}
-          className="text-xs text-ink-soft underline underline-offset-4 transition-colors hover:text-ink"
+          aria-label={dict.archivePage.title}
           data-archive-link=""
+          className="text-ink-soft transition-colors hover:text-ink"
         >
-          {dict.archivePage.title} ▸
+          {/* 存档图标按钮（24×20 viewBox；原型 §A1） */}
+          <svg
+            viewBox="0 0 24 20"
+            width="24"
+            height="20"
+            aria-hidden="true"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <rect x="3" y="3.5" width="14" height="13" rx="2" />
+            <path d="M3 8h14M8 8v8.5" />
+          </svg>
         </Link>
       </header>
 

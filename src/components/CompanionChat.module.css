@@ -29,18 +29,29 @@
 
 .header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
   border-bottom: 1px solid var(--scene-line);
   padding-bottom: 10px;
 }
 
-.title {
+.titleWrap {
   flex: 1;
+  min-width: 0;
+}
+
+.title {
   font-size: 16px;
   font-weight: 500;
   color: var(--scene-ink);
   letter-spacing: 0.04em;
+}
+
+.sub {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--scene-soft);
+  line-height: 1.6;
 }
 
 .dots {

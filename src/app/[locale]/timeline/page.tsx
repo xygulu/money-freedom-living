@@ -8,6 +8,7 @@ import { getDict } from '@/i18n/get-dict';
 import { enabledLocales, isLocale } from '@/i18n/config';
 import { resolveIdentity } from '@/lib/identity';
 import { buildTimeline, formatTimelineDay, type TimelineItem } from '@/lib/timeline';
+import { getUiVersion, withJourneyHref } from '@/lib/ui-version';
 import TimelineItemView from '@/components/TimelineItemView';
 
 export const dynamic = 'force-dynamic';
@@ -17,7 +18,7 @@ const todayISO = () => new Date().toISOString().slice(0, 10);
 export default async function timelinePage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   if (!isLocale(locale) || !enabledLocales.includes(locale)) notFound();
-  const dict = getDict(locale);
+  const dict = withJourneyHref(getDict(locale), locale, await getUiVersion());
 
   const headersList = await headers();
   const cookieList = await cookies();
@@ -43,7 +44,7 @@ export default async function timelinePage({ params }: { params: Promise<{ local
         <div className="mt-8 border border-dashed border-line p-6">
           <p className="text-sm leading-relaxed text-ink-soft">{dict.timeline.empty}</p>
           <Link
-            href={`/${locale}/journey`}
+            href={dict.nav.journeyHref}
             className="mt-5 inline-block border border-ink px-5 py-2.5 text-sm transition-colors hover:bg-ink hover:text-paper"
           >
             {dict.timeline.backToJourney}

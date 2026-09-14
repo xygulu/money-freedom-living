@@ -2,14 +2,13 @@
 
 // 前台改造（70-2 B4）· 你的路（PathBar）：14 格 + 4 阶段节点。
 //
-// 与 JourneyProgressBar 共享同一份"灯表"真值（confirmed 评估），但渲染更轻：
-// - 没有 zone / zone-state / lamp-count 等三层数据契约
-// - 用 14 个小圆点串成一行（已走=实心/当前=呼吸/未到=虚线）
-// - 4 个阶段节点（小圆 + 名字），点击展开"评估"路径（M11 阶段评估保留）
+// 70-2 加固（H/I 项）按原型重做：
+// - 4 个阶段节点**只是文字，不是 Link**（原型 line 269-271 是 <span>，无 href）——
+//   原版硬编码 Link 是过度工程，原型根本不跳。删 `dictStageLocale()` 死代码。
+// - hint 文案**动态生成**（原型 line 482）：`${n} 格亮着。这里不显示百分比，
+//   也不显示"还差几天"。` 不再走 i18n 静态串。
 //
-// 之所以重写一遍而不是复用 JourneyProgressBar：经典版路径有 25+ 个 data-* 锚点
-// （smoke-m5/m9/m10/m11），新一幕要清爽——自己的实现只暴露 data-step / data-zone。
-import Link from 'next/link';
+// 14 个圆点串成一行（已走=实心/当前=呼吸/未到=虚线）。
 import type { Dict } from '@/i18n/get-dict';
 import type { StageProgress } from '@/lib/stage';
 import styles from './PathBar.module.css';
@@ -46,6 +45,14 @@ export default function PathBar({ dict, stage, progress }: Props) {
   // 补齐到 14
   while (dots.length < TOTAL_DOTS) dots.push('empty');
 
+  // 算"已亮"的总格数（lit + breathing 都算"走过"，empty 才算没走）
+  const litCount = dots.filter((d) => d === 'lit' || d === 'breathing').length;
+
+  // I 项：动态 hint 文案（不走 i18n 静态串）
+  // 原型 line 482：「N 格亮着。这里不显示百分比，也不显示"还差几天"。」
+  // 0 格亮 → "还没走过。不急。"
+  const hint = litCount === 0 ? t.pathHintZero : t.pathHintLit.replace('{n}', String(litCount));
+
   return (
     <section className={styles.bar} data-step="path">
       <p className={styles.eyebrow}>{t.pathEyebrow}</p>
@@ -59,21 +66,22 @@ export default function PathBar({ dict, stage, progress }: Props) {
           />
         ))}
       </div>
-      <div className={styles.stages} role="tablist">
+      {/* H 项：4 个阶段节点用 span，不是 Link；原型 line 269-271 */}
+      <div className={styles.stages} role="list" data-stage-labels>
         {[1, 2, 3, 4].map((s) => (
-          <Link
+          <span
             key={s}
-            href={`/${dictStageLocale(dict)}/journey/changes?stage=${s}`}
-            role="tab"
+            role="listitem"
             aria-current={s === stage ? 'true' : undefined}
             className={`${styles.stage} ${s === stage ? styles.stageOn : ''}`}
+            data-stage={s}
           >
             <span className={styles.stageDot} aria-hidden="true" />
             <span className={styles.stageName}>{stageNames[s - 1] ?? `阶段 ${s}`}</span>
-          </Link>
+          </span>
         ))}
       </div>
-      <p className={styles.hint}>{t.pathHint}</p>
+      <p className={styles.hint} data-path-hint>{hint}</p>
     </section>
   );
 }
@@ -91,12 +99,4 @@ function computeLitPerStage(currentStage: number, progress: StageProgress): Reco
   for (let s = 1; s < currentStage; s++) result[s as 1 | 2 | 3] = 4;
   result[currentStage as 1 | 2 | 3 | 4] = progress.litCount;
   return result;
-}
-
-/** 从 dict 里读 locale——MVP 简化，dict 不直接持 locale，stage 名走 dict.newJourney.stageNames。
- *  这里仅作为 Link href 的占位；运行时真正 locale 由父组件透传，MVP 跳过具体路径。 */
-function dictStageLocale(dict: Dict): string {
-  // Dict 没有显式 locale 字段；从 dict 中找一个有特征的 key 间接推断；
-  // MVP 简化：直接落到 en，留给后续按 UI locale 注入
-  return 'zh-CN';
 }

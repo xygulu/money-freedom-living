@@ -8,7 +8,8 @@
     "journey": "旅",
     "chat": "はなし",
     "journal": "おもい",
-    "me": "自分"
+    "me": "自分",
+    "journeyHref": ""
   },
   "landing": {
     "hero": "お金のためにだけある、あなた自身の部屋。",
@@ -91,6 +92,8 @@
     "deleteConfirmBtn": "完全に削除",
     "deleteCancel": "残しておく",
     "privacyLink": "プライバシーポリシー",
+    "signOut": "ログアウト",
+    "signOutConfirm": "本当にログアウトしますか？",
     "error": "問題が起きました。もう一度お試しください"
   },
   "touch": {
@@ -554,16 +557,47 @@
     "doorLink": "もう少し話したくなったら",
     "doorFallback": "今日はここまで。何でも言ってください——ここにいます。",
     "chatEmpty": "コンパニオンが開きました。急がなくていい——何か言う必要はありません。",
-    "nudgeSeenToday": "今日はもう、見えました。"
+    "nudgeSeenToday": "今日はもう、見えました。",
+    "chatMode": {
+      "presence": {
+        "title": "わたしは、ここにいます。",
+        "sub": "急がなくて大丈夫。話してくれれば、受け取ります。",
+        "foot": "答えなくてもまったく構いません"
+      },
+      "hint": {
+        "title": "一つ聞いてみたいことがあります",
+        "sub": "あなた自身が言ったことです。覚えています。",
+        "foot": "今日でなくても構いません"
+      },
+      "hintToday": {
+        "title": "今日の一歩は、まだやっていません",
+        "sub": "急がなくて大丈夫。いつでもいい。",
+        "foot": "今日でなくても構いません"
+      },
+      "door": {
+        "title": "もう少し話したくなったら",
+        "sub": "今日のひと区切りは、ここまで。",
+        "foot": "答えなくてもまったく構いません"
+      }
+    },
+    "hintBubble": {
+      "hint": "先週「花呗を先に返さない」を試したいと言っていましたね。今日も触れてみますか？",
+      "hintToday": "やりたいときに一声ください；今日パスしても——どちらも数えます。",
+      "doorWithLine": "いま「{line}」と言いましたね——どの部分をもう少し話しますか？",
+      "doorNoLine": "今日はここまで。何でも言ってください——ここにいます。"
+    }
   },
   "newJourney": {
     "dailyEyebrow": "今日",
     "actEyebrow": "今日の一歩",
     "actChoices": {
-      "done": "できた",
-      "partial": "半分だけ",
-      "missed": "今日は手が回らなかった"
+      "did": "やった",
+      "swap": "別の問い",
+      "skip": "パス"
     },
+    "actSwapText": "別の問い：お金を使ったあと、胸がキュッとなった瞬間をひとつ思い出す——その日、何がありましたか？",
+    "actSwapNote": "書き留めなくていい。思い出すことが、すでに行動です。",
+    "actSkipNote": "パスしました。これも数えます——この区間はちゃんと歩いたことになります。",
     "doneEyebrow": "今日、ここまで",
     "done": "今日、ここまで。",
     "doneSub": "ちらっと見ただけでも、立派に歩いたことになります。いつでもどうぞ。",
@@ -572,11 +606,22 @@
     "mirrorEchoFallback": "届きました。今日のところは、それで十分です。",
     "pathEyebrow": "あなたの道",
     "stageNames": ["看见", "松动", "练习", "活法"],
-    "pathHint": "節點をタップして根拠を見る",
+    "pathHintLit": "{n} マスが灯っています。パーセンテージも「あと何日」も、ここでは出しません。",
+    "pathHintZero": "まだ歩いていません。急がなくて大丈夫。",
     "noMirror": "今日、手が回らなくても、大丈夫。",
     "echoPreparing": "コンパニオンが考えています……",
     "echoFailed": "今回はお返しができませんでした。あなたが書いたことは、あなたのまま。",
-    "actDoneCta": "この一歩を記す"
+    "actDoneCta": "この一歩を記す",
+    "commitEyebrow": "今日のひとつのマス",
+    "commitQ1": "① できましたか",
+    "commitDidOptions": ["できた", "始めた、終わらなかった", "今日は手が回らなかった"],
+    "commitQ2": "② 気づいたこと",
+    "commitQ2Placeholder": "ひとことでも、ひとつの観察でも",
+    "commitQ3": "③ 頭に浮かんだ最初の一言",
+    "commitQ3Placeholder": "思い出せなくても大丈夫",
+    "commitQ3Hint": "これはあなただけが見ます。空欄でも数えます。",
+    "commitSubmit": "今日はここまで",
+    "commitAllEmptyHint": "三つすべて空欄でも構いません"
   },
   "archivePage": {
     "title": "アーカイブ",
@@ -591,11 +636,16 @@
     },
     "settingsGroup": {
       "versionLabel": "インターフェース",
-      "themeLabel": "トーン"
+      "themeLabel": "トーン",
+      "accountLabel": "設定とアカウント",
+      "emailNotif": "メールと通知の好み",
+      "emailNotifHint": "あなた自身の節目にだけ——給料日、月末、大促",
+      "exportDelete": "書き出し / 記録を削除",
+      "langRecoveryVip": "言語 · リカバリーコード · 会員"
     },
     "versions": { "new": "新しい版", "classic": "クラシック" },
     "themes": { "plain": "プレーン", "paper": "紙", "night": "ナイト" },
-    "backToJourney": "旅に戻る"
+    "backToJourney": "今日に戻る"
   },
   "nudge": {
     "fallback": "わたしは、ここにいます。"

@@ -28,6 +28,52 @@
   text-transform: uppercase;
 }
 
+/* 第三段账号区下的列表——和 ArchiveList 同样的视觉 */
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.arow {
+  border-bottom: 1px solid var(--scene-line);
+}
+
+.arow:last-child {
+  border-bottom: 0;
+}
+
+.link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 0;
+  color: var(--scene-ink);
+  text-decoration: none;
+}
+
+.t {
+  font-size: 15px;
+}
+
+.hint {
+  font-size: 12px;
+  color: var(--scene-faint);
+  margin: -8px 0 10px;
+}
+
+.arrow {
+  color: var(--scene-faint);
+  font-size: 16px;
+  margin-left: 8px;
+}
+
+.signoutWrap {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--scene-line);
+}
+
 .mini {
   font-size: 12px;
   color: var(--scene-faint);

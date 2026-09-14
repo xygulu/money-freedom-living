@@ -2,13 +2,13 @@
 //
 // 入口路径：/journey-new 顶栏右上"存档"按钮 / `/[locale]/archive`。
 //
-// 结构（§A3）：
+// 结构（§A3 + 用户 2026-09-14 加固）：
 //   - 我走过的路 → /road
 //   - 我说过的话 → /chat/history
 //   - 我的镜子（画像） → /portrait
 //   - 我写过的信 → /letters
 //   - 写信给以后的我 → /letters/new（若有路由；否则降级 /letters）
-//   - 设置与账号 → /me
+//   - 设置与账号 → /me  账号段下三行：邮件与通知偏好 / 导出·删除 / 语言·恢复码·会员 + 登出
 //
 // 在聚合页底部"设置"段落里挂 VersionSwitch（界面）+ ThemeSwitch（调性），
 // 主题切换仅靠前端 data-scene-theme 属性；无持久化（与现有"无 cookie 即 plain"对齐）。
@@ -17,10 +17,13 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { enabledLocales, isLocale } from '@/i18n/config';
 import { getDict } from '@/i18n/get-dict';
-import { getUiVersion } from '@/lib/ui-version';
+import { getUiVersion, journeyHrefFor, withJourneyHref } from '@/lib/ui-version';
+import { auth } from '@/lib/auth';
+import { headers } from 'next/headers';
 import ArchiveList from '@/components/ArchiveList';
 import VersionSwitch from '@/components/VersionSwitch';
 import ThemeSwitch from '@/components/ThemeSwitch';
+import SignOutButton from '@/components/SignOutButton';
 import styles from './archive.module.css';
 
 export const dynamic = 'force-dynamic';
@@ -29,18 +32,23 @@ export default async function ArchivePage({ params }: { params: Promise<{ locale
   const { locale } = await params;
   if (!isLocale(locale) || !enabledLocales.includes(locale)) notFound();
 
-  const dict = getDict(locale);
   const uiVersion = await getUiVersion();
-  // 回到旅程按当前 ui_version 分流：
-  // - new → /journey-new（一幕）
-  // - classic → /journey（11 块经典版）
-  // 避免链接走 /journey 触发经典版守卫反向 redirect——直接落到正确版本。
-  const journeyHref = uiVersion === 'classic' ? `/${locale}/journey` : `/${locale}/journey-new`;
+  // 注入按当前 ui_version 分流的 journeyHref
+  const dict = withJourneyHref(getDict(locale), locale, uiVersion);
+  // 切版本按钮需要"另一版本"的 href——用本地 helper 双算
+  const journeyHrefByVersion = {
+    new: journeyHrefFor(locale, 'new'),
+    classic: journeyHrefFor(locale, 'classic'),
+  } as const;
+
+  // 登录态：第三段「设置与账号」下渲染 SignOutButton；游客态不渲染
+  const session = await auth.api.getSession({ headers: await headers() });
+  const isSignedIn = Boolean(session?.user);
 
   return (
     <div className={styles.archive}>
       <p className={styles.mini}>
-        <Link href={journeyHref} className={styles.backlink} data-back-to-journey>
+        <Link href={dict.nav.journeyHref} className={styles.backlink} data-back-to-journey>
           ← {dict.archivePage.backToJourney}
         </Link>
       </p>
@@ -55,25 +63,64 @@ export default async function ArchivePage({ params }: { params: Promise<{ locale
         writeHref={`/${locale}/letters`}
       />
 
-      {/* 设置段落 */}
-      <section className={styles.setgroup} data-setgroup="settings">
+      {/* 第一段：界面 */}
+      <section className={styles.setgroup} data-setgroup="version">
         <p className={styles.lab}>{dict.archivePage.settingsGroup.versionLabel}</p>
         <VersionSwitch
           locale={locale}
           current={uiVersion}
           labels={dict.archivePage.versions}
+          journeyHrefByVersion={journeyHrefByVersion}
         />
+      </section>
 
-        <p className={styles.lab} style={{ marginTop: 18 }}>
-          {dict.archivePage.settingsGroup.themeLabel}
-        </p>
+      {/* 第二段：调性 */}
+      <section className={styles.setgroup} data-setgroup="theme">
+        <p className={styles.lab}>{dict.archivePage.settingsGroup.themeLabel}</p>
         <ThemeSwitch labels={dict.archivePage.themes} />
+      </section>
 
-        <p className={styles.mini}>
-          <a href={`/${locale}/me`} className={styles.backlink}>
-            {dict.archivePage.rows.setting} →
-          </a>
+      {/* 第三段：设置与账号（账号段下三行 + 登出）——按原型 §A3 + 用户加固 */}
+      <section className={styles.setgroup} data-setgroup="account">
+        <p className={styles.lab} data-account-label>
+          {dict.archivePage.settingsGroup.accountLabel}
         </p>
+
+        <ul className={styles.list} data-account-rows>
+          <li className={styles.arow} data-account-row="emailNotif">
+            <Link href={`/${locale}/me#notif`} className={styles.link}>
+              <span className={styles.t}>{dict.archivePage.settingsGroup.emailNotif}</span>
+              <span className={styles.arrow}>›</span>
+            </Link>
+            <p className={styles.hint}>{dict.archivePage.settingsGroup.emailNotifHint}</p>
+          </li>
+          <li className={styles.arow} data-account-row="exportDelete">
+            <Link href={`/${locale}/me#delete`} className={styles.link}>
+              <span className={styles.t}>{dict.archivePage.settingsGroup.exportDelete}</span>
+              <span className={styles.arrow}>›</span>
+            </Link>
+          </li>
+          <li className={styles.arow} data-account-row="langRecoveryVip">
+            <Link href={`/${locale}/me`} className={styles.link}>
+              <span className={styles.t}>{dict.archivePage.settingsGroup.langRecoveryVip}</span>
+              <span className={styles.arrow}>›</span>
+            </Link>
+          </li>
+        </ul>
+
+        {/* 登出：登录态才挂；游客态不渲染（原型缺，按用户 2026-09-14 加固） */}
+        {isSignedIn && (
+          <div className={styles.signoutWrap}>
+            <SignOutButton
+              locale={locale}
+              labels={{
+                btn: dict.me.signOut,
+                confirm: dict.me.signOutConfirm,
+                cancel: dict.me.deleteCancel,
+              }}
+            />
+          </div>
+        )}
       </section>
     </div>
   );

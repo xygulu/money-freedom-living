@@ -5,6 +5,9 @@
 // 用户在 /archive → 设置 里两选一切换：写入 cookie mfl_ui_version，
 // 再 router.refresh() 让服务端组件重渲染。
 // 选中的态走 ink 填底 + 极简字体，对齐 scene-tokens.css。
+//
+// `journeyHrefByVersion` 由 archive 页注入（70-2 加固：版本隔离后，
+// 切版本跳的"目标页"必须按目标版本分流，不能再硬编码 /journey）。
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -16,10 +19,13 @@ export default function VersionSwitch({
   locale,
   current,
   labels,
+  journeyHrefByVersion,
 }: {
   locale: string;
   current: UiVersion;
   labels: { new: string; classic: string };
+  /** 切到目标版本后该跳的 href（按 uiVersion 分流），由 archive 页注入 */
+  journeyHrefByVersion: Record<UiVersion, string>;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -38,8 +44,8 @@ export default function VersionSwitch({
       if (!res.ok) throw new Error(String(res.status));
       router.refresh();
       // ui_version 改后服务端按版本分流，需要重定向到新页面让用户看到效果
-      const target = version === 'classic' ? `/${locale}/journey` : `/${locale}/journey-new`;
-      router.push(target);
+      // 用父组件注入的版本化 href（70-2 加固：避免硬编码 /journey）
+      router.push(journeyHrefByVersion[version]);
     } catch (e) {
       setErr('failed');
       setBusy(false);

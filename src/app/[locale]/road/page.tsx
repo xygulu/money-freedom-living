@@ -17,13 +17,14 @@ import { getProfile } from '@/lib/profile';
 import { buildRoad, inviteBooksFor } from '@/lib/road';
 import { bookTitle } from '@/lib/content';
 import { formatTimelineDay } from '@/lib/timeline';
+import { getUiVersion, withJourneyHref } from '@/lib/ui-version';
 
 export const dynamic = 'force-dynamic';
 
 export default async function roadPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   if (!isLocale(locale) || !enabledLocales.includes(locale)) notFound();
-  const dict = getDict(locale);
+  const dict = withJourneyHref(getDict(locale), locale, await getUiVersion());
 
   const headersList = await headers();
   const cookieList = await cookies();
@@ -45,7 +46,7 @@ export default async function roadPage({ params }: { params: Promise<{ locale: s
         <div className="mt-8 border border-dashed border-line p-6">
           <p className="text-sm leading-relaxed text-ink-soft">{dict.road.empty}</p>
           <Link
-            href={`/${locale}/journey`}
+            href={dict.nav.journeyHref}
             className="mt-5 inline-block border border-ink px-5 py-2.5 text-sm transition-colors hover:bg-ink hover:text-paper"
           >
             {dict.road.backToJourney}
@@ -134,7 +135,7 @@ export default async function roadPage({ params }: { params: Promise<{ locale: s
         </section>
       )}
 
-      <Link href={`/${locale}/journey`} className="mt-10 inline-block text-sm text-accent underline underline-offset-4">
+      <Link href={dict.nav.journeyHref} className="mt-10 inline-block text-sm text-accent underline underline-offset-4">
         {dict.road.backToJourney}
       </Link>
     </div>

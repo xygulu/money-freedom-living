@@ -9,6 +9,7 @@ import { enabledLocales, isLocale } from '@/i18n/config';
 import { resolveIdentity } from '@/lib/identity';
 import { getProfile, type Portrait } from '@/lib/profile';
 import { getPortraitVersion, listPortraitVersions } from '@/lib/evolution';
+import { getUiVersion, withJourneyHref } from '@/lib/ui-version';
 import PortraitCalibrate from '@/components/PortraitCalibrate';
 
 export const dynamic = 'force-dynamic';
@@ -87,7 +88,7 @@ export default async function portraitPage({
 }) {
   const { locale } = await params;
   if (!isLocale(locale) || !enabledLocales.includes(locale)) notFound();
-  const dict = getDict(locale);
+  const dict = withJourneyHref(getDict(locale), locale, await getUiVersion());
   const p = dict.portrait;
 
   const sp = await searchParams;
@@ -164,7 +165,7 @@ export default async function portraitPage({
       )}
 
       <div className="mt-12 border-t border-line pt-6 pb-4">
-        <Link href={`/${locale}/journey`} className="text-sm text-ink-soft underline underline-offset-4 hover:text-ink">
+        <Link href={dict.nav.journeyHref} className="text-sm text-ink-soft underline underline-offset-4 hover:text-ink">
           ← {p.back}
         </Link>
       </div>

@@ -9,7 +9,6 @@ import { resolveIdentity } from '@/lib/identity';
 import { getProfile } from '@/lib/profile';
 import { getUiVersion } from '@/lib/ui-version';
 import JourneyProgressBar from '@/components/JourneyProgressBar';
-import Companion from '@/components/Companion';
 
 export const metadata: Metadata = {
   title: 'Money Freedom Living',
@@ -96,9 +95,8 @@ export default async function LocaleLayout({
             </div>
           )}
 
-          {/* 陪伴者：新版路径常驻，经典版路径不显示（保持经典版逐字原貌）。
-              在 /chat 路由内 display:none 防递归（Companion 内部按 pathname 判断）。 */}
-          {uiVersion === 'new' && <Companion />}
+          {/* 陪伴者：仅 /journey-new 自己挂载（70-2 加固：todayStepDone 由 NewJourneyView 持有），
+              经典版路径不显示（保持经典版逐字原貌）。 */}
         </div>
       </body>
     </html>

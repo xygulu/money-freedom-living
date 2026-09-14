@@ -171,7 +171,8 @@ export function composeTouch(params: {
   const question = (tpl.question ?? '').trim();
 
   // 带上 from/node：他从哪封信回来的，回来的那一刻才认得出（journey 页据此记一次 touch_return）
-  const back = `${baseUrl.replace(/\/$/, '')}/${locale}/journey?from=touch&node=${node}`;
+  // 默认跳到新版一幕（/journey-new）；classic 用户经由 journey 守卫反向 redirect 到 /journey，参数保留
+  const back = `${baseUrl.replace(/\/$/, '')}/${locale}/journey-new?from=touch&node=${node}`;
   const unsub = unsubUrl(baseUrl, locale, token);
   const text = [
     body,

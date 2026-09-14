@@ -8,7 +8,8 @@
     "journey": "旅程",
     "chat": "聊聊",
     "journal": "心事",
-    "me": "我的"
+    "me": "我的",
+    "journeyHref": ""
   },
   "landing": {
     "hero": "一間只屬於你的、關於錢的房間。",
@@ -91,6 +92,8 @@
     "deleteConfirmBtn": "永久刪除",
     "deleteCancel": "先留著",
     "privacyLink": "隱私政策",
+    "signOut": "登出",
+    "signOutConfirm": "真的要登出？",
     "error": "出了點問題，請重試"
   },
   "touch": {
@@ -554,16 +557,47 @@
     "doorLink": "想多說兩句",
     "doorFallback": "今天到這裡了。想說什麼就說，我在。",
     "chatEmpty": "陪伴者打開了。慢慢來，不一定非得說什麼。",
-    "nudgeSeenToday": "今天已經被看見了。"
+    "nudgeSeenToday": "今天已經被看見了。",
+    "chatMode": {
+      "presence": {
+        "title": "我在这儿。",
+        "sub": "不著急。你說了我就接。",
+        "foot": "不回應也完全沒關係"
+      },
+      "hint": {
+        "title": "有件事想問你",
+        "sub": "是你自己說過的，我記著。",
+        "foot": "今天不聊也行"
+      },
+      "hintToday": {
+        "title": "今天這一步你還沒做",
+        "sub": "不著急。什麼時候都行。",
+        "foot": "今天不聊也行"
+      },
+      "door": {
+        "title": "想多說兩句",
+        "sub": "今天這一段到這裡了。",
+        "foot": "不回應也完全沒關係"
+      }
+    },
+    "hintBubble": {
+      "hint": "你上週說過想試試「不先還花唄」。今天還願意碰一下嗎？",
+      "hintToday": "想做的時候說一聲；今天想跳過去也可以——都算數。",
+      "doorWithLine": "你剛才說「{line}」——想多說哪一部分？",
+      "doorNoLine": "今天到這裡了。想說什麼就說，我在。"
+    }
   },
   "newJourney": {
     "dailyEyebrow": "今天",
     "actEyebrow": "今天這一步",
     "actChoices": {
-      "done": "做完了",
-      "partial": "做了一半",
-      "missed": "今天沒顧上"
+      "did": "做了",
+      "swap": "換一個",
+      "skip": "跳過"
     },
+    "actSwapText": "換一個：回想一次你花錢之後心裡發緊的時刻——那天發生了什麼？",
+    "actSwapNote": "不用寫下來。想起來就算發生了。",
+    "actSkipNote": "跳過了。這也算數——這一段照樣算走完。",
     "doneEyebrow": "今天到這裡",
     "done": "今天，到這裡。",
     "doneSub": "只看那一眼也算走完。隨時回來。",
@@ -572,11 +606,22 @@
     "mirrorEchoFallback": "我聽見了。今天這樣就夠了。",
     "pathEyebrow": "你的路",
     "stageNames": ["看見", "鬆動", "練習", "活法"],
-    "pathHint": "點開節點看依據",
+    "pathHintLit": "{n} 格亮著。這裡不顯示百分比，也不顯示「還差幾天」。",
+    "pathHintZero": "還沒走過。不急。",
     "noMirror": "今天沒顧上也沒關係。",
     "echoPreparing": "陪伴者在想……",
     "echoFailed": "陪伴者這次沒回上。你寫的話還是你的。",
-    "actDoneCta": "記下這一步"
+    "actDoneCta": "記下這一步",
+    "commitEyebrow": "今天這一個格",
+    "commitQ1": "① 我做了嗎",
+    "commitDidOptions": ["做了", "開頭了，沒做完", "今天沒顧上"],
+    "commitQ2": "② 我留意到了什麼",
+    "commitQ2Placeholder": "一句話，一個觀察——都行",
+    "commitQ3": "③ 腦子裡的第一句話",
+    "commitQ3Placeholder": "想不起來也完全沒關係",
+    "commitQ3Hint": "這只給你自己看。留空也算。",
+    "commitSubmit": "今天到這裡",
+    "commitAllEmptyHint": "三格都可以留空"
   },
   "archivePage": {
     "title": "存檔",
@@ -591,11 +636,16 @@
     },
     "settingsGroup": {
       "versionLabel": "介面",
-      "themeLabel": "調性"
+      "themeLabel": "調性",
+      "accountLabel": "設置與帳號",
+      "emailNotif": "郵件與通知偏好",
+      "emailNotifHint": "只在你自己的時刻——發薪日、月末、大促",
+      "exportDelete": "匯出 / 刪除我的記錄",
+      "langRecoveryVip": "語言 · 恢復碼 · 會員"
     },
     "versions": { "new": "新版", "classic": "經典版" },
     "themes": { "plain": "極簡留白", "paper": "溫暖紙感", "night": "夜間" },
-    "backToJourney": "回到旅程"
+    "backToJourney": "回到今天這一步"
   },
   "nudge": {
     "fallback": "我在这儿。"

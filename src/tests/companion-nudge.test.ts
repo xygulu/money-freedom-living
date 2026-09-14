@@ -161,10 +161,28 @@ async function fakeLlm(stub: () => Promise<string>): Promise<string> {
 }
 
 describe('hitRedLine：红线单测', () => {
-  it('完成度指责全命中', () => {
-    const bad = ['你还没做', '还没做这件事', '还没完成', '还差一点点', '完成度还差', '今天你还没开始'];
+  it('完成度指责全命中（除 §6 例外）', () => {
+    // §6 例外：用户拍板「今天这一步你还没做」是 hintToday 模式唯一保留的完成度陈述。
+    // 所以 `你还没做` / `今天你还没` / `你还没` 这几条**不**再被红线挡（hintToday 文案是模板，
+    // 不经过 hitRedLine）。但 `没完成` / `还差` / `完成度` 仍被挡。
+    const bad = ['还没完成', '还差一点点', '完成度还差', '还剩一步', '未完成 50%'];
     for (const text of bad) {
       expect(hitRedLine(text)).toBe(true);
+    }
+  });
+
+  it('§6 例外文案（hintToday）不命中红线（用户拍板保留）', () => {
+    // 这是用户 2026-09-14 在 §6 拍板保留的**唯一例外**：
+    // 球的"有话要说"可以用「今天这一步你还没做」作为唯一的完成度陈述。
+    // 红线解除对它的禁用——文案由 CompanionChat hintToday 模式固定拼出。
+    const excepted = [
+      '今天这一步你还没做',
+      '今天这一步你还没做——想做的时候说一声',
+      '你还没做这一段吗',
+      '今天你还没开始',
+    ];
+    for (const text of excepted) {
+      expect(hitRedLine(text)).toBe(false);
     }
   });
 
@@ -205,11 +223,12 @@ describe('hitRedLine：红线单测', () => {
 });
 
 describe('RED_LINE_PATTERNS 静态完整性', () => {
-  it('必含三类全部关键词（防漏挡）', () => {
+  it('必含三类全部关键词（防漏挡）；§6 例外三句除外', () => {
     const all = RED_LINE_PATTERNS.map((re) => re.source).join('\n');
-    expect(all).toMatch(/还没做/);
-    expect(all).toMatch(/连续/);
-    expect(all).toMatch(/收益率/);
+    // §6 例外三句已移除（你还没做 / 今天你还没 / 你还没）——hintToday 文案由模板拼出
+    expect(all).toMatch(/没完成/); // 完成度指责保留
+    expect(all).toMatch(/连续/); // 产品机制
+    expect(all).toMatch(/收益率/); // 静态引用
   });
 });
 
@@ -232,13 +251,21 @@ describe('buildCompanionNudge：四语一致', () => {
 });
 
 describe('buildCompanionNudge：四源标识互斥', () => {
-  it('source 永远只取五个之一', async () => {
-    const sources: NudgeSource[] = ['template-memory', 'template-goal', 'template-promise', 'llm', 'fallback'];
+  it('source 永远只取六个之一', async () => {
+    const sources: NudgeSource[] = [
+      'template-memory',
+      'template-goal',
+      'template-promise',
+      'template-anchor',
+      'llm',
+      'fallback',
+    ];
     const inputs = [
-      { lastMemoryText: 'm', stageGoal: null, lastTouchedPrompt: null },
-      { lastMemoryText: null, stageGoal: 'g', lastTouchedPrompt: null },
-      { lastMemoryText: null, stageGoal: null, lastTouchedPrompt: 'p' },
-      { lastMemoryText: null, stageGoal: null, lastTouchedPrompt: null },
+      { lastMemoryText: 'm', stageGoal: null, lastTouchedPrompt: null, anchorKind: null },
+      { lastMemoryText: null, stageGoal: 'g', lastTouchedPrompt: null, anchorKind: null },
+      { lastMemoryText: null, stageGoal: null, lastTouchedPrompt: 'p', anchorKind: null },
+      { lastMemoryText: null, stageGoal: null, lastTouchedPrompt: null, anchorKind: null as never },
+      { lastMemoryText: null, stageGoal: null, lastTouchedPrompt: null, anchorKind: 'payday' as const },
     ];
     for (const i of inputs) {
       const out = await buildCompanionNudge({
@@ -249,5 +276,48 @@ describe('buildCompanionNudge：四源标识互斥', () => {
       });
       expect(sources).toContain(out.source);
     }
+  });
+
+  it('L1d：anchorKind=payday 时返回 anchor 模板（§6 三种合法触发②）', async () => {
+    const out = await buildCompanionNudge({
+      locale: 'zh-CN',
+      lastMemoryText: null,
+      stageGoal: null,
+      lastTouchedPrompt: null,
+      anchorKind: 'payday',
+      llmFn: neverCallLlm,
+      fallback: FALLBACK,
+    });
+    expect(out.source).toBe('template-anchor');
+    expect(out.text).toContain('锚点日');
+    expect(out.text).toContain('发薪日');
+    expect(out.hitRedLine).toBe(false);
+  });
+
+  it('L1d：anchorKind=month_end / sale 各语种都返回模板', async () => {
+    const locales: Locale[] = ['en', 'zh-CN', 'zh-TW', 'ja'];
+    for (const locale of locales) {
+      const out = await buildCompanionNudge({
+        locale,
+        anchorKind: 'month_end',
+        llmFn: neverCallLlm,
+        fallback: FALLBACK,
+      });
+      expect(out.source).toBe('template-anchor');
+      expect(out.hitRedLine).toBe(false);
+    }
+  });
+
+  it('L1 优先级：memory > anchor（即"他记得他自己"重于"日历提醒"）', async () => {
+    const out = await buildCompanionNudge({
+      locale: 'zh-CN',
+      lastMemoryText: '我花了不该花的钱',
+      stageGoal: null,
+      lastTouchedPrompt: null,
+      anchorKind: 'payday', // 优先级低于 memory
+      llmFn: neverCallLlm,
+      fallback: FALLBACK,
+    });
+    expect(out.source).toBe('template-memory');
   });
 });

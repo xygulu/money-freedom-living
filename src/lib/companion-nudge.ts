@@ -8,11 +8,16 @@
 //   L1a 引用最近一条 memory（用户自己的原话）
 //   L1b 引用当前阶段 goal（书的方向，不评价）
 //   L1c 引用最近一条 promise/open concern/last letter（"你说想试的那件事"）
-//   L2  LLM 降级——只在 L1 三档全空 + 用户已有 ≥1 段实质素材时调用
+//   L1d 引用自己的日历（发薪日 / 月末 / 大促）——§6 三种合法触发②
+//   L2  LLM 降级——只在 L1 四档全空 + 用户已有 ≥1 段实质素材时调用
 //   L3  兜底空模板——dict.nudge.fallback（"我在这儿。"）
 //
 // 红线（hitRedLine）：
-//   - 完成度指责：还没做 / 没完成 / 还差 / 还剩 / 今天你还没 / 完成度
+//   - 完成度指责：没完成 / 还差 / 还剩 / 完成度 / 未完成
+//     **例外（用户 2026-09-14 在 §6 拍板保留）**：球的"有话要说"可以用
+//     「今天这一步你还没做」作为**唯一的完成度陈述**——见 CompanionChat
+//     hintToday 模式（chatMode.hintToday / hintBubble.hintToday）；红线条目里
+//     不再挡 `/还没做/` `/今天你还没/` `/你还没/`，挡 LLM 输出就够了。
 //   - 产品机制：连续…天 / 排行 / 成就 / 徽标 / 积分 / 红点 / 倒计时 / 阶段灯 / 深度报告 / 参考节奏 / 四个阶段
 //   - 静态引用：书名 / 理财建议（收益率 / 复利 / 年化 / 资产配置）
 //
@@ -27,8 +32,12 @@ export type NudgeSource =
   | 'template-memory'
   | 'template-goal'
   | 'template-promise'
+  | 'template-anchor'
   | 'llm'
   | 'fallback';
+
+/** §6 L1d 触发：日历（发薪日 / 月末 / 大促等）——调用方把判断结果传入。 */
+export type AnchorKind = 'payday' | 'month_end' | 'sale' | null;
 
 export interface CompanionNudgeInput {
   locale: Locale;
@@ -38,6 +47,11 @@ export interface CompanionNudgeInput {
   stageGoal?: string | null;
   /** 最近一条"想试/承诺/未完成" ——promise/open concern/last letter 内容都可入 */
   lastTouchedPrompt?: string | null;
+  /**
+   * §6 L1d：今天是不是日历上他自己的日子（发薪日 / 月末 / 大促）。
+   * 命中时 L1d 模板拼出"今天是你设的锚点日"——这是用户自己定的日子，不算完成度指责。
+   */
+  anchorKind?: AnchorKind;
   /** safety 命中闸（crisis/DV → 直接走兜底，不调 LLM） */
   safetyBlocked?: boolean;
   /** LLM 注入点（默认 llmComplete）；测试可替成 stub */
@@ -58,23 +72,26 @@ export interface CompanionNudgeOutput {
 
 /**
  * 红线正则（70-2 §6 用户纠偏版）：
- * - 不得出现完成度指责：还没做 / 没完成 / 还差 / 还剩 / 今天你还没 / 完成度
+ * - 不得出现完成度指责：没完成 / 还差 / 还剩 / 完成度 / 未完成
+ *   **§6 例外**（用户 2026-09-14 拍板保留）：球的"有话要说"**唯一例外**允许出现
+ *   「今天这一步你还没做」——这是球在 `todayStepDone=true` 且 nudge 命中时由
+ *   CompanionChat hintToday 模式**固定拼出的**四件套文案（chatMode.hintToday +
+ *   hintBubble.hintToday），不进 nudge 文案生成器、不进 LLM。
+ *   因此：① 红线不再挡 `/还没做/` `/今天你还没/` `/你还没/`（避免误禁 hintToday 文案）；
+ *   ② LLM system prompt 仍显式禁完成度指责（见 TEMPLATES[*].llmSystem）；③ 其他完成度
+ *   指责仍被挡（没完成 / 还差 / 还剩 / 完成度 / 未完成）。
  * - 不得出现产品机制（首页红线 D4）：连续…天 / 排行 / 成就 / 徽标 / 积分 / 红点 /
  *   倒计时 / 阶段灯 / 深度报告 / 参考节奏 / 四个阶段 / 进度
  * - 不得出现书名 / 理财建议：收益率 / 复利 / 年化 / 资产配置 / 理财建议 / 投资标的
  *
- * 红线只挡"显示给用户的 nudge 文案"。模板内容（L1a/L1b/L1c）由本模块自己拼接，
+ * 红线只挡"显示给用户的 nudge 文案"。模板内容（L1a/L1b/L1c/L1d）由本模块自己拼接，
  * 永远不过红线；LLM 输出（L2）过一次，命中即降级 L3。
  */
 export const RED_LINE_PATTERNS: readonly RegExp[] = [
-  // 完成度指责
-  /还没做/,
+  // 完成度指责（保留；§6 例外文案由模板拼出，不经过此函数）
   /没完成/,
   /还差/,
   /还剩/,
-  /今天你还没/,
-  /今天还没/,
-  /你还没/,
   /完成度/,
   /未完成/,
   // 产品机制（首页红线 D4）
@@ -134,6 +151,7 @@ interface NudgeTemplates {
   memory: (quote: string) => string;
   goal: (goal: string) => string;
   promise: () => string;
+  anchor: (kind: NonNullable<AnchorKind>) => string;
   llmSystem: string;
 }
 
@@ -142,6 +160,11 @@ const TEMPLATES: Record<Locale, NudgeTemplates> = {
     memory: (q) => `You said "${clipQuote(q)}" last time — still around this week?`,
     goal: (g) => `This stage's question is: ${clipQuote(g, 80)}. No rush — just look when you can.`,
     promise: () => `The thing you said you wanted to try — do you still remember?`,
+    anchor: (kind) => {
+      if (kind === 'payday') return `Today is the anchor day you set (payday). How did you and money get along this stretch?`;
+      if (kind === 'month_end') return `It's month-end — your anchor day. Any settle-down you'd like to do today?`;
+      return `It's the anchor day you set. Anything you'd like to settle today?`;
+    },
     llmSystem: `You are the companion in "money-freedom-living". Write ONE short nudge (1-2 sentences, ≤ 140 chars total) the companion would say to one specific person right now.
 
 Hard rules — output is silently rejected if any matches:
@@ -156,6 +179,11 @@ Hard rules — output is silently rejected if any matches:
     memory: (q) => `上次你说「${clipQuote(q)}」—— 这一周它在不在？`,
     goal: (g) => `这个阶段的题是：${clipQuote(g, 60)}。今天不一定做，慢慢看。`,
     promise: () => `你说想试的那件事，还记得吗？`,
+    anchor: (kind) => {
+      if (kind === 'payday') return `今天是你自己设的锚点日（发薪日）。这一段，你和钱处得怎么样？`;
+      if (kind === 'month_end') return `今天月末——你自己的锚点日。想停一下、整理一下吗？`;
+      return `今天是你自己设的锚点日。有什么想顺手收一收的吗？`;
+    },
     llmSystem: `你是「一辈子不愁钱的活法」的陪伴者。现在写一句陪伴者会说的 nudge（1-2 句，总字数 ≤ 80 字）。
 
 硬性红线（命中即作废，不展示）：
@@ -170,6 +198,11 @@ Hard rules — output is silently rejected if any matches:
     memory: (q) => `上次你說「${clipQuote(q)}」—— 這週它在不在？`,
     goal: (g) => `這個階段的題是：${clipQuote(g, 60)}。今天不一定做，慢慢看。`,
     promise: () => `你說想試的那件事，還記得嗎？`,
+    anchor: (kind) => {
+      if (kind === 'payday') return `今天是你自己設的錨點日（發薪日）。這一段，你和錢處得怎麼樣？`;
+      if (kind === 'month_end') return `今天月末——你自己的錨點日。想停一下、整理一下嗎？`;
+      return `今天是你自己設的錨點日。有什麼想順手收一收的嗎？`;
+    },
     llmSystem: `你是「一輩子不愁錢的活法」的陪伴者。現在寫一句陪伴者會說的 nudge（1-2 句，總字數 ≤ 80 字）。
 
 硬性紅線（命中即作廢，不展示）：
@@ -184,6 +217,11 @@ Hard rules — output is silently rejected if any matches:
     memory: (q) => `前回「${clipQuote(q)}」と言っていましたね——今週もありますか？`,
     goal: (g) => `このフェーズの問いは：${clipQuote(g, 60)}。今日はやらなくていい、ぼんやり眺めるだけで。`,
     promise: () => `やってみたいと言っていたこと、まだ覚えていますか？`,
+    anchor: (kind) => {
+      if (kind === 'payday') return `今日はあなたが設定したアンカーの日（給料日）です。この一区間、お金とはどう過ごせましたか？`;
+      if (kind === 'month_end') return `今日は月末——あなたのアンカーの日です。立ち止まって、整理してみますか？`;
+      return `今日はあなたが設定したアンカーの日です。何か手をつけたいことはありますか？`;
+    },
     llmSystem: `あなたは「一生お金に困らない生き方」のコンパニオンです。今この瞬間に言う nudge を 1-2 文（合計 ≤ 140 字）で書いてください。
 
 ハードレッドライン（該当したら出力を捨てます）：
@@ -235,11 +273,12 @@ async function defaultLlm(
  *   2. lastMemoryText → L1a 模板（命中即返回，hitRedLine=false）
  *   3. stageGoal → L1b 模板
  *   4. lastTouchedPrompt → L1c 模板
- *   5. allowLlm && 用户有"实质素材" → L2 LLM（输出过红线，过线降级 L3）
- *   6. fallback → L3 兜底
+ *   5. anchorKind → L1d 模板（§6 三种合法触发② 日历）
+ *   6. allowLlm && 用户有"实质素材" → L2 LLM（输出过红线，过线降级 L3）
+ *   7. fallback → L3 兜底
  *
- * 实质素材判断：lastMemoryText / stageGoal / lastTouchedPrompt 任意一项非空。
- * （L1 三档是命中式返回 → L1 全空 = 用户零素材 → 不值得调 LLM）
+ * 实质素材判断：lastMemoryText / stageGoal / lastTouchedPrompt / anchorKind 任意一项非空。
+ * （L1 四档是命中式返回 → L1 全空 = 用户零素材 → 不值得调 LLM）
  */
 export async function buildCompanionNudge(input: CompanionNudgeInput): Promise<CompanionNudgeOutput> {
   const tpl = TEMPLATES[input.locale] ?? TEMPLATES.en;
@@ -262,6 +301,13 @@ export async function buildCompanionNudge(input: CompanionNudgeInput): Promise<C
   // L1c：引用最近一条 promise/open/last letter 内容（"你说想试的那件事"）
   if (input.lastTouchedPrompt && input.lastTouchedPrompt.trim()) {
     return { text: tpl.promise(), source: 'template-promise', hitRedLine: false };
+  }
+
+  // L1d：§6 三种合法触发② —— 用户自己设的日历（发薪日 / 月末 / 大促）
+  // 这是用户自己定的日子，不是我们催他做什么——所以优先级低于 a/b/c（"他记得他自己"重于
+  // "日历提醒"），又高于 LLM 兜底（避免 LLM 凭空编）。
+  if (input.anchorKind) {
+    return { text: tpl.anchor(input.anchorKind), source: 'template-anchor', hitRedLine: false };
   }
 
   // L2 LLM：L1 三档全空 —— 用户零素材，不调 LLM（浪费 + 容易编）

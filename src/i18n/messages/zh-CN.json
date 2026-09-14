@@ -8,7 +8,8 @@
     "journey": "旅程",
     "chat": "聊聊",
     "journal": "心事",
-    "me": "我的"
+    "me": "我的",
+    "journeyHref": ""
   },
   "landing": {
     "hero": "一辈子不愁钱的活法",
@@ -91,6 +92,8 @@
     "deleteConfirmBtn": "永久删除",
     "deleteCancel": "先留着",
     "privacyLink": "隐私政策",
+    "signOut": "登出",
+    "signOutConfirm": "真的要登出？",
     "error": "出了点问题，请重试"
   },
   "touch": {
@@ -554,16 +557,47 @@
     "doorLink": "想多说两句",
     "doorFallback": "今天到这里了。想说什么就说，我在。",
     "chatEmpty": "陪伴者打开了。慢慢来，不一定非得说什么。",
-    "nudgeSeenToday": "今天已经被看见了。"
+    "nudgeSeenToday": "今天已经被看见了。",
+    "chatMode": {
+      "presence": {
+        "title": "我在这儿。",
+        "sub": "不着急。你说了我就接。",
+        "foot": "不回应也完全没关系"
+      },
+      "hint": {
+        "title": "有件事想问你",
+        "sub": "是你自己说过的，我记着。",
+        "foot": "今天不聊也行"
+      },
+      "hintToday": {
+        "title": "今天这一步你还没做",
+        "sub": "不着急。什么时候都行。",
+        "foot": "今天不聊也行"
+      },
+      "door": {
+        "title": "想多说两句",
+        "sub": "今天这一段到这儿了。",
+        "foot": "不回应也完全没关系"
+      }
+    },
+    "hintBubble": {
+      "hint": "你上周说过想试试「不先还花呗」。今天还愿意碰一下吗？",
+      "hintToday": "想做的时候说一声；今天想跳过去也可以——都算数。",
+      "doorWithLine": "你刚才说「{line}」——想多说哪一部分？",
+      "doorNoLine": "今天到这里了。想说什么就说，我在。"
+    }
   },
   "newJourney": {
     "dailyEyebrow": "今天",
     "actEyebrow": "今天这一步",
     "actChoices": {
-      "done": "做完了",
-      "partial": "做了一半",
-      "missed": "今天没顾上"
+      "did": "做了",
+      "swap": "换一个",
+      "skip": "今天跳过"
     },
+    "actSwapText": "换一个：回想一次你花钱之后心里发紧的时刻——那天发生了什么？",
+    "actSwapNote": "不用写下来。想起来就算发生了。",
+    "actSkipNote": "跳过了。这也算数——这一段照样算走完。",
     "doneEyebrow": "今天到这里",
     "done": "今天，到这里。",
     "doneSub": "只看那一眼也算走完。随时回来。",
@@ -572,11 +606,22 @@
     "mirrorEchoFallback": "我听见了。今天这样就够了。",
     "pathEyebrow": "你的路",
     "stageNames": ["看见", "松动", "练习", "活法"],
-    "pathHint": "点开节点看依据",
+    "pathHintLit": "{n} 格亮着。这里不显示百分比，也不显示「还差几天」。",
+    "pathHintZero": "还没走。不赶时间。",
     "noMirror": "今天没顾上也没关系。",
     "echoPreparing": "陪伴者在想……",
     "echoFailed": "陪伴者这次没回上。你写的话还是你的。",
-    "actDoneCta": "记下这一步"
+    "actDoneCta": "记下这一步",
+    "commitEyebrow": "今天这一格",
+    "commitQ1": "① 我做了",
+    "commitDidOptions": ["做了", "没做完", "今天没顾上"],
+    "commitQ2": "② 我想到",
+    "commitQ2Placeholder": "一句话、一件事，都行",
+    "commitQ3": "③ 脑子里的第一句话",
+    "commitQ3Placeholder": "想不起来也行",
+    "commitQ3Hint": "这句只给你自己看。留空不算没做。",
+    "commitSubmit": "今天到这里",
+    "commitAllEmptyHint": "全部都可以留空"
   },
   "archivePage": {
     "title": "存档",
@@ -591,11 +636,16 @@
     },
     "settingsGroup": {
       "versionLabel": "界面",
-      "themeLabel": "调性"
+      "themeLabel": "调性",
+      "accountLabel": "设置与账号",
+      "emailNotif": "邮件与通知偏好",
+      "emailNotifHint": "只在「你自己的时刻」发——发薪日、月末、你说过想试的那件事",
+      "exportDelete": "导出 / 删除我的记录",
+      "langRecoveryVip": "语言 · 恢复码 · 会员"
     },
     "versions": { "new": "新版", "classic": "经典版" },
     "themes": { "plain": "极简留白", "paper": "温暖纸感", "night": "夜间" },
-    "backToJourney": "回到旅程"
+    "backToJourney": "回到今天这一步"
   },
   "nudge": {
     "fallback": "我在这儿。"

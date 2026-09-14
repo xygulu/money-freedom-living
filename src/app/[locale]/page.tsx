@@ -14,7 +14,7 @@ import { visibleLocales } from '@/i18n/config';
 import { getDict } from '@/i18n/get-dict';
 import { resolveIdentity } from '@/lib/identity';
 import { getProfile } from '@/lib/profile';
-import { getUiVersion } from '@/lib/ui-version';
+import { getUiVersion, journeyHrefFor } from '@/lib/ui-version';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,8 +30,7 @@ export default async function LandingPage({ params }: { params: Promise<{ locale
     const profile = await getProfile(identity.key);
     if (profile?.portrait) {
       const v = await getUiVersion();
-      const target = v === 'classic' ? `/${locale}/journey` : `/${locale}/journey-new`;
-      redirect(target);
+      redirect(journeyHrefFor(locale, v));
     }
   } catch (error) {
     // redirect() 以特殊错误对象向外抛，必须放行；身份/档案解析失败 = 当作访客

@@ -4,6 +4,7 @@
 // 恢复码是 Safari ITP 清存储后的找回钥匙（docs/02 §9）；删除走两步确认（输入 DELETE）。
 import { useState } from 'react';
 import type { Dict } from '@/i18n/get-dict';
+import SignOutButton from './SignOutButton';
 
 interface Props {
   locale: string;
@@ -61,6 +62,18 @@ export default function MeAccount({ locale, dict }: Props) {
 
   return (
     <div className="mt-10 border-t border-line">
+      {/* 登出（70-2 加固：用户 2026-09-14 要求设置里补账号登出，带二次确认） */}
+      <div className="flex justify-end pt-4">
+        <SignOutButton
+          locale={locale}
+          labels={{
+            btn: t.signOut,
+            confirm: t.signOutConfirm,
+            cancel: t.deleteCancel,
+          }}
+        />
+      </div>
+
       {/* 恢复码 */}
       <div className="border-b border-line py-6">
         <h2 className="text-base">{t.recovery}</h2>

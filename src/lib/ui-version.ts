@@ -8,6 +8,7 @@
 // 用户授权"新版好就废除旧版"，所以本文件加一个轻量使用统计
 // （getUiVersionUsageStats）供后续评估使用——废除时只删调用点。
 import { cookies } from 'next/headers';
+import type { Dict } from '@/i18n/get-dict';
 
 export const UI_VERSION_COOKIE = 'mfl_ui_version';
 export const UI_VERSIONS = ['new', 'classic'] as const;
@@ -42,6 +43,30 @@ export function readUiVersionClient(): UiVersion {
   const m = document.cookie.match(/(?:^|; )mfl_ui_version=([^;]*)/);
   const v = m ? decodeURIComponent(m[1]) : null;
   return isUiVersion(v) ? v : DEFAULT_UI_VERSION;
+}
+
+/**
+ * 当前 ui_version 下"回到旅程"应跳的 URL（用户 2026-09-14 要求"切换后保持隔离"）。
+ * - new      → /{locale}/journey-new（一幕）
+ * - classic  → /{locale}/journey  （经典版）
+ */
+export function journeyHrefFor(locale: string, uiVersion: UiVersion): string {
+  return uiVersion === 'classic' ? `/${locale}/journey` : `/${locale}/journey-new`;
+}
+
+/**
+ * 把 `dict.nav.journeyHref` 注入为按当前 ui_version 分流的 href。
+ * Dict 推导自 en.json 静态类型；`nav.journeyHref` 已在 en.json 占位 ""，运行时被本函数覆盖。
+ * 不用本函数、想直接读 `dict.nav.journeyHref` 拿到的会是空串——这是设计，逼迫调用方走这里。
+ */
+export function withJourneyHref(dict: Dict, locale: string, uiVersion: UiVersion): Dict {
+  return {
+    ...dict,
+    nav: {
+      ...dict.nav,
+      journeyHref: journeyHrefFor(locale, uiVersion),
+    },
+  };
 }
 
 /**

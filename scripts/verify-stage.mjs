@@ -1,4 +1,4 @@
-// 前台改造 70-2 · 一屏放下 + 红线自检 + classic/new 切换（屏幕级烟测）。
+// 前台改造 70-2 · 一屏放下 + 红线自检 + classic/new 切换 + 原型合规回归（屏幕级烟测）。
 //
 // 检查项：
 //  ① /journey-new 一屏放下（scrollHeight ≤ innerHeight + 1，3 种视口 × 3 种语言）
@@ -8,6 +8,15 @@
 //  ⑤ 陪伴者圆 54×54（getBoundingClientRect）
 //  ⑥ ui_version=classic 后 /journey 仍是 11 块布局（含 data-welcome-back）
 //  ⑦ 切到 /journey-new 后 nudge API 返回 200 + 至少一次 text/source
+//  ⑧ 一幕原型合规回归（按用户原话"完全遵照原型"）：
+//    - topbar SVG 存档图标按钮（不是文字链接）
+//    - 陪伴者 SVG 用原型 path d="M12 4.6c..."
+//    - PathBar hint 文案动态生成（"X 格亮着"）
+//    - 4 阶段节点是 <span> 不是 <Link>
+//  ⑨ archive 设置段（按 70-2 加固）：
+//    - 游客态 SignOutButton 不渲染
+//    - 第三段「设置与账号」存在
+//    - 顶部按钮文案 "← 回到今天这一步"（不是"回到旅程"）
 //
 // 运行：dev server 在 3000（pnpm dev）+ node --env-file=.env.local scripts/verify-stage.mjs
 // 失败立刻非零退出，CI 可直接挂挡。
@@ -169,6 +178,98 @@ async function backLinkTest(browser, { locale, uiVersion, expectPath }) {
   }
 }
 
+// ⑧ 70-2 加固 · 一幕原型合规回归（按用户原话"完全遵照原型"）
+async function prototypeComplianceTest(browser, locale) {
+  const { page } = await newPageWithCookies(browser, { locale, uiVersion: 'new' });
+  try {
+    await page.goto(`${BASE}/${locale}/journey-new`, { waitUntil: 'networkidle' });
+
+    // C 项：topbar 用了 SVG 存档图标按钮，不是文字链接
+    const archBtn = await page.locator('header [data-archive-link]').count();
+    check(`[${locale}] topbar 有存档图标按钮 [data-archive-link]`, archBtn === 1, `count=${archBtn}`);
+    const archSvg = await page.locator('header [data-archive-link] svg').count();
+    check(`[${locale}] topbar 存档按钮内嵌 SVG`, archSvg === 1, `count=${archSvg}`);
+    // 文字应是辅助说明，不是按钮本身的全部
+    const archText = await page.locator('header [data-archive-link]').innerText();
+    check(`[${locale}] topbar 存档按钮**主要**是图标（无纯文字文案）`, archText.trim().length <= 4, `text="${archText.trim()}"`);
+
+    // K 项：陪伴者 SVG path 用原型 d="M12 4.6..."（第一个 path）
+    const svgPath = await page.evaluate(() => {
+      const btn = document.querySelector('[data-companion] button');
+      if (!btn) return '';
+      const path = btn.querySelector('svg path');
+      return path?.getAttribute('d') ?? '';
+    });
+    check(`[${locale}] 陪伴者 SVG 用原型 path d="M12 4.6..."`, svgPath.startsWith('M12 4.6'), `d=${svgPath.slice(0, 24)}...`);
+
+    // L 项：pulse 元素存在（呼吸圈）
+    const pulse = await page.locator('[data-companion] .pulse, [data-companion] [class*="pulse"]').count();
+    check(`[${locale}] 陪伴者 .pulse 元素存在`, pulse >= 1, `count=${pulse}`);
+
+    // I 项：PathBar hint 文案动态生成（含"格亮着"或"还没走过"）
+    const pathHint = await page.locator('[data-step="path"] [data-path-hint], [data-step="path"] p').last().innerText();
+    check(
+      `[${locale}] PathBar hint 动态生成`,
+      /格亮着/.test(pathHint) || /还没走过/.test(pathHint),
+      `hint="${pathHint.slice(0, 32)}..."`,
+    );
+
+    // H 项：4 阶段节点是 span 不是 Link（原型 line 269-271 是 <span>）
+    const stageLinks = await page.locator('[data-step="path"] a[href*="changes"]').count();
+    check(`[${locale}] 4 阶段节点不是 Link（原型无链接）`, stageLinks === 0, `count=${stageLinks}`);
+    const stageSpans = await page.locator('[data-stage-labels] span[data-stage]').count();
+    check(`[${locale}] 4 阶段节点是 span[data-stage]`, stageSpans === 4, `count=${stageSpans}`);
+  } finally {
+    await page.context().close();
+  }
+}
+
+// ⑨ 70-2 加固 · archive 设置段 + 登出入口（按 70-2 加固）
+async function archiveSignOutTest(browser, locale) {
+  const { page } = await newPageWithCookies(browser, { locale, uiVersion: 'new' });
+  try {
+    await page.goto(`${BASE}/${locale}/archive`, { waitUntil: 'networkidle' });
+
+    // 游客态（未登录）：data-sign-out 不渲染
+    const guestCount = await page.locator('[data-sign-out]').count();
+    check(`[${locale}] archive 游客态不渲染 SignOutButton`, guestCount === 0, `count=${guestCount}`);
+
+    // 第三段「设置与账号」段存在
+    const setgroupCount = await page.locator('[data-setgroup="account"]').count();
+    check(`[${locale}] archive 第三段 [data-setgroup=account] 存在`, setgroupCount === 1, `count=${setgroupCount}`);
+    const acctLabel = await page.locator('[data-account-label]').innerText();
+    check(
+      `[${locale}] archive 第三段标签含「设置」`,
+      /设置|账号|Account|Setting/.test(acctLabel),
+      `label="${acctLabel.slice(0, 16)}..."`,
+    );
+
+    // 账号段下三行入口都在
+    const rows = await page.locator('[data-account-row]').count();
+    check(`[${locale}] archive 账号段下 3 行入口`, rows === 3, `count=${rows}`);
+  } finally {
+    await page.context().close();
+  }
+}
+
+// ⑩ D 项：archive 顶部按钮文案"← 回到今天这一步"
+async function archiveBackLinkTextTest(browser, locale, uiVersion) {
+  const { page } = await newPageWithCookies(browser, { locale, uiVersion });
+  try {
+    await page.goto(`${BASE}/${locale}/archive`, { waitUntil: 'networkidle' });
+    const backLinkText = await page.locator('[data-back-to-journey]').innerText();
+    // 原型 line 312 是"← 回到今天这一步"，中文必须含"今天"
+    // i18n 文案：zh-CN/zh-TW 含"今天"；en 含"today"；ja 含"今日"
+    const expected =
+      locale === 'en' ? /today/i.test(backLinkText)
+        : locale === 'ja' ? /今日/.test(backLinkText)
+        : /今天/.test(backLinkText);
+    check(`[${locale}/${uiVersion}] archive 顶部按钮文案含"今天"`, expected, `text="${backLinkText.trim()}"`);
+  } finally {
+    await page.context().close();
+  }
+}
+
 async function main() {
   const browser = await chromium.launch({ headless: true });
 
@@ -189,6 +290,21 @@ async function main() {
     // ④ nudge API + ui-version API（无需浏览器）
     await nudgeApiTest();
     await versionSwitchTest();
+
+    // ⑧ 一幕原型合规回归（按用户原话"完全遵照原型"）
+    for (const locale of ['zh-CN', 'zh-TW', 'en']) {
+      await prototypeComplianceTest(browser, locale);
+    }
+
+    // ⑨ archive 设置段 + 登出入口回归
+    for (const locale of ['zh-CN', 'zh-TW', 'en']) {
+      await archiveSignOutTest(browser, locale);
+    }
+
+    // ⑩ D 项：archive 顶部按钮文案"← 回到今天这一步"
+    await archiveBackLinkTextTest(browser, 'zh-CN', 'new');
+    await archiveBackLinkTextTest(browser, 'zh-TW', 'new');
+    await archiveBackLinkTextTest(browser, 'en', 'new');
   } finally {
     await browser.close();
   }

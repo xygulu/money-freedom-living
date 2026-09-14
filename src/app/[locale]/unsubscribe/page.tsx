@@ -12,6 +12,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { getDict } from '@/i18n/get-dict';
 import { enabledLocales, isLocale } from '@/i18n/config';
+import { getUiVersion, withJourneyHref } from '@/lib/ui-version';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,7 +25,7 @@ export default async function unsubscribePage({
 }) {
   const { locale } = await params;
   if (!isLocale(locale) || !enabledLocales.includes(locale)) notFound();
-  const dict = getDict(locale);
+  const dict = withJourneyHref(getDict(locale), locale, await getUiVersion());
   const sp = await searchParams;
   const t = dict.touch;
 
@@ -45,7 +46,7 @@ export default async function unsubscribePage({
           </button>
         </form>
         <div className="mt-10 text-sm">
-          <Link href={`/${locale}/journey`} className="text-accent underline underline-offset-4">
+          <Link href={dict.nav.journeyHref} className="text-accent underline underline-offset-4">
             {t.unsubKeepLabel}
           </Link>
         </div>
@@ -60,7 +61,7 @@ export default async function unsubscribePage({
       <p className="mt-5 text-sm leading-relaxed">{ok ? t.unsubDone : t.unsubFail}</p>
       {ok && <p className="mt-3 text-xs leading-relaxed text-ink-soft/70">{t.unsubResubHint}</p>}
       <div className="mt-10 flex gap-4 text-sm">
-        <Link href={`/${locale}/journey`} className="text-accent underline underline-offset-4">
+        <Link href={dict.nav.journeyHref} className="text-accent underline underline-offset-4">
           {dict.nav.journey}
         </Link>
         <Link href={`/${locale}/me`} className="text-ink-soft underline underline-offset-4">
