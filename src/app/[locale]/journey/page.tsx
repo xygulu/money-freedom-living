@@ -2,7 +2,8 @@
 // 今天这一段（M11-D，docs/05 §8）——开（看见）→ 做（动手）→ 合（被接住）：
 //   开：今日一签（按当前阶段抽取；同一用户 90 天不重复，看过的记入档案 daily_seen）
 //   做：今日微行动（按当前阶段练习确定性抽取；"完成 + 一句感受"写入 experiments）
-//   合：陪伴对话（进入 /chat，消耗会话配额）+「今天到这里」的明确收束
+//   合：一格收尾（did / 想到什么 / 脑子里第一句话，三行都可留空；docs/10 §1.1）
+//       +「今天到这里」的明确收束。想多说两句仍可去 /chat，但不再是必经。
 // 全部可跳过，跳过不打断足迹，无未完成红点；只看那一眼也算走完这一段。
 // 阶段路标 + 当前位置 + 信件入口（阶段仪式：给现在的自己 / 写给钱的一封信）。
 // 归来问候与发薪日锚点属 M7，这里不掺。
@@ -23,6 +24,7 @@ import { computeStageProgress, MAX_STAGE } from '@/lib/stage';
 import { baselineFor, countMaterialSince, shouldPropose, saveEvolution, listPortraitVersions } from '@/lib/evolution';
 import { shouldOfferAssess, saveAssessmentState, ASSESS_PENDING_TTL_DAYS } from '@/lib/assess';
 import MicroActionCard from '@/components/MicroActionCard';
+import DayCloseCard from '@/components/DayCloseCard';
 import StageLampChart from '@/components/StageLampChart';
 import ActionRecordList from '@/components/ActionRecordList';
 import AnchorCard from '@/components/AnchorCard';
@@ -150,14 +152,14 @@ export default async function journeyPage({
 
   // 验收指标：24h-72h 回访等（docs/02 §11）。查询端按 user+day 去重，这里无条件打点。
   const gapBucket = gapDays < 0 ? 'first' : gapDays === 0 ? 'same_day' : gapDays <= 3 ? '1-3' : gapDays <= 7 ? '4-7' : '8+';
+  const query = await searchParams;
   try {
     await track(identity.key, 'journey_visit', { gap: gapBucket }, locale);
     // 从信里回来的那一次单独记一笔（链接带 ?from=touch&node=D7）。
     // 没有这一笔，touch_sent 就只是"寄出去几封"——寄出去和有人因此回来，是两回事，
     // 而只有后者能回答"这些信到底该不该继续写"。页面上一个字都不显示：他回来了就够了。
-    const sp = await searchParams;
-    if (sp.from === 'touch' && /^D\d+$/.test(sp.node ?? '')) {
-      await track(identity.key, 'touch_return', { node: sp.node!, gap: gapBucket }, locale);
+    if (query.from === 'touch' && /^D\d+$/.test(query.node ?? '')) {
+      await track(identity.key, 'touch_return', { node: query.node!, gap: gapBucket }, locale);
     }
   } catch {
     // 打点绝不阻塞页面
@@ -242,21 +244,17 @@ export default async function journeyPage({
         </div>
 
         <div data-arc-step="close" className="border-t border-line px-6 py-6">
-          <p className="text-xs tracking-widest text-ink-soft">
-            {dict.journey.arcClose} · {dict.journey.chatLabel}
-          </p>
+          <p className="text-xs tracking-widest text-ink-soft">{dict.journey.arcClose}</p>
           <p className="mt-4 text-sm leading-relaxed text-ink-soft">{dict.journey.chatHint}</p>
+          {/* 「合」不再跳对话（docs/10 §1.1）：一格三行即可收尾。
+              多说两句仍是他的选择，但那是**另一条路**，不是走完这一格的必经门槛—— */}
           <Link
             href={`/${locale}/chat?start=1`}
-            className="mt-5 inline-block border border-ink px-5 py-2.5 text-sm transition-colors hover:bg-ink hover:text-paper"
+            className="mt-3 inline-block text-sm text-accent underline underline-offset-4"
           >
-            {dict.journey.chatCta}
+            {dict.journey.closeMore}
           </Link>
-          {/* 明确收束：一段路走到这儿就合上了，不留「明天还有」的尾巴 */}
-          <div data-day-close className="mt-6 border-t border-dashed border-line pt-5">
-            <p className="text-sm leading-relaxed">{dict.journey.arcCloseTitle}</p>
-            <p className="mt-1.5 text-xs leading-relaxed text-ink-soft/70">{dict.journey.arcCloseNote}</p>
-          </div>
+          <DayCloseCard locale={locale} dict={dict} node={query?.node} />
         </div>
       </section>
 

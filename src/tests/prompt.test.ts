@@ -129,6 +129,56 @@ describe('buildChatContext：P§6 优先级组装', () => {
   });
 });
 
+describe('每日两问协议 + 五类失败接法（docs/10 §1.2，硬约束不进裁剪）', () => {
+  it('协议块在系统提示里，且紧跟安全规则（不排到会被预算裁掉的末尾）', () => {
+    const { system } = buildChatContext(base);
+    expect(system).toContain('一天最多两问');
+    const safetyAt = system.indexOf('## 安全规则');
+    const protocolAt = system.indexOf('一天最多两问');
+    expect(protocolAt).toBeGreaterThan(safetyAt);
+    // 排在内容层之前：预算不足时先裁内容，不能先裁约束
+    expect(protocolAt).toBeLessThan(system.indexOf('## 现在'));
+  });
+
+  it('两块各自带标题，是独立块而不是塞在别处的两句话', () => {
+    const { system } = buildChatContext(base);
+    expect(system).toContain('## 一天最多两问（硬约束）');
+    expect(system).toContain('他答不上来时怎么接');
+  });
+
+  it('三个数字口径逐条在场：最多两个 / 不同时出现 / 先行为后认知', () => {
+    const { system } = buildChatContext(base);
+    expect(system).toContain('你最多问两个问题');
+    expect(system).toContain('不能出现在同一条回复里');
+    expect(system).toContain('先行为、后认知');
+  });
+
+  it('五类失败接法一类不落（说没做/不知道/只回一个字/反问回来/情绪为负）', () => {
+    const { system } = buildChatContext(base);
+    for (const marker of ['没做', '不知道', '只回一个字', '反问回来', '情绪为负']) {
+      expect(system).toContain(marker);
+    }
+  });
+
+  it('「没做」那一类写死不准安慰——安慰一出现，选项就塌成只能填"做了"', () => {
+    const { system } = buildChatContext(base);
+    expect(system).toContain('不安慰、不鼓励、不提明天');
+    expect(system).toContain('打卡表');
+  });
+
+  it('四语都有这两块，且各语都点到自己的语言（漏语言＝某语用户拿到中文约束）', () => {
+    const zh = buildChatContext(base).system;
+    expect(zh).toContain('一天最多两问');
+    const en = buildChatContext({ ...base, locale: 'en' as Locale }).system;
+    expect(en).toContain('At most two questions a day');
+    expect(en).toContain('When he answers badly');
+    const tw = buildChatContext({ ...base, locale: 'zh-TW' as Locale }).system;
+    expect(tw).toContain('一天最多兩問');
+    const ja = buildChatContext({ ...base, locale: 'ja' as Locale }).system;
+    expect(ja).toContain('一日に質問は二つまで');
+  });
+});
+
 describe('validateDigest（会话摘要结构校验）', () => {
   it('合法摘要通过，pinned 过滤非法 kind/空文本并截 3 条', () => {
     const digest = validateDigest({

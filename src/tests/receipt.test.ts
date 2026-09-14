@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildReceiptSystem, buildReceiptUser, pickReceiptFallback, RECEIPT_FALLBACKS } from '@/lib/receipt';
+import { buildReceiptSystem, buildReceiptUser, buildCloseReceiptUser, pickReceiptFallback, RECEIPT_FALLBACKS, RECEIPT_FALLBACKS_UNFINISHED } from '@/lib/receipt';
 
 describe('buildReceiptSystem（收条体红线 prompt）', () => {
   it('红线逐字在场：不分析不解读、不给建议、结尾不提问、不复述动作细节、无夸奖式加压', () => {
@@ -52,5 +52,37 @@ describe('pickReceiptFallback（词典收条：LLM 不可用时的降级）', ()
       expect(pickReceiptFallback(loc, 's')).toBeTruthy();
     }
     expect(pickReceiptFallback('xx-UNKNOWN', 's')).toBe(pickReceiptFallback('en', 's'));
+  });
+});
+
+describe('收条不许安慰「没做完」（docs/10 §1.1 的塌陷防线）', () => {
+  it('降级词典也分两套：did 不是 done 时走"原样收着"那一套', () => {
+    const unfinished = pickReceiptFallback('zh-CN', 'seed', 'missed');
+    expect(RECEIPT_FALLBACKS_UNFINISHED['zh-CN']).toContain(unfinished);
+    expect(RECEIPT_FALLBACKS['zh-CN']).not.toContain(unfinished);
+    // partial 同样走没做完那套——「没做完」就是没做完，别给自己留后门
+    expect(pickReceiptFallback('zh-CN', 'seed', 'partial')).toBe(unfinished);
+  });
+
+  it('「做了」仍走老词典（存量行为不变）', () => {
+    expect(pickReceiptFallback('zh-CN', 'seed', 'done')).toBe(pickReceiptFallback('zh-CN', 'seed'));
+    expect(RECEIPT_FALLBACKS['zh-CN']).toContain(pickReceiptFallback('zh-CN', 'seed', 'done'));
+  });
+
+  it('四语都有、非空、未知语言回落 en', () => {
+    for (const loc of ['en', 'zh-CN', 'zh-TW', 'ja']) {
+      expect(RECEIPT_FALLBACKS_UNFINISHED[loc].length).toBeGreaterThanOrEqual(3);
+      for (const line of RECEIPT_FALLBACKS_UNFINISHED[loc]) expect(line.length).toBeGreaterThan(0);
+    }
+    expect(pickReceiptFallback('xx-UNKNOWN', 's', 'missed')).toBe(
+      pickReceiptFallback('en', 's', 'missed')
+    );
+  });
+
+  it('LLM 提示词里写明"不当成失败、不安慰"——降级路径与真模型路径口径一致', () => {
+    const user = buildCloseReceiptUser({ did: 'missed' });
+    expect(user).toContain('今天没顾上');
+    expect(user).toContain('不安慰');
+    expect(user).toContain('不提明天');
   });
 });

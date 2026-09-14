@@ -193,13 +193,24 @@ export interface BookEntry {
 /** 命题上的程度（跨书累加，永不重置——书可以换，走过的程度不会退回，docs/05 §3.2） */
 export type ThreadDepth = 'seen' | 'replaced' | 'mastered';
 
+/**
+ * 认知层三个指标的落点（docs/10 P0-1）。**零新表**：全部挂在 threads[].evidence 上，
+ * 靠这个 kind 区分。没有 kind 的是普通证据（存量数据与评估写入的那些）。
+ * - `pause`   L5 停顿：他主动停下来看了自己一眼（「合」的第③问填了东西）
+ * - `migrate` L4 迁移：他自己说出一个新做法/新解释，**且他亲手确认过**这是新的
+ * - `regress` M 恢复时间的起点：说法掉回旧句式。**只记时间，绝不展示给用户看**
+ */
+export type EvidenceKind = 'pause' | 'migrate' | 'regress';
+
 /** quote 必须是用户原话：交叉印证时要调得出「你上次是这么说的」，而不是复述我的话 */
 export interface ThreadEvidence {
   at: string; // ISO
   bookId: string;
-  source: 'chat' | 'journal' | 'letter' | 'experiment' | 'assessment';
+  source: 'chat' | 'journal' | 'letter' | 'experiment' | 'assessment' | 'close';
   quote: string;
   ref?: string;
+  /** 认知层指标标记（docs/10 P0-1）；普通证据不带 */
+  kind?: EvidenceKind;
 }
 
 export interface ThreadState {
@@ -638,8 +649,31 @@ export async function recordThreadEvidence(
   );
 }
 
-/** 触达状态局部更新（同样守类型；调用方只传要改的键） */
-export async function saveTouch(userKey: string, patch: TouchState): Promise<void> {
+/**
+ * 撤回一条证据（docs/10 P0-1 的 L4「不对，撤销」）。
+ *
+ * 为什么必须是**真删**而不是打个 dismissed 标记：这是「不诊断、不贴标签」红线的技术
+ * 实现——AI 说"这是个新说法"，用户说"不是"，那就当没发生过。留一条"用户否认过的
+ * 迁移"在库里，下次读取端照样会拿它做文章，等于把标签偷偷留下了。
+ * 按 (topic, at) 精确定位：at 是写入时的 ISO 时间戳，同一命题上不会撞。
+ */
+export async function deleteThreadEvidence(userKey: string, topic: TopicId, at: string): Promise<void> {
+  const profile = await getProfile(userKey);
+  const current = profile?.threads?.[topic];
+  if (!current) return;
+  const kept = current.evidence.filter((e) => e.at !== at);
+  if (kept.length === current.evidence.length) return;
+  const state: ThreadState = { ...current, evidence: kept };
+  await execWithFailover((sql: SqlClient) =>
+    sql`UPDATE growth_profiles
+        SET threads = (CASE WHEN jsonb_typeof(threads) = 'object' THEN threads ELSE '{}'::jsonb END)
+                      || jsonb_build_object(${topic}::text, ${JSON.stringify(state)}::jsonb),
+            updated_at = now()
+        WHERE user_key = ${userKey}`
+  );
+}
+
+/** 触达状态局部更新（同样守类型；调用方只传要改的键） */export async function saveTouch(userKey: string, patch: TouchState): Promise<void> {
   await execWithFailover((sql: SqlClient) =>
     sql`UPDATE growth_profiles
         SET touch = (CASE WHEN jsonb_typeof(touch) = 'object' THEN touch ELSE '{}'::jsonb END)
