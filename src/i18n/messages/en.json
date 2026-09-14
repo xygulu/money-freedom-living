@@ -120,29 +120,36 @@
       },
       "D7": {
         "subject": "That line is still where you left it",
-        "body": "A few days on, I came across this again — your words:\n\n{echo}\n\nNobody's waiting on anything from you. Come back whenever you feel like it."
+        "body": "A few days on, I came across this again — your words:\n\n{echo}\n\nNobody's waiting on anything from you. Come back whenever you feel like it.",
+        "question": "Have you started moving on it?"
       },
       "D14": {
         "subject": "It took something to write that",
-        "body": "It took something out of you to write this:\n\n{echo}\n\nI remember. That's all I wanted to say."
+        "body": "It took something out of you to write this:\n\n{echo}\n\nI remember. That's all I wanted to say.",
+        "question": "Does it hold — this thing you have been trying?"
       },
       "D21": {
         "subject": "That line of yours has stayed with me",
-        "body": "Some things get lighter the moment they're said out loud. You said:\n\n{echo}\n\nThat lightness was real."
+        "body": "Some things get lighter the moment they're said out loud. You said:\n\n{echo}\n\nThat lightness was real.",
+        "question": "With no one reminding you, are you still doing it?"
       },
       "D30": {
         "subject": "What you said a month ago",
-        "body": "A month ago, you said:\n\n{echo}\n\nA person and their own words can drift apart. Reading it now — does it land the same way?"
+        "body": "A month ago, you said:\n\n{echo}\n\nA person and their own words can drift apart. Reading it now — does it land the same way?",
+        "question": "Has the way you put it settled?"
       },
       "D66": {
         "subject": "The road you walked is still there",
-        "body": "Every step of the road you walked is still on the map. This is still on it:\n\n{echo}\n\nWhenever you want to look at it again, it's there."
+        "body": "Every step of the road you walked is still on the map. This is still on it:\n\n{echo}\n\nWhenever you want to look at it again, it's there.",
+        "question": "Does it happen now without your deciding to do it?"
       },
       "D90": {
         "subject": "Three months ago, you wrote a letter",
-        "body": "Three months ago, you wrote a letter. It's still here.\n\n{echo}\n\nThe person who wrote it has probably come a little further since."
+        "body": "Three months ago, you wrote a letter. It's still here.\n\n{echo}\n\nThe person who wrote it has probably come a little further since.",
+        "question": "Looking back — did it work? Do you want to keep going?"
       }
-    }
+    },
+    "nodeBackLead": "You came back from this letter."
   },
   "journey": {
     "title": "Journey",

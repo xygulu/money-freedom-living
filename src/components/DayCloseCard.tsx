@@ -20,11 +20,18 @@ export default function DayCloseCard({
   locale,
   dict,
   node,
+  from,
 }: {
   locale: string;
   dict: Dict;
   /** 从节点信里回来的（?from=touch&node=D7）——这一格同时是那个节点的答卷 */
   node?: string;
+  /**
+   * 这一格是怎么来的：'touch' = 顺着节点信里的链接回来的，其它 = 他自己走到这一页
+   * （docs/10 §2.2 的 `source`）。两者都会写 `node_verdict`，但**不是同一件事**：
+   * 信叫回来的那次能说明"这封信起作用了"，自己走完的那次不能，混在一起就再也分不开。
+   */
+  from?: 'touch';
 }) {
   const t = dict.journey;
   const [did, setDid] = useState<Did | null>(null);
@@ -56,6 +63,7 @@ export default function DayCloseCard({
           firstLine: cantRecall ? undefined : firstLine.trim() || undefined,
           firstLineSkipped: cantRecall,
           node,
+          from,
           locale,
         }),
       });

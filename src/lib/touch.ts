@@ -109,6 +109,21 @@ export function unsubUrl(baseUrl: string, locale: string, token: string): string
   return `${baseUrl.replace(/\/$/, '')}/api/touch/unsubscribe?token=${encodeURIComponent(token)}&locale=${encodeURIComponent(locale)}`;
 }
 
+/**
+ * 这个节点要问的那一个问题（docs/10 §2.1）。
+ *
+ * 信里问一次，回程页再问一次——**同一个问题**，同一份文案。只在一处写死，两处引用，
+ * 是为了让"他答的是不是我们问的"这件事不需要人去核对：文案改了，两边一起改。
+ * 只有 6 个节点问；D3 是"你上次说的那句话我留着"，不提问，所以返回 null。
+ */
+export function nodeQuestion(dict: Dict, node: string): string | null {
+  const tpl = (
+    dict.touch.letters as unknown as Record<string, { question?: string } | undefined>
+  )[node];
+  const q = (tpl?.question ?? '').trim();
+  return q || null;
+}
+
 function clip(text: string, max = 120): string {
   const t = text.replace(/\s+/g, ' ').trim();
   return t.length <= max ? t : `${t.slice(0, max)}…`;
@@ -139,7 +154,9 @@ export function composeTouch(params: {
   if (!token) return null;
 
   const t = dict.touch;
-  const tpl = (t.letters as unknown as Record<string, { subject: string; body: string } | undefined>)[node];
+  const tpl = (
+    t.letters as unknown as Record<string, { subject: string; body: string; question?: string } | undefined>
+  )[node];
   if (!tpl) return null;
 
   const echo = pickEcho(profile);
@@ -148,13 +165,28 @@ export function composeTouch(params: {
     ? tpl.body.replace('{echo}', clip(echo.text))
     : t.bodyNoEcho.replace('{title}', dict.nav.journey);
 
+  // 这个节点要问的那一个问题（docs/10 §2.1）：**信里问，回程页接着问**——
+  // 回程页的一格要能认出"我是被哪句话叫回来的"。信里问了，页面才接得上；
+  // 页面接不上，回程就只是"点了个链接"，不是"回答了一个问题"。
+  const question = (tpl.question ?? '').trim();
+
   // 带上 from/node：他从哪封信回来的，回来的那一刻才认得出（journey 页据此记一次 touch_return）
   const back = `${baseUrl.replace(/\/$/, '')}/${locale}/journey?from=touch&node=${node}`;
   const unsub = unsubUrl(baseUrl, locale, token);
-  const text = [body, '', `${t.backLabel}: ${back}`, '', `${t.unsubLead} ${unsub}`].join('\n');
+  const text = [
+    body,
+    ...(question ? ['', question] : []),
+    '',
+    `${t.backLabel}: ${back}`,
+    '',
+    `${t.unsubLead} ${unsub}`,
+  ].join('\n');
   const html = [
     `<div style="font-family:-apple-system,Segoe UI,Helvetica,sans-serif;font-size:15px;line-height:1.9;color:#2b2724;max-width:520px">`,
     ...body.split('\n').map((line) => `<p style="margin:0 0 14px">${escapeHtml(line)}</p>`),
+    ...(question
+      ? [`<p style="margin:0 0 14px;font-weight:500">${escapeHtml(question)}</p>`]
+      : []),
     `<p style="margin:26px 0 0"><a href="${escapeHtml(back)}" style="color:#a4553c">${escapeHtml(t.backLabel)}</a></p>`,
     `<p style="margin:30px 0 0;font-size:12px;color:#9b938c">${escapeHtml(t.unsubLead)} <a href="${escapeHtml(unsub)}" style="color:#9b938c">${escapeHtml(t.unsubLabel)}</a></p>`,
     `</div>`,

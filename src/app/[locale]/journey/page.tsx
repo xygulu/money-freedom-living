@@ -21,6 +21,8 @@ import { timeZoneFrom } from '@/lib/time';
 import { track } from '@/lib/analytics';
 import { buildTimeline, formatTimelineDay } from '@/lib/timeline';
 import { computeStageProgress, MAX_STAGE } from '@/lib/stage';
+import { isVerdictNode } from '@/lib/cognition';
+import { nodeQuestion } from '@/lib/touch';
 import { baselineFor, countMaterialSince, shouldPropose, saveEvolution, listPortraitVersions } from '@/lib/evolution';
 import { shouldOfferAssess, saveAssessmentState, ASSESS_PENDING_TTL_DAYS } from '@/lib/assess';
 import MicroActionCard from '@/components/MicroActionCard';
@@ -153,6 +155,11 @@ export default async function journeyPage({
   // 验收指标：24h-72h 回访等（docs/02 §11）。查询端按 user+day 去重，这里无条件打点。
   const gapBucket = gapDays < 0 ? 'first' : gapDays === 0 ? 'same_day' : gapDays <= 3 ? '1-3' : gapDays <= 7 ? '4-7' : '8+';
   const query = await searchParams;
+  // 节点回程（docs/10 §2.2）：只有 6 个节点算节点，别的 node 参数一律当没看见。
+  // 判定收在 isVerdictNode 一处——页面认的、接口认的、埋点认的必须是同一批节点，
+  // 不然会出现"页面摆了问题、接口不记答卷"这种静默的错位。
+  const nodeParam = isVerdictNode(query?.node) ? query.node : undefined;
+  const nodeQuestionText = nodeParam ? nodeQuestion(dict, nodeParam) : null;
   try {
     await track(identity.key, 'journey_visit', { gap: gapBucket }, locale);
     // 从信里回来的那一次单独记一笔（链接带 ?from=touch&node=D7）。
@@ -254,7 +261,21 @@ export default async function journeyPage({
           >
             {dict.journey.closeMore}
           </Link>
-          <DayCloseCard locale={locale} dict={dict} node={query?.node} />
+          {/* 从节点信回来的：把那封信问的那一个问题，原样摆在格子上方（docs/10 §2.2）。
+              同一个问题在信里问过一次，这里再问一次——不是重复，是**接上**：
+              少了这一行，回程就只是"点了个链接"，他不知道自己回来是干什么的。 */}
+          {nodeQuestionText && (
+            <div data-node-question className="mt-6 border-l-2 border-accent/50 pl-4">
+              <p className="text-xs tracking-widest text-ink-soft/70">{dict.touch.nodeBackLead}</p>
+              <p className="mt-1.5 text-base leading-relaxed">{nodeQuestionText}</p>
+            </div>
+          )}
+          <DayCloseCard
+            locale={locale}
+            dict={dict}
+            node={nodeParam}
+            from={query?.from === 'touch' ? 'touch' : undefined}
+          />
         </div>
       </section>
 

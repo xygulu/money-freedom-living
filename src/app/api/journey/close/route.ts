@@ -46,6 +46,7 @@ export async function POST(request: NextRequest) {
       firstLine?: string;
       firstLineSkipped?: boolean;
       node?: string;
+      from?: string;
       locale?: string;
     };
     if (!isDidToday(body.did)) return jsonError('bad_did', 400);
@@ -126,7 +127,10 @@ export async function POST(request: NextRequest) {
           // 依据指针（不是原话）：照 (topic, at) 能在 threads 里取回他说的那一句
           basis_topic: pause ? topic : null,
           basis_at: pause ? at : null,
-          source: 'touch',
+          // 这一格是他自己走到 /journey 交的，还是顺着节点信里的链接回来的（docs/10 §2.2）。
+          // 判据只有 `?from=touch` 一个来源，和上面 touch_return 打点用的是同一个条件——
+          // 两处口径必须一致，否则"信叫回来的答卷"和"自己交的答卷"会开始互相冒充。
+          source: body.from === 'touch' ? 'touch' : 'app',
         },
         locale
       );
