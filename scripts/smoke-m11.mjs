@@ -541,9 +541,9 @@ check(
 
 
 // ⑦ 触达层合规（M11-E，docs/05 §9.3 三条硬约束 + §10 验收 D）
-// 这一段一封信都不真发：Resend 没配时 dispatch 自动降级成试算，正好把"该发谁"
-// 算清楚又不打扰任何人。真正要守住的是"谁收不到"：没同意的、人还在的、发过的、
-// 退订了的——四种人一个都不许出现在命中名单里。
+// 这一段一封信都不真发：请求里写死 dryRun，只把"该发谁"算清楚，不打扰任何人。
+// 真正要守住的是"谁收不到"：没同意的、人还在的、发过的、退订了的——四种人一个都
+// 不许出现在命中名单里。外加一条：smoke 自己建的 @smoke.test 账号连寄都不该寄。
 console.log('\n—— ⑦ 触达层合规（M11-E）——');
 const CRON = process.env.TOUCH_CRON_SECRET;
 const dispatch = (body = {}, secret = CRON) =>
@@ -600,7 +600,19 @@ if (!CRON) {
   check('建档 40 天、12 天没来 → 命中 D30（节点取"已到期里最大的那个"）', node === 'D30', String(node));
   check('试算不占位：sentNodes 还是空的（没发就不许记成发过）',
     Object.keys((await sql`SELECT touch FROM growth_profiles WHERE user_key = ${tu.key}`)[0].touch?.sentNodes ?? {}).length === 0);
-  check('Resend 没配 → 自动降级成试算，不报错也不假装发了', after.r.configured === false && after.r.dryRun === true);
+  // 通道配没配都要能试算：没配时 dispatch 自动降级（configured=false），配了也不会
+  // 因为我们请求了 dryRun 就偷偷发。两种环境下"一封都没寄出去"都必须成立。
+  check(
+    `试算一封都不寄（当前通道 configured=${after.r.configured}）`,
+    after.r.dryRun === true && after.r.sent === 0 && after.r.failed === 0,
+    JSON.stringify({ configured: after.r.configured, sent: after.r.sent, failed: after.r.failed })
+  );
+  // 保留域名的账号（smoke 自己建的就是）一封都不寄——硬退率是发信域名的命根子
+  check(
+    '@smoke.test 这类保留域名：选人算它，寄信跳过它',
+    (after.r.skipped?.test_address ?? 0) > (base.r.skipped?.test_address ?? 0) && after.r.planned === base.r.planned,
+    `test_address ${base.r.skipped?.test_address ?? 0} → ${after.r.skipped?.test_address ?? 0}，planned ${base.r.planned} → ${after.r.planned}`
+  );
 
   // 人还在这儿的时候不召回（邮件是节点召回，不是日活引擎）
   await sql`UPDATE growth_profiles SET last_active_date = now()::date WHERE user_key = ${tu.key}`;

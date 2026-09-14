@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { pickTouchNode, pickEcho, composeTouch, unsubUrl, TOUCH_NODES, MIN_GAP_DAYS } from '../lib/touch';
+import { pickTouchNode, pickEcho, composeTouch, unsubUrl, isDeliverableEmail, TOUCH_NODES, MIN_GAP_DAYS } from '../lib/touch';
 import type { GrowthProfile } from '../lib/profile';
 import en from '../i18n/messages/en.json';
 import zhCN from '../i18n/messages/zh-CN.json';
@@ -220,5 +220,34 @@ describe('composeTouch：每封信都必须能退订', () => {
     const letter = composeTouch({ node: 'D3', profile: p, dict, locale: 'zh-CN', baseUrl: base })!;
     expect(letter.html).not.toContain('<script>');
     expect(letter.html).toContain('&lt;script&gt;');
+  });
+});
+
+describe('M11-E 收件地址：保留域名一封都不寄', () => {
+  // 为什么这条值得一组测试：smoke 每跑一次就留下几个 `@smoke.test` 的账号，其中
+  // 会有 opt-in 的。timer 装上之后要是真寄过去，就是一串硬退——退信率是发信域名的
+  // 命根子，攒够了连真实用户的信都进不了收件箱。拦在本地是免费的，退信是全域名共担的。
+  it('RFC 2606 保留 TLD 与 example 域一律不寄', () => {
+    expect(isDeliverableEmail('m11-touch-ab12cd34@smoke.test')).toBe(false);
+    expect(isDeliverableEmail('a@foo.invalid')).toBe(false);
+    expect(isDeliverableEmail('a@localhost')).toBe(false);
+    expect(isDeliverableEmail('a@box.localhost')).toBe(false);
+    expect(isDeliverableEmail('a@example.com')).toBe(false);
+    expect(isDeliverableEmail('a@Example.ORG')).toBe(false); // 大小写不是漏洞
+  });
+
+  it('长得不像地址的也不寄（没有 @ / 没有点 / 有空格）', () => {
+    expect(isDeliverableEmail('nobody')).toBe(false);
+    expect(isDeliverableEmail('@foo.com')).toBe(false);
+    expect(isDeliverableEmail('a@')).toBe(false);
+    expect(isDeliverableEmail('a@localdomain')).toBe(false);
+    expect(isDeliverableEmail('a b@foo.com')).toBe(false);
+  });
+
+  it('真实地址照常寄——别把真人误伤了', () => {
+    expect(isDeliverableEmail('xygulu@139.com')).toBe(true);
+    expect(isDeliverableEmail('someone@gmail.com')).toBe(true);
+    expect(isDeliverableEmail('a.b+tag@sub.miller.ink')).toBe(true);
+    expect(isDeliverableEmail('人@例子.中国')).toBe(true); // 国际化域名不该被误杀
   });
 });

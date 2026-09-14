@@ -137,6 +137,28 @@ function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+/** RFC 2606 / 6761 保留给测试与文档的域名——真实世界里不存在，寄过去必定硬退 */
+const RESERVED_TLDS = ['test', 'example', 'invalid', 'localhost'];
+const RESERVED_DOMAINS = ['example.com', 'example.net', 'example.org'];
+
+/**
+ * 这个地址能不能真寄出去。
+ *
+ * 为什么要拦：smoke 建的账号是 `xxx@smoke.test`，`.test` 是保留 TLD，永远不会有
+ * 收件服务器。真发过去就是一次硬退（hard bounce），而硬退率是发信域名的命根子——
+ * 攒够了整个 miller.ink 都会被投递方降权，殃及的是真实用户收不收得到信。
+ * 拦在这里而不是让 Resend 去退：退信是全域名共担的成本，本地一行判断是免费的。
+ */
+export function isDeliverableEmail(email: string): boolean {
+  const at = email.lastIndexOf('@');
+  if (at <= 0 || at === email.length - 1) return false;
+  const domain = email.slice(at + 1).toLowerCase();
+  if (!domain.includes('.') || /\s/.test(email)) return false;
+  if (RESERVED_DOMAINS.includes(domain)) return false;
+  const tld = domain.slice(domain.lastIndexOf('.') + 1);
+  return !RESERVED_TLDS.includes(tld);
+}
+
 /** 触达通道有没有配好——没配不是错误，是"这台机器不发信"，调度器据此优雅降级 */
 export function touchConfigured(): boolean {
   return Boolean(process.env.RESEND_API_KEY && process.env.RESEND_FROM);

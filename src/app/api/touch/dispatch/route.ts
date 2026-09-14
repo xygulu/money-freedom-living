@@ -14,7 +14,7 @@
 // 返回的统计里没有任何 PII：只有数量、节点名与跳过原因的计数。
 import { NextRequest, NextResponse } from 'next/server';
 import { listTouchCandidates, claimTouchNode } from '@/lib/profile';
-import { pickTouchNode, composeTouch, touchConfigured } from '@/lib/touch';
+import { pickTouchNode, composeTouch, touchConfigured, isDeliverableEmail } from '@/lib/touch';
 import { sendResendEmail } from '@/lib/email-resend';
 import { getDict } from '@/i18n/get-dict';
 import { defaultLocale, enabledLocales, isLocale } from '@/i18n/config';
@@ -58,16 +58,21 @@ export async function POST(request: NextRequest) {
     for (const profile of candidates) {
       const node = pickTouchNode(profile, now);
       if (!node) { skip('not_due'); continue; }
+      // byNode 记的是**选人的结果**（谁到了哪个节点），planned 记的是**真会寄出几封**。
+      // 分开是有意的：收件人不可达时前者照旧、后者不加，一眼能看出"选人对不对"和
+      // "寄得出去几封"是两件事分别出了问题还是同一件。
+      byNode[node] = (byNode[node] ?? 0) + 1;
 
       const email = await emailOf(profile.user_key);
       if (!email) { skip('no_email'); continue; }
+      // smoke 建的 @smoke.test 之类：寄出去必定硬退，退多了整个发信域名被降权
+      if (!isDeliverableEmail(email)) { skip('test_address'); continue; }
 
       const locale = isLocale(profile.locale) && enabledLocales.includes(profile.locale) ? profile.locale : defaultLocale;
       const letter = composeTouch({ node, profile, dict: getDict(locale), locale, baseUrl });
       if (!letter) { skip('no_template'); continue; }
 
       planned++;
-      byNode[node] = (byNode[node] ?? 0) + 1;
       if (dryRun) continue;
 
       // 先占位：抢不到说明别的进程/上一次跑已经发过这个节点了

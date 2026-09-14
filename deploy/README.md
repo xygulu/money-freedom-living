@@ -12,7 +12,33 @@
 
 发信域名的 **SPF / DKIM / DMARC 必须配齐**（docs/05 §9.3 第 3 条）。不配这项等于没有触达——信进垃圾箱。
 
-## 2. 先试算，别直接发
+当前发信身份（2026-02 起，临时）：`miller.ink`，暂借 honghong 的 Resend 发信域名。DNS 现状：
+
+| 记录 | 现状 |
+|---|---|
+| DKIM `resend._domainkey.miller.ink` | ✅ 有（2048 位公钥） |
+| SPF `send.miller.ink` TXT | ✅ `v=spf1 include:amazonses.com ~all` |
+| 退信回收 `send.miller.ink` MX | ✅ `feedback-smtp.ap-northeast-1.amazonses.com` |
+| DMARC `_dmarc.miller.ink` | ❌ **缺** |
+
+DMARC 缺这条要补：Gmail / Yahoo 从 2024 年起要求批量发信方至少有 `p=none`，没有会被降权。
+加一条 TXT `_dmarc.miller.ink` → `v=DMARC1; p=none; rua=mailto:<你的收件箱>` 即可。
+**本产品正式上线前要换成自己的发信域名**——现在收信人看到的寄件人是 honghong 的域名，
+和产品对不上；换域名 = 在 Resend 里新加 domain + 照它给的三条 DNS 记录配一遍。
+
+## 2. 先寄一封给自己看
+
+```bash
+node --env-file=.env.local scripts/touch-preview.mjs                   # 只打印，不发
+node --env-file=.env.local scripts/touch-preview.mjs --node D3 --locale en
+node --env-file=.env.local scripts/touch-preview.mjs --send --to you@your.mail
+```
+
+用的是**合成档案**（`/api/touch/preview`），一行真实用户数据都不读也不写；信里的退订
+token 是假的，点了只跳 `ok=0`——一封样信不该有动真实档案的能力。`--to` 不给就寄给
+`SUPPORT_EMAIL`。
+
+## 3. 再试算，别直接群发
 
 ```bash
 node --env-file=.env.local scripts/touch-dispatch.mjs            # 试算：算该发谁，一封不发
@@ -21,7 +47,11 @@ node --env-file=.env.local scripts/touch-dispatch.mjs --send     # 真发
 
 输出里没有邮箱、没有 user_key、没有信的内容，只有数量与节点名。
 
-## 3. 挂上 systemd timer
+`@smoke.test` 一类的保留域名（RFC 2606：`.test` / `.example` / `.invalid` / `.localhost`
+与 `example.com`）会被直接跳过，记在 `skipped.test_address` 里。smoke 每跑一次就留下几个
+这种账号，真寄过去就是一串硬退——退信率是发信域名的命根子，攒够了真实用户也收不到信。
+
+## 4. 挂上 systemd timer
 
 ```bash
 cp deploy/mfl-touch.service deploy/mfl-touch.timer /etc/systemd/system/
@@ -34,7 +64,7 @@ journalctl -u mfl-touch.service -n 50     # 看上一次跑的结果
 一天一次。timer 误触发也不会重发——每个节点只发一次这件事是靠 `touch.sentNodes` 的
 原子占位（`claimTouchNode`）保证的，不是靠「脚本不重复跑」。
 
-## 4. 停掉
+## 5. 停掉
 
 ```bash
 systemctl disable --now mfl-touch.timer

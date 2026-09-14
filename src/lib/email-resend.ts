@@ -16,7 +16,7 @@ export interface ResendEmail {
   html?: string;
 }
 
-export async function sendResendEmail(email: ResendEmail): Promise<void> {
+export async function sendResendEmail(email: ResendEmail): Promise<{ id: string | null }> {
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.RESEND_FROM;
   if (!apiKey || !from) {
@@ -41,4 +41,7 @@ export async function sendResendEmail(email: ResendEmail): Promise<void> {
     const body = await res.text();
     throw new Error(`Resend HTTP ${res.status}: ${body.slice(0, 200)}`);
   }
+  // Resend 回的 id 是这封信在他们那儿的凭据——投递出问题时凭它去后台查一封具体的信
+  const data = (await res.json().catch(() => null)) as { id?: string } | null;
+  return { id: typeof data?.id === 'string' ? data.id : null };
 }

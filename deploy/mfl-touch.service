@@ -1,6 +1,8 @@
 [Unit]
 Description=money-freedom-living 节点来信调度（M11-E / docs/05 §9.5）
-Documentation=file:///root/money-freedom-living/docs/05-多书架构与触达层.md
+# 文档：docs/05-多书架构与触达层.md §9（中文文件名做不成合法 URL，systemd 会
+# 报 "Invalid URL, ignoring" 并忽略整行，所以写成注释而不是 Documentation=）
+Documentation=file:///root/money-freedom-living/deploy/README.md
 After=network-online.target
 Wants=network-online.target
 
