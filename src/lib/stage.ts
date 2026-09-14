@@ -5,7 +5,8 @@
 // 只是确认仪式同步留下的心印存档（足迹/心印陈列用），不是灯的判定来源。本文件
 // 只负责灯的形状与展示判定。只增不减：灯不熄灭、阶段不倒退；无 deadline、无
 // 红点；阶段 4 没有终点线。
-import type { GrowthProfile, Stamp } from '@/lib/profile';
+import type { GrowthProfile, Stamp, ThreadDepth } from '@/lib/profile';
+import { DEFAULT_BOOK_ID, type TopicId } from '@/lib/content';
 
 export interface StageCheck {
   kind: Stamp['kind']; // 关联评估结论与确认时入档的心印 kind；展示名走 dict.journey.<labelKey>
@@ -48,6 +49,11 @@ export interface LampRule {
    * 讲的是他在日子里做了什么，没有记录就无从谈起，光凭他在聊天里说得漂亮不能点。
    */
   needsAction: boolean;
+  /**
+   * 这盏灯落在哪条命题线上（M11-A）。灯属于书（路线图可换、可重排），
+   * 命题属于人（跨书累加、永不重置）——topic 就是两者之间的桥（docs/05 §3.2）。
+   */
+  topic: TopicId;
 }
 
 /**
@@ -56,25 +62,28 @@ export interface LampRule {
  * 评估里（依据素材 + 用户确认），代码里只保留灯的形状。hint 与 content
  * 的 advance_when 一同喂给评估 LLM，一律程度句式书写。
  */
-export const STAGE_LAMPS: Record<number, LampRule[]> = {
+const MONEY_FREEDOM_LAMPS: Record<number, LampRule[]> = {
   1: [
     {
       kind: 'stage1_story',
       labelKey: 'stageLampStory',
       hint: '判定的是程度不是动作：他认出今天的钱模式有来历——早期场景至今还在他身上运行（不只是「记得一件事」，而是「原来它一直在影响我」）',
       needsAction: false,
+      topic: 'parents',
     },
     {
       kind: 'stage1_script',
       labelKey: 'stageLampScript',
       hint: '他听得见那个常年在耳边说话的旧声音——知道它说什么、它怎么拦他，并且对它有了自己的态度（认下它的分量，或说出它哪里不对）',
       needsAction: false,
+      topic: 'self-worth',
     },
     {
       kind: 'stage1_color',
       labelKey: 'stageLampColor',
       hint: '他认得自己面对钱时反复泛起的底色感受（怕/愧/不配……），并能承认「这是我的底色」——只是看见，不评判',
       needsAction: false,
+      topic: 'inner-turmoil',
     },
   ],
   2: [
@@ -83,18 +92,21 @@ export const STAGE_LAMPS: Record<number, LampRule[]> = {
       labelKey: 'stageLampClaim',
       hint: '旧脚本从「天经地义的事实」变成「他自己的东西」——他亲口认领它（它当年保护过他），或明确说它已经不再是我；认领的那一刻，松动就开始了',
       needsAction: false,
+      topic: 'self-worth',
     },
     {
       kind: 'stage2_try',
       labelKey: 'stageLampTry',
       hint: '允许真的在他身上发生过——为自己破过一次例、放自己一马，或改写过一句内在台词，体感松了一点（心虚、做砸都算，那说明碰到了旧脚本）；做过什么是证据，「允许了自己」才是标准',
       needsAction: true,
+      topic: 'allowing',
     },
     {
       kind: 'stage2_voice',
       labelKey: 'stageLampVoice',
       hint: '他的话语里看得见松动——「我可以选择」「我想试试」开始替代「必须/应该/不敢」；话语是内心松紧的体温计',
       needsAction: false,
+      topic: 'boundaries',
     },
   ],
   3: [
@@ -103,15 +115,43 @@ export const STAGE_LAMPS: Record<number, LampRule[]> = {
       labelKey: 'stageLampSeven',
       hint: '新做法在他的日子里稳定下来——与钱打交道时自然用它，不再靠硬撑和提醒；做过几轮只是证据，稳定成日常才是标准',
       needsAction: true,
+      topic: 'money-safety',
     },
     {
       kind: 'stage3_review',
       labelKey: 'stageLampReview',
       hint: '他能自己看见变化——不用别人告诉他，他自己说得出「哪里不一样了」；有变化、没变化、说不清都算，只要是自己的观察',
       needsAction: true,
+      topic: 'inner-turmoil',
     },
   ],
 };
+
+/**
+ * 按书索引的灯表（M11-A）。v1 只有一本书，但索引从此带 bookId：
+ * 换书 = 换路线图（灯的形状可以不同），不影响用户在命题上已经走到的程度。
+ * 未知 bookId 一律回落 v1 书——路线图不能是空的。
+ */
+export const BOOK_LAMPS: Record<string, Record<number, LampRule[]>> = {
+  [DEFAULT_BOOK_ID]: MONEY_FREEDOM_LAMPS,
+};
+
+export function lampsFor(bookId: string, stage: number): LampRule[] {
+  return (BOOK_LAMPS[bookId] ?? MONEY_FREEDOM_LAMPS)[stage] ?? [];
+}
+
+/** 当前书的灯表。存量调用点（按 stage 直接索引）保持不变，见 docs/05 §4.6 */
+export const STAGE_LAMPS: Record<number, LampRule[]> = MONEY_FREEDOM_LAMPS;
+
+/**
+ * 灯亮之后落在命题线上的程度（docs/05 §4.6）：
+ * 认知类的灯亮 = 在这条命题上"看见了"；行为类的灯亮 = 旧做法真的被替换过一次；
+ * 本阶段灯全亮（随之开启下一段）= 这条命题在这本书里走完了。只增不减由 mergeDepth 兜住。
+ */
+export function lampDepth(rule: LampRule, stageAllLit: boolean): ThreadDepth {
+  if (stageAllLit) return 'mastered';
+  return rule.needsAction ? 'replaced' : 'seen';
+}
 
 /** 本阶段里「必须有真实行为记录才允许点亮」的灯 kind（评估 prompt 与硬闸共用）。 */
 export function actionEvidenceKinds(stage: number): string[] {

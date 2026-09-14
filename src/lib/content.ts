@@ -51,6 +51,8 @@ export interface DailyCard {
 
 export interface PracticeNote {
   file: string;
+  /** M11-B：笔记归属的书（content/practices 的 frontmatter 缺省时归 DEFAULT_BOOK_ID） */
+  bookId: string;
   date: string;
   type: 'fact' | 'opinion';
   stage: number;
@@ -75,9 +77,24 @@ export interface SafetyResources {
   domesticViolence: SafetyResource[];
 }
 
+/** 一本书的元信息（content/books/<id>/meta.md）——书是内容层，成长归用户，见 docs/05 §2 */
+export interface BookMeta {
+  id: string;
+  /** 书名四语（zh-TW/ja 未转正也先备着，转正时无需改内容） */
+  title: Record<string, string>;
+  author: string;
+  source: string;
+  topics: TopicId[];
+  status: 'active' | 'draft';
+  note: string;
+}
+
 interface ContentBundle {
-  journey: Record<string, JourneyStage[]>;
-  daily: Record<string, DailyCard[]>;
+  books: BookMeta[];
+  /** journey[bookId][locale] */
+  journey: Record<string, Record<string, JourneyStage[]>>;
+  /** daily[bookId][locale] */
+  daily: Record<string, Record<string, DailyCard[]>>;
   practices: PracticeNote[];
   safety: Record<string, { keywords: SafetyKeywords; resources: SafetyResources }>;
   builtAt: string;
@@ -85,25 +102,46 @@ interface ContentBundle {
 
 const bundle = generated as ContentBundle;
 
-export function getJourneyStages(locale: Locale): JourneyStage[] {
-  return (isEnabled(locale) ? bundle.journey[locale] : null) ?? [];
+/**
+ * v1 的书。所有 bookId 参数缺省时落到它——存量用户档案里没有 books 字段时同样按它归位，
+ * 保证「多书架构上线后存量用户零变化」（docs/05 §10 验收 B）。
+ */
+export const DEFAULT_BOOK_ID = 'money-freedom';
+
+export function getBooks(): BookMeta[] {
+  return bundle.books;
 }
 
-export function getJourneyStage(locale: Locale, id: number): JourneyStage | null {
-  return getJourneyStages(locale).find((s) => s.id === id) ?? null;
+export function getBook(bookId: string): BookMeta | null {
+  return bundle.books.find((b) => b.id === bookId) ?? null;
 }
 
-export function getDailyPool(locale: Locale): DailyCard[] {
-  return (isEnabled(locale) ? bundle.daily[locale] : null) ?? [];
+/** 书名：目标语言缺失时回落到 en，再回落到 bookId 本身（书名永远有东西可显示） */
+export function bookTitle(bookId: string, locale: Locale): string {
+  const book = getBook(bookId);
+  if (!book) return bookId;
+  return book.title[locale]?.trim() || book.title.en?.trim() || bookId;
+}
+
+export function getJourneyStages(locale: Locale, bookId: string = DEFAULT_BOOK_ID): JourneyStage[] {
+  return (isEnabled(locale) ? bundle.journey[bookId]?.[locale] : null) ?? [];
+}
+
+export function getJourneyStage(locale: Locale, id: number, bookId: string = DEFAULT_BOOK_ID): JourneyStage | null {
+  return getJourneyStages(locale, bookId).find((s) => s.id === id) ?? null;
+}
+
+export function getDailyPool(locale: Locale, bookId: string = DEFAULT_BOOK_ID): DailyCard[] {
+  return (isEnabled(locale) ? bundle.daily[bookId]?.[locale] : null) ?? [];
 }
 
 export function getPractices(): PracticeNote[] {
   return bundle.practices;
 }
 
-/** 阶段相关的创造者笔记（按 stage 过滤，非全量注入——见 docs/02 §10） */
-export function getPracticesForStage(stage: number): PracticeNote[] {
-  return getPractices().filter((p) => p.stage === stage);
+/** 阶段相关的创造者笔记（按 stage 过滤，非全量注入——见 docs/02 §10；跨书时再按 bookId 收窄） */
+export function getPracticesForStage(stage: number, bookId?: string): PracticeNote[] {
+  return getPractices().filter((p) => p.stage === stage && (bookId === undefined || p.bookId === bookId));
 }
 
 /** 危机词表（git 管理的粗筛网，召回优先——safety.ts 消费） */
@@ -145,8 +183,9 @@ export function pickDaily(
   dateISO: string,
   stage: number,
   seenTexts: string[] = [],
+  bookId: string = DEFAULT_BOOK_ID,
 ): DailyCard | null {
-  const pool = getDailyPool(locale);
+  const pool = getDailyPool(locale, bookId);
   if (pool.length === 0) return null;
 
   const seen = new Set(seenTexts);
@@ -161,8 +200,8 @@ export function pickDaily(
  * 今日微行动：按当前阶段练习确定性抽取（同一天同一用户同一条，docs/02 §5）。
  * 练习只提议不指派——卡上永远给"随便聊聊/只看看签"的替代出口，可跳过。
  */
-export function pickExercise(locale: Locale, dateISO: string, stage: number, userKey: string): string | null {
-  const stageContent = getJourneyStage(locale, stage);
+export function pickExercise(locale: Locale, dateISO: string, stage: number, userKey: string, bookId: string = DEFAULT_BOOK_ID): string | null {
+  const stageContent = getJourneyStage(locale, stage, bookId);
   const exercises = stageContent?.exercises ?? [];
   if (exercises.length === 0) return null;
   return exercises[hash(`${dateISO}#${userKey}`) % exercises.length];

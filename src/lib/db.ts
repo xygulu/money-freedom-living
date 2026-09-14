@@ -186,6 +186,16 @@ async function doMigrate(): Promise<void> {
   // 阶段评估状态（pending/confirmed/confirmedAt/dismissedAt/generatingAt/proposedSeenAt）。
   // 同样不放 portrait JSONB（同上）；在 growth_profiles 行内 → 导出/删除/游客迁移级联天然覆盖
   await sql`ALTER TABLE growth_profiles ADD COLUMN IF NOT EXISTS stage_assessment JSONB NOT NULL DEFAULT '{}'`;
+  // ---- M11-A 多书架构（docs/05 §4.1）：零新表，三列全部落在 growth_profiles 行内 ----
+  // 行内 = 导出/删除/游客迁移天然覆盖；另建表则要手工补 migrate/export/delete 三处，必然漏。
+  // books：读过/在读的书 [{bookId,status:'active'|'paused'|'done',startedAt,stage,stageStartedAt,finishedAt?}]
+  // 「当前书」= status='active' 那本，不另设 active_book 列（两处真源必然打架）
+  await sql`ALTER TABLE growth_profiles ADD COLUMN IF NOT EXISTS books JSONB NOT NULL DEFAULT '[]'`;
+  // threads：命题线（用户 × 命题，跨书累加，永不重置）
+  // { [topicId]: { firstSeenAt, lastSeenAt, depth:'seen'|'replaced'|'mastered', evidence:[{at,bookId,source,quote,ref}] } }
+  await sql`ALTER TABLE growth_profiles ADD COLUMN IF NOT EXISTS threads JSONB NOT NULL DEFAULT '{}'`;
+  // touch：触达层状态 { emailOptIn, optInAt, unsubToken, lastSentAt, sentNodes:{D7:at,…}, lastOpenedAt? }
+  await sql`ALTER TABLE growth_profiles ADD COLUMN IF NOT EXISTS touch JSONB NOT NULL DEFAULT '{}'`;
   await sql`CREATE INDEX IF NOT EXISTS idx_chat_sessions_user ON chat_sessions(user_key, created_at DESC)`;
 
   // 对话原文只存这里（用户可删）；日志/safety_events 不含原文（P§9 日志纪律）
@@ -246,6 +256,9 @@ async function doMigrate(): Promise<void> {
     )
   `;
   await sql`CREATE INDEX IF NOT EXISTS idx_portrait_versions_user ON portrait_versions(user_key, version DESC)`;
+  // M11-A：画像归用户、版本号是用户级的，所以 UNIQUE (user_key, version) 不变；
+  // book_id 只记录"这一版是在读哪本书时长出来的"（可为 NULL：存量版本与换书前的版本）。
+  await sql`ALTER TABLE portrait_versions ADD COLUMN IF NOT EXISTS book_id TEXT`;
 
   // 使用事件（docs/02 §11 验收指标）：只存匿名 user_key + 事件名 + 脱敏元数据，
   // 不存任何用户文本原文（P§9 日志纪律）。user_key 本身不含 PII（u:<uuid>/g:<随机 hex>）。
@@ -275,6 +288,11 @@ async function doMigrate(): Promise<void> {
     )
   `;
   await sql`CREATE INDEX IF NOT EXISTS idx_consent_user ON consent_records(user_key, created_at DESC)`;
+  // M11-E：触达同意必须与敏感信息同意分开（docs/05 §9.3）。没有 kind 时 latestConsent 取"最近一条"，
+  // 一封邮件的 opt-in 会被误读成敏感信息同意——这是本次唯一动既有表的地方。
+  // 存量行全部是敏感信息同意，故 DEFAULT 'sensitive' 就是正确的回填值。
+  await sql`ALTER TABLE consent_records ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'sensitive'`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_consent_user_kind ON consent_records(user_key, kind, created_at DESC)`;
 
   // 恢复码尝试审计与限速（P§7/恢复码设计：账号级 5 次/时 + IP 级 20 次/时 +
   // 全局失败锁定）。只存 scope/主体哈希/结果，不存尝试码本身。

@@ -59,6 +59,11 @@ export async function GET(request: NextRequest) {
             dailySeen: profile.dailySeen,
             payday: profile.payday,
             totalActiveDays: profile.total_active_days,
+            // M11-A 多书架构：在读的书 / 命题线（跨书累加的程度与原话）/ 触达设置。
+            // 这里是显式字段白名单，加了列不补这三行就导不出来（docs/05 §11 核实结论）
+            books: profile.books,
+            threads: profile.threads,
+            touch: profile.touch,
           }
         : null,
       journal,

@@ -263,6 +263,9 @@ describe('shouldOfferAssess（提议闸：首评/素材/天数/冷却/锁/TTL）
     payday: null,
     total_active_days: 0,
     last_active_date: null,
+    books: [],
+    threads: {},
+    touch: {},
     ...over,
   });
   const counts = (material: number, daysSince = 0) => ({

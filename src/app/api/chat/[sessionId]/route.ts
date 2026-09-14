@@ -20,7 +20,7 @@ import { buildTalkSystem } from '@/lib/onboarding';
 import { buildChatContext } from '@/lib/prompt';
 import { settleSession } from '@/lib/memory';
 import { checkSafety, recordSafetyEvent, referralMessage, type SafetyVerdict } from '@/lib/safety';
-import { bumpActiveDay, getProfile } from '@/lib/profile';
+import { activeBookId, bumpActiveDay, getProfile } from '@/lib/profile';
 import { consumeQuota, getQuotaStatus, clientIpFromHeaders, guestKeyForRequest, GUEST_ID_COOKIE } from '@/lib/quota';
 import { timeZoneFrom, todayIn } from '@/lib/time';
 import { getLlmProviders, llmStream } from '@/lib/llm';
@@ -115,6 +115,8 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ sessio
       stableMode: session.safetyFlagged,
       opener: isOpener,
       tz: timeZoneFrom(request.cookies),
+      bookId: profile ? activeBookId(profile) : undefined,
+      threads: profile?.threads,
     });
 
     return respondToMessage({

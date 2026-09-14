@@ -4,6 +4,7 @@
 import { ensureSchema, execWithFailover, iso, type SqlClient } from '@/lib/db';
 import { stageAdvanceTarget } from '@/lib/stage';
 import { track } from '@/lib/analytics';
+import { DEFAULT_BOOK_ID, type TopicId } from '@/lib/content';
 
 export interface PortraitMoment {
   title: string;
@@ -178,6 +179,47 @@ export interface LetterEntry {
   createdAt: string; // ISO
 }
 
+/** 一本书在这个人这里的状态（docs/05 §4.1 books[]）。当前书 = status==='active' 那条。 */
+export interface BookEntry {
+  bookId: string;
+  status: 'active' | 'paused' | 'done';
+  startedAt: string; // ISO
+  /** 这本书内走到第几段（当前书以行级 stage 为唯一真源，读时覆盖，避免两处真源打架） */
+  stage: number;
+  stageStartedAt: string; // ISO
+  finishedAt?: string;
+}
+
+/** 命题上的程度（跨书累加，永不重置——书可以换，走过的程度不会退回，docs/05 §3.2） */
+export type ThreadDepth = 'seen' | 'replaced' | 'mastered';
+
+/** quote 必须是用户原话：交叉印证时要调得出「你上次是这么说的」，而不是复述我的话 */
+export interface ThreadEvidence {
+  at: string; // ISO
+  bookId: string;
+  source: 'chat' | 'journal' | 'letter' | 'experiment' | 'assessment';
+  quote: string;
+  ref?: string;
+}
+
+export interface ThreadState {
+  firstSeenAt: string;
+  lastSeenAt: string;
+  depth: ThreadDepth;
+  evidence: ThreadEvidence[];
+}
+
+/** 触达层状态（docs/05 §4.1 touch）。emailOptIn 与敏感信息同意是两件事，分开记。 */
+export interface TouchState {
+  emailOptIn?: boolean;
+  optInAt?: string;
+  unsubToken?: string;
+  lastSentAt?: string;
+  /** 每个节点只发一次的凭据：{ D3: ISO, D7: ISO, … } */
+  sentNodes?: Record<string, string>;
+  lastOpenedAt?: string;
+}
+
 export interface GrowthProfile {
   user_key: string;
   locale: string;
@@ -199,6 +241,12 @@ export interface GrowthProfile {
   payday: { type: 'monthly' | 'biweekly' | 'weekly'; day?: number } | null;
   total_active_days: number;
   last_active_date: string | null;
+  /** M11-A：读过/在读的书。存量档案读时归位成一条 v1 书，不写迁移脚本 */
+  books: BookEntry[];
+  /** M11-A：命题线（用户 × 命题），跨书累加 */
+  threads: Partial<Record<TopicId, ThreadState>>;
+  /** M11-E：触达层状态 */
+  touch: TouchState;
 }
 
 /** Neon HTTP 驱动把 DATE 解析成 JS Date（本地时区午夜）——归一化回 'YYYY-MM-DD'，
@@ -212,14 +260,76 @@ export function dateColumnToISO(value: unknown): string | null {
   return null;
 }
 
+/**
+ * books 归位（docs/05 §4.1「存量归位不写迁移脚本」）：
+ * 档案里没有 books（存量用户/新建行）时，读时补一条 v1 书的 active 记录。
+ * 当前书的段数以行级 stage / stage_started_at 为唯一真源——books[] 里 active 那条读时被覆盖，
+ * 避免"书内进度"出现两处可写真源。
+ */
+export function parseBooks(value: unknown, stage: number, stageStartedAt: string, createdAt: string): BookEntry[] {
+  const raw = Array.isArray(value) ? (value as Partial<BookEntry>[]) : [];
+  const entries: BookEntry[] = raw
+    .filter((b) => typeof b?.bookId === 'string' && b.bookId !== '')
+    .map((b) => ({
+      bookId: b.bookId as string,
+      status: b.status === 'paused' || b.status === 'done' ? b.status : 'active',
+      startedAt: typeof b.startedAt === 'string' ? b.startedAt : createdAt,
+      stage: typeof b.stage === 'number' ? b.stage : 1,
+      stageStartedAt: typeof b.stageStartedAt === 'string' ? b.stageStartedAt : createdAt,
+      ...(typeof b.finishedAt === 'string' ? { finishedAt: b.finishedAt } : {}),
+    }));
+  if (entries.length === 0) {
+    entries.push({ bookId: DEFAULT_BOOK_ID, status: 'active', startedAt: createdAt, stage, stageStartedAt });
+  }
+  const active = entries.find((b) => b.status === 'active');
+  if (active) {
+    active.stage = stage;
+    active.stageStartedAt = stageStartedAt;
+  }
+  return entries;
+}
+
+function parseThreads(value: unknown): GrowthProfile['threads'] {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  const out: GrowthProfile['threads'] = {};
+  for (const [topic, raw] of Object.entries(value as Record<string, unknown>)) {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) continue;
+    const t = raw as Partial<ThreadState>;
+    out[topic as TopicId] = {
+      firstSeenAt: typeof t.firstSeenAt === 'string' ? t.firstSeenAt : '',
+      lastSeenAt: typeof t.lastSeenAt === 'string' ? t.lastSeenAt : '',
+      depth: t.depth === 'replaced' || t.depth === 'mastered' ? t.depth : 'seen',
+      evidence: Array.isArray(t.evidence) ? (t.evidence as ThreadEvidence[]) : [],
+    };
+  }
+  return out;
+}
+
+function parseTouch(value: unknown): TouchState {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  return value as TouchState;
+}
+
+/** 当前书（docs/05 §4.1：status==='active' 那本；存量/异常一律回落 v1 书） */
+export function activeBook(profile: Pick<GrowthProfile, 'books'>): BookEntry | null {
+  return profile.books.find((b) => b.status === 'active') ?? null;
+}
+
+export function activeBookId(profile: Pick<GrowthProfile, 'books'>): string {
+  return activeBook(profile)?.bookId ?? DEFAULT_BOOK_ID;
+}
+
 function rowToProfile(row: Record<string, unknown>): GrowthProfile {
+  const stage = row.stage as number;
+  const stageStartedAt = iso(row.stage_started_at);
+  const createdAt = iso(row.created_at);
   return {
     user_key: row.user_key as string,
     locale: row.locale as string,
     portrait: (row.portrait as Portrait | null) ?? null,
     concerns: (row.concerns as GrowthProfile['concerns']) ?? [],
-    stage: row.stage as number,
-    stage_started_at: iso(row.stage_started_at),
+    stage,
+    stage_started_at: stageStartedAt,
     pinned: (row.pinned as GrowthProfile['pinned']) ?? [],
     memories: (row.memories as GrowthProfile['memories']) ?? [],
     experiments: (row.experiments as GrowthProfile['experiments']) ?? [],
@@ -227,11 +337,14 @@ function rowToProfile(row: Record<string, unknown>): GrowthProfile {
     stamps: (row.stamps as GrowthProfile['stamps']) ?? [],
     evolution: parseEvolution(row.portrait_evolution),
     assessment: parseAssessmentState(row.stage_assessment),
-    created_at: iso(row.created_at),
+    created_at: createdAt,
     dailySeen: (row.daily_seen as GrowthProfile['dailySeen']) ?? [],
     payday: (row.payday as GrowthProfile['payday']) ?? null,
     total_active_days: row.total_active_days as number,
     last_active_date: dateColumnToISO(row.last_active_date),
+    books: parseBooks(row.books, stage, stageStartedAt, createdAt),
+    threads: parseThreads(row.threads),
+    touch: parseTouch(row.touch),
   };
 }
 
@@ -240,7 +353,8 @@ export async function getProfile(userKey: string): Promise<GrowthProfile | null>
   const rows = await execWithFailover((sql: SqlClient) =>
     sql`SELECT user_key, locale, portrait, concerns, stage, stage_started_at,
                pinned, memories, experiments, letters, stamps, portrait_evolution,
-               stage_assessment, created_at, daily_seen, payday, total_active_days, last_active_date
+               stage_assessment, created_at, daily_seen, payday, total_active_days, last_active_date,
+               books, threads, touch
         FROM growth_profiles WHERE user_key = ${userKey}`
   );
   const profile = rows[0] ? rowToProfile(rows[0]) : null;
@@ -268,7 +382,8 @@ export async function ensureProfile(userKey: string, locale: string): Promise<Gr
       ON CONFLICT (user_key) DO NOTHING
       RETURNING user_key, locale, portrait, concerns, stage, stage_started_at,
                 pinned, memories, experiments, letters, stamps, portrait_evolution,
-                stage_assessment, created_at, daily_seen, payday, total_active_days, last_active_date
+                stage_assessment, created_at, daily_seen, payday, total_active_days, last_active_date,
+                books, threads, touch
     `
   );
   if (rows[0]) return rowToProfile(rows[0]);
@@ -477,6 +592,91 @@ export async function saveStage(userKey: string, stage: number): Promise<void> {
   await execWithFailover((sql: SqlClient) =>
     sql`UPDATE growth_profiles
         SET stage = ${stage}, stage_started_at = now(), updated_at = now()
+        WHERE user_key = ${userKey}`
+  );
+}
+
+// ───────────────────────── M11-A 命题线与触达（docs/05 §4.1/§4.6） ─────────────────────────
+
+/** 每个命题最多留这么多条原话——交叉印证只需要"你上次是这么说的"，不需要全部历史 */
+const THREAD_EVIDENCE_MAX = 20;
+
+const DEPTH_RANK: Record<ThreadDepth, number> = { seen: 0, replaced: 1, mastered: 2 };
+
+/** 程度只增不减（书可以换、灯可以是新书的，命题上走到的程度不回退——docs/05 §3.2） */
+export function mergeDepth(current: ThreadDepth | undefined, incoming: ThreadDepth): ThreadDepth {
+  if (!current) return incoming;
+  return DEPTH_RANK[incoming] > DEPTH_RANK[current] ? incoming : current;
+}
+
+/**
+ * 往命题线上记一条证据（quote 必须是用户原话）。
+ * 写法：整块覆盖该 topic 的子对象，外层用 jsonb_typeof 守住——JSONB `||` 只有
+ * "对象 + 对象"才是合并，NULL/数组会静默变成追加或抹平（0277200 的教训）。
+ */
+export async function recordThreadEvidence(
+  userKey: string,
+  topic: TopicId,
+  evidence: ThreadEvidence,
+  current: ThreadState | undefined,
+  depth: ThreadDepth = 'seen',
+): Promise<void> {
+  const at = evidence.at || new Date().toISOString();
+  const kept = [...(current?.evidence ?? []), { ...evidence, at }].slice(-THREAD_EVIDENCE_MAX);
+  const state: ThreadState = {
+    firstSeenAt: current?.firstSeenAt || at,
+    lastSeenAt: at,
+    depth: mergeDepth(current?.depth, depth),
+    evidence: kept,
+  };
+  await execWithFailover((sql: SqlClient) =>
+    sql`UPDATE growth_profiles
+        SET threads = (CASE WHEN jsonb_typeof(threads) = 'object' THEN threads ELSE '{}'::jsonb END)
+                      || jsonb_build_object(${topic}::text, ${JSON.stringify(state)}::jsonb),
+            updated_at = now()
+        WHERE user_key = ${userKey}`
+  );
+}
+
+/** 触达状态局部更新（同样守类型；调用方只传要改的键） */
+export async function saveTouch(userKey: string, patch: TouchState): Promise<void> {
+  await execWithFailover((sql: SqlClient) =>
+    sql`UPDATE growth_profiles
+        SET touch = (CASE WHEN jsonb_typeof(touch) = 'object' THEN touch ELSE '{}'::jsonb END)
+                    || ${JSON.stringify(patch)}::jsonb,
+            updated_at = now()
+        WHERE user_key = ${userKey}`
+  );
+}
+
+/**
+ * 节点发信的重发防护：只有该节点从未发过才写入并返回 true（单条 UPDATE 原子判断）。
+ * 调度器据此决定要不要真的发——先占位再发，宁可漏发不可重发。
+ */
+export async function claimTouchNode(userKey: string, node: string): Promise<boolean> {
+  const at = new Date().toISOString();
+  const rows = await execWithFailover((sql: SqlClient) =>
+    sql`UPDATE growth_profiles
+        SET touch = (CASE WHEN jsonb_typeof(touch) = 'object' THEN touch ELSE '{}'::jsonb END)
+                    || jsonb_build_object(
+                         'lastSentAt', ${at}::text,
+                         'sentNodes',
+                         (CASE WHEN jsonb_typeof(touch->'sentNodes') = 'object' THEN touch->'sentNodes' ELSE '{}'::jsonb END)
+                         || jsonb_build_object(${node}::text, ${at}::text)
+                       ),
+            updated_at = now()
+        WHERE user_key = ${userKey}
+          AND (touch->'sentNodes'->>${node}) IS NULL
+        RETURNING user_key`
+  );
+  return rows.length > 0;
+}
+
+/** 换书 / 开新书：把旧的当前书置为 paused（或 done），把目标书设为 active。 */
+export async function saveBooks(userKey: string, books: BookEntry[]): Promise<void> {
+  await execWithFailover((sql: SqlClient) =>
+    sql`UPDATE growth_profiles
+        SET books = ${JSON.stringify(books)}::jsonb, updated_at = now()
         WHERE user_key = ${userKey}`
   );
 }

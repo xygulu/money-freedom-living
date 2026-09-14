@@ -12,9 +12,10 @@ import type {
   SessionMemory,
   StageAssessment,
 } from '@/lib/profile';
+import { mergeDepth, recordThreadEvidence } from '@/lib/profile';
 import { getJournalEntries } from '@/lib/journal';
 import { LOCALE_NAME } from '@/lib/onboarding';
-import { MAX_STAGE, STAGE_LAMPS, actionEvidenceKinds } from '@/lib/stage';
+import { MAX_STAGE, STAGE_LAMPS, actionEvidenceKinds, lampDepth, lampsFor } from '@/lib/stage';
 import type { EvolveMaterialCounts } from '@/lib/evolution';
 import { TOPICS_ZH, type JourneyStage } from '@/lib/content';
 import type { Locale } from '@/i18n/config';
@@ -389,6 +390,48 @@ export async function saveAssessmentState(userKey: string, patch: Partial<Assess
             updated_at = now()
         WHERE user_key = ${userKey}`
   );
+}
+
+/**
+ * 评估确认的副作用（M11-A，docs/05 §4.6）：把这次点亮的灯按命题落到命题线上。
+ * 灯是书内进度（换书会换形状），命题线是这个人在命题上走到的程度（跨书累加、
+ * 永不重置）——所以同一次确认要写两处：confirmed.lamps 不变，threads 这边只增。
+ * 本阶段灯全亮时按 mastered 记（这条命题在这本书里走完了）；mergeDepth 保证不回退。
+ */
+export async function recordAssessmentThreads(
+  userKey: string,
+  bookId: string,
+  stage: number,
+  assessment: StageAssessment,
+  threads: GrowthProfile['threads'],
+  atISO: string,
+): Promise<void> {
+  const rules = lampsFor(bookId, stage);
+  if (rules.length === 0) return;
+  const lit = new Map(assessment.lamps.map((l) => [l.kind, l]));
+  const stageAllLit = rules.every((r) => lit.get(r.kind)?.lit === true);
+  // 同一 topic 可能对应多盏灯：串行写并把上一轮结果并回本地副本，后写的不会覆盖前写的证据
+  const local: GrowthProfile['threads'] = { ...threads };
+  for (const rule of rules) {
+    const lamp = lit.get(rule.kind);
+    if (!lamp?.lit || !lamp.evidence.trim()) continue;
+    const current = local[rule.topic];
+    const depth = lampDepth(rule, stageAllLit);
+    const evidence = {
+      at: atISO,
+      bookId,
+      source: 'assessment' as const,
+      quote: lamp.evidence.trim(),
+      ref: rule.kind,
+    };
+    await recordThreadEvidence(userKey, rule.topic, evidence, current, depth);
+    local[rule.topic] = {
+      firstSeenAt: current?.firstSeenAt || atISO,
+      lastSeenAt: atISO,
+      depth: mergeDepth(current?.depth, depth),
+      evidence: [...(current?.evidence ?? []), evidence],
+    };
+  }
 }
 
 /**

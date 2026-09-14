@@ -9,7 +9,7 @@
 // action=dismiss：「不是这样的/先不用」→ 14 天冷却，无惩罚；有待确认评估则一并清掉。
 import { NextRequest } from 'next/server';
 import { resolveIdentity } from '@/lib/identity';
-import { getProfile, appendStamps, saveStage, bumpActiveDay, type StageAssessment } from '@/lib/profile';
+import { getProfile, appendStamps, saveStage, bumpActiveDay, activeBookId, type StageAssessment } from '@/lib/profile';
 import {
   gatherAssessMaterial,
   shouldOfferAssess,
@@ -18,6 +18,7 @@ import {
   saveAssessmentState,
   claimAssessment,
   releaseAssessmentLock,
+  recordAssessmentThreads,
 } from '@/lib/assess';
 import { countMaterialSince } from '@/lib/evolution';
 import { getJourneyStages } from '@/lib/content';
@@ -109,8 +110,13 @@ export async function POST(request: NextRequest) {
     const earned = new Set(profile.stamps.map((s) => s.kind));
     const newlyLit = pending.lamps.filter((l) => l.lit && !earned.has(l.kind)).map((l) => l.kind);
 
+    // 命题线（M11-A）：确认与推进都要把这次点亮按命题落到 threads 上——
+    // 灯归书、程度归人，换书之后这些程度不会重置（docs/05 §3.2/§4.6）
+    const bookId = activeBookId(profile);
+
     if (body.action === 'confirm') {
       await appendStamps(identity.key, newlyLit);
+      await recordAssessmentThreads(identity.key, bookId, profile.stage, pending, profile.threads, now);
       await saveAssessmentState(identity.key, { pending: null, confirmed: pending, confirmedAt: now, previousConfirmed: state.confirmed });
       await bumpActiveDay(identity.key);
       await track(identity.key, 'stage_assessment_confirmed', { stage: profile.stage, lit: newlyLit.length }, locale);
@@ -133,6 +139,7 @@ export async function POST(request: NextRequest) {
     if (pending.actualStage <= from) return jsonError('advance_not_ready', 403);
     const to = from + 1;
     await appendStamps(identity.key, [...newlyLit, `stage${to}_entered`]);
+    await recordAssessmentThreads(identity.key, bookId, from, pending, profile.threads, now);
     await saveStage(identity.key, to);
     await saveAssessmentState(identity.key, { pending: null, confirmed: pending, confirmedAt: now, previousConfirmed: state.confirmed });
     await bumpActiveDay(identity.key);

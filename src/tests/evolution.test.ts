@@ -41,6 +41,9 @@ const profile = (over: Partial<GrowthProfile> = {}): GrowthProfile => ({
   payday: null,
   total_active_days: 0,
   last_active_date: null,
+  books: [],
+  threads: {},
+  touch: {},
   ...over,
 });
 

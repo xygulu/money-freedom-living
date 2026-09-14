@@ -1,8 +1,8 @@
 // 正式对话的 system 组装（docs/03 §5 = P§6 优先级的落地）。
 // 预算策略：固定块各有上限，远期 memories 预算有余才放（P§6 第 8 位），
 // 对话历史从最新往回取、超预算即裁——低优先级先裁，禁忌与承诺永不裁。
-import { getJourneyStage, getPracticesForStage } from '@/lib/content';
-import type { Portrait, SessionMemory } from '@/lib/profile';
+import { DEFAULT_BOOK_ID, TOPICS_ZH, getBook, getJourneyStage, getPracticesForStage, type TopicId } from '@/lib/content';
+import type { Portrait, SessionMemory, ThreadDepth, ThreadState } from '@/lib/profile';
 import type { ChatTurn } from '@/lib/chat';
 import { LOCALE_NAME } from '@/lib/onboarding';
 import { nowBlock, relativeDay, todayIn } from '@/lib/time';
@@ -106,6 +106,38 @@ function clipped(text: string, max: number): string {
   return text.length > max ? `${text.slice(0, max - 1)}…` : text;
 }
 
+const DEPTH_ZH: Record<ThreadDepth, string> = {
+  seen: '看见了（他认出这件事在自己身上）',
+  replaced: '换过做法（旧脚本被真的替换过至少一次）',
+  mastered: '走完过这条线（在某本书里到过头）',
+};
+
+/** 每条命题最多带几句原话进 prompt——足够交叉印证，不至于把预算吃光 */
+const THREAD_QUOTES = 2;
+
+/**
+ * 命题线块（M11-A / docs/05 §3.3）：走到哪个程度 + 他自己说过的话。
+ * 跨书的原话尤其重要——同一命题在新书里再出现时，正确的做法是「你上次是这么说的」，
+ * 而不是当成新话题从头讲一遍。
+ */
+export function buildThreadBlock(
+  threads: Partial<Record<TopicId, ThreadState>> | undefined,
+  currentBookId: string,
+): string | null {
+  const entries = Object.entries(threads ?? {}) as [TopicId, ThreadState][];
+  const usable = entries.filter(([, t]) => t && (t.evidence?.length ?? 0) > 0);
+  if (usable.length === 0) return null;
+  const lines = ['## 他在这些命题上走到哪了（跨书累加，只增不减）', '同一命题再出现时：先把他上次的原话调出来印证，别当新话题从头讲。'];
+  for (const [topic, t] of usable) {
+    lines.push(`- ${TOPICS_ZH[topic]}：${DEPTH_ZH[t.depth]}`);
+    for (const e of t.evidence.slice(-THREAD_QUOTES)) {
+      const from = e.bookId && e.bookId !== currentBookId ? '（上一本书里）' : '';
+      lines.push(`  · ${from}「${clipped(e.quote, 140)}」`);
+    }
+  }
+  return lines.join('\n');
+}
+
 export interface ChatContextInput {
   locale: Locale;
   stage: number;
@@ -121,6 +153,10 @@ export interface ChatContextInput {
   tz: string;
   /** 注入时刻，仅测试需要固定时传 */
   now?: Date;
+  /** 当前在读的书（M11-A）：路线图的出处，不是身份 */
+  bookId?: string;
+  /** 命题线：这个人在六个命题上走到的程度与他自己的原话（跨书累加） */
+  threads?: Partial<Record<TopicId, ThreadState>>;
 }
 
 export interface ChatContext {
@@ -162,7 +198,8 @@ export function buildChatContext(input: ChatContextInput): ChatContext {
   }
 
   // 阶段引导 + practices（优先级 3-4：内容层原料）
-  const stage = getJourneyStage(locale, input.stage);
+  const bookId = input.bookId ?? DEFAULT_BOOK_ID;
+  const stage = getJourneyStage(locale, input.stage, bookId);
   if (stage) {
     blocks.push(
       [
@@ -173,7 +210,7 @@ export function buildChatContext(input: ChatContextInput): ChatContext {
         ...stage.ai_stance.dont.map((d) => `- DON'T: ${d}`),
       ].join('\n')
     );
-    const practices = getPracticesForStage(input.stage);
+    const practices = getPracticesForStage(input.stage, bookId);
     if (practices.length > 0) {
       blocks.push(
         [
@@ -183,6 +220,24 @@ export function buildChatContext(input: ChatContextInput): ChatContext {
       );
     }
   }
+
+  // 当前书（M11-A）：书是路线图的出处，只在你自己需要知道"这段引导从哪来"时用。
+  // 绝不主动向用户报书名/进度/第几章——书在产品里是可见但弱化的（docs/05 §3.5）。
+  const book = getBook(bookId);
+  if (book) {
+    blocks.push(
+      [
+        '## 你手上的这本书（内部信息，不要主动报书名或进度）',
+        `《${book.title['zh-CN'] || book.title.en}》${book.author}。上面的阶段引导出自它。`,
+        '书只是路线图。走到哪一步是这个人的事，不是书的进度；他随时可以停、可以换。',
+      ].join('\n')
+    );
+  }
+
+  // 命题线（M11-A）：跨书累加的程度 + 他自己的原话。
+  // 同一命题再次出现时不要重讲一遍——把他上次的原话调出来做交叉印证（docs/05 §3.3）。
+  const threadBlock = buildThreadBlock(input.threads, bookId);
+  if (threadBlock) blocks.push(threadBlock);
 
   // 画像（优先级 5）
   const portrait = input.portrait;

@@ -55,6 +55,9 @@ const profile = (
     payday: null,
     total_active_days: 3,
     last_active_date: daysAgo(1),
+    books: [],
+    threads: {},
+    touch: {},
     ...rest,
   };
 };
