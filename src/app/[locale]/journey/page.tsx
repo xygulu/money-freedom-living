@@ -315,7 +315,7 @@ export default async function journeyPage({
           const locked = s.id === MAX_STAGE && s.id !== stage;
           const current = s.id === stage;
           const walked = s.id < stage;
-          const stProgress = profile ? computeStageProgress(s.id, profile) : null;
+          const stProgress = profile ? computeStageProgress(s.id, profile, bookId) : null;
           // 渲染侧按 kind 去重兜底（历史行可能带重复；appendStamps 已原子化并自愈存量）
           const seenStampKinds = new Set<string>();
           const stageStamps = (profile?.stamps ?? []).filter((st) => {

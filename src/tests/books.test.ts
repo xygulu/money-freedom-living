@@ -1,10 +1,20 @@
 import { afterAll, describe, expect, it } from 'vitest';
-import { DEFAULT_BOOK_ID, TOPICS, bookTitle, getBook, getBooks, getJourneyStages, getPracticesForStage, getDailyPool, pickDaily } from '@/lib/content';
-import { BOOK_LAMPS, STAGE_LAMPS, lampDepth, lampsFor, type LampRule } from '@/lib/stage';
+import { DEFAULT_BOOK_ID, TOPICS, bookTitle, getBook, getBooks, getJourneyStages, getPracticesForStage, getDailyPool, pickDaily, stageCountFor } from '@/lib/content';
+import {
+  BOOK_LAMPS,
+  STAGE_LAMPS,
+  actionEvidenceKinds,
+  computeStageProgress,
+  lampDepth,
+  lampsFor,
+  stageAdvanceTarget,
+  stageLampScales,
+  type LampRule,
+} from '@/lib/stage';
 import { mergeDepth, parseBooks } from '@/lib/profile';
 import { buildThreadBlock } from '@/lib/prompt';
 import { validateAssessment } from '@/lib/assess';
-import type { ThreadState } from '@/lib/profile';
+import type { GrowthProfile, ThreadState } from '@/lib/profile';
 
 // M11-A 多书架构（docs/05）：成长归用户 / 书是内容层 / 命题线是桥。
 // 这里守三件事：① 存量单书用户读出来跟以前一模一样；② 灯能按书索引且未知书有兜底；
@@ -241,5 +251,105 @@ describe('每日一签：书各出各的，看过的却是全局去重', () => {
     const all = getDailyPool('zh-CN', DEFAULT_BOOK_ID).map((c) => c.text);
     const exhausted = pickDaily('zh-CN', '2026-10-01', 1, all, DEFAULT_BOOK_ID);
     expect(exhausted && all.includes(exhausted.text)).toBe(true);
+  });
+});
+
+// ───────── 接线：四个「只认第一本书」的地方现在都跟着当前在读的书走 ─────────
+// 改之前 stage.ts 里的段数是常量 4、灯表是 STAGE_LAMPS 直接索引。接第二本书时
+// 这两处会一起说谎：段数不对、灯是上一本的。这里守的是「不传 bookId 的存量调用
+// 点行为一模一样」+「传了就真按那本书算」。
+describe('段数与灯跟着书走（M11-A 接线）', () => {
+  const p = (over: Partial<GrowthProfile> = {}): GrowthProfile =>
+    ({
+      user_key: 'u:books-test',
+      locale: 'zh-CN',
+      portrait: null,
+      concerns: [],
+      stage: 1,
+      stage_started_at: '2026-09-01T00:00:00Z',
+      pinned: [],
+      memories: [],
+      experiments: [],
+      letters: [],
+      stamps: [],
+      evolution: { dismissedAt: null, lastGeneratedAt: null, proposedSeenAt: null, generatingAt: null },
+      assessment: {
+        pending: null,
+        confirmed: null,
+        confirmedAt: null,
+        dismissedAt: null,
+        generatingAt: null,
+        proposedSeenAt: null,
+      },
+      created_at: '2026-08-01T00:00:00Z',
+      dailySeen: [],
+      payday: null,
+      total_active_days: 0,
+      last_active_date: null,
+      books: [],
+      threads: {},
+      touch: {},
+      ...over,
+    }) as GrowthProfile;
+
+  it('段数属于书：v1 是 4 段，不认识的书是 0（调用方自己决定回落）', () => {
+    expect(stageCountFor(DEFAULT_BOOK_ID)).toBe(4);
+    expect(stageCountFor()).toBe(stageCountFor(DEFAULT_BOOK_ID));
+    expect(stageCountFor('no-such-book')).toBe(0);
+    // 段数和内容层是同一个真相，不另写一份常量
+    expect(stageCountFor(DEFAULT_BOOK_ID)).toBe(getJourneyStages('zh-CN', DEFAULT_BOOK_ID).length);
+  });
+
+  it('不传 bookId = v1 那本书：存量调用点零行为变化', () => {
+    const profile = p();
+    expect(computeStageProgress(1, profile)).toEqual(computeStageProgress(1, profile, DEFAULT_BOOK_ID));
+    expect(stageLampScales(profile)).toEqual(stageLampScales(profile, DEFAULT_BOOK_ID));
+    expect(stageAdvanceTarget(profile)).toBe(stageAdvanceTarget(profile, DEFAULT_BOOK_ID));
+    expect(actionEvidenceKinds(1)).toEqual(actionEvidenceKinds(1, DEFAULT_BOOK_ID));
+  });
+
+  it('传了书就按那本书的灯算：总数、行动类的 kind 都换了一套', () => {
+    const profile = p();
+    const progress = computeStageProgress(1, profile, BOOK_2);
+    expect(progress.checks.length).toBe(BOOK_2_LAMPS[1].length);
+    expect(progress.checks.map((c) => c.kind)).toEqual(BOOK_2_LAMPS[1].map((r) => r.kind));
+    expect(progress.litCount).toBe(0);
+    // 行动类硬闸认的也是这本书的 kind——不会拿上一本的 kind 去要证据
+    expect(actionEvidenceKinds(1, BOOK_2)).toEqual(['b2_stage1_b']);
+    expect(actionEvidenceKinds(1, BOOK_2).some((k) => actionEvidenceKinds(1).includes(k))).toBe(false);
+  });
+
+  it('灯图按书画：第二本只有一段，画出来就是一段，不拿 v1 的 4 段凑', () => {
+    const profile = p();
+    expect(stageLampScales(profile).length).toBe(4);
+    // BOOK_2 只挂了灯表没有内容层的段 → stageCountFor 给 0，回落到 v1 段数，图不会空
+    expect(stageLampScales(profile, BOOK_2).length).toBe(4);
+    expect(stageLampScales(profile, BOOK_2)[0].total).toBe(BOOK_2_LAMPS[1].length);
+    // 第二本没排到的段：灯表为空 → 该段无灯（和 v1 的阶段 4 同一种画法）
+    expect(stageLampScales(profile, BOOK_2)[1].total).toBe(0);
+  });
+
+  it('下一段开没开也按这本书的灯判：判的是 BOOK_2 的两盏，不是 v1 的', () => {
+    const lit = (kinds: string[]) => ({
+      ...p().assessment,
+      confirmed: {
+        actualStage: 1,
+        lamps: kinds.map((kind) => ({ kind, lit: true, evidence: '真做过一次' })),
+        summary: 's',
+        diagnosis: 'd',
+        distance: 'x',
+        nextHint: 'n',
+        actions: [],
+      },
+      confirmedAt: '2026-09-02T00:00:00Z',
+    });
+    // 只亮了 v1 的灯 → 在第二本的路线图上还没走完这一段
+    expect(
+      stageAdvanceTarget(p({ assessment: lit(STAGE_LAMPS[1].map((r) => r.kind)) as never }), BOOK_2),
+    ).toBeNull();
+    // 亮的是第二本自己的两盏 → 往下开一段
+    expect(
+      stageAdvanceTarget(p({ assessment: lit(BOOK_2_LAMPS[1].map((r) => r.kind)) as never }), BOOK_2),
+    ).toBe(2);
   });
 });

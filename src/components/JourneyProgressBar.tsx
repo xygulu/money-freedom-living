@@ -12,7 +12,7 @@
 import Link from 'next/link';
 import type { Dict } from '@/i18n/get-dict';
 import type { Locale } from '@/i18n/config';
-import type { GrowthProfile } from '@/lib/profile';
+import { activeBookId, type GrowthProfile } from '@/lib/profile';
 import { MAX_STAGE, stageLampScales } from '@/lib/stage';
 import { getJourneyStage } from '@/lib/content';
 
@@ -28,7 +28,8 @@ export default function JourneyProgressBar({
   if (!profile) return null; // 未体检/身份解析失败：不渲染，layout 绝不因进度条挂掉
 
   const stage = profile.stage;
-  const scales = stageLampScales(profile);
+  // 按当前在读的那本书画：段数与每段几盏灯都属于书（docs/05 §3.1）
+  const scales = stageLampScales(profile, activeBookId(profile));
 
   return (
     <Link

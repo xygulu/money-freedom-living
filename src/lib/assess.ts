@@ -269,7 +269,7 @@ export function buildAssessMessages(
   const nextLen = locale === 'en' ? '30 words or fewer' : '40 字以内';
 
   // 需真实行为证据的灯：没记录就点不亮（校验层还有一道硬闸，这里先把话说清楚）
-  const actionLamps = actionEvidenceKinds(stage);
+  const actionLamps = actionEvidenceKinds(stage, context.bookId ?? DEFAULT_BOOK_ID);
 
   const system = [
     `你是这段旅程的见证者。你要评估的不是用户操作了多少次、完成了多少任务，而是他从说过的话、写下的事里，实际表现出的认知与行为——他真实走到了旅程的哪个位置。全程用${lang}书写。`,

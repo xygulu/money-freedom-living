@@ -131,6 +131,22 @@ export function getJourneyStage(locale: Locale, id: number, bookId: string = DEF
   return getJourneyStages(locale, bookId).find((s) => s.id === id) ?? null;
 }
 
+/**
+ * 这本书分几段（M11-A）。段数属于书，不属于代码里的常量——第二本书可以是三段、
+ * 也可以是五段，进度栏该跟着书走，而不是永远画四格。
+ * 不挑语言：同一本书各语言的段必须平行（内容层的硬约束），取并集只是为了容错。
+ * 不认识的书返回 0，调用方自己决定回落到什么。
+ */
+export function stageCountFor(bookId: string = DEFAULT_BOOK_ID): number {
+  const byLocale = bundle.journey[bookId];
+  if (!byLocale) return 0;
+  let max = 0;
+  for (const stages of Object.values(byLocale)) {
+    for (const s of stages ?? []) max = Math.max(max, s.id);
+  }
+  return max;
+}
+
 export function getDailyPool(locale: Locale, bookId: string = DEFAULT_BOOK_ID): DailyCard[] {
   return (isEnabled(locale) ? bundle.daily[bookId]?.[locale] : null) ?? [];
 }

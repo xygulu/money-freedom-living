@@ -6,7 +6,7 @@
 // 只负责灯的形状与展示判定。只增不减：灯不熄灭、阶段不倒退；无 deadline、无
 // 红点；阶段 4 没有终点线。
 import type { GrowthProfile, Stamp, ThreadDepth } from '@/lib/profile';
-import { DEFAULT_BOOK_ID, type TopicId } from '@/lib/content';
+import { DEFAULT_BOOK_ID, stageCountFor, type TopicId } from '@/lib/content';
 
 export interface StageCheck {
   kind: Stamp['kind']; // 关联评估结论与确认时入档的心印 kind；展示名走 dict.journey.<labelKey>
@@ -161,18 +161,25 @@ export function lampDepth(rule: LampRule, stageAllLit: boolean): ThreadDepth {
 }
 
 /** 本阶段里「必须有真实行为记录才允许点亮」的灯 kind（评估 prompt 与硬闸共用）。 */
-export function actionEvidenceKinds(stage: number): string[] {
-  return (STAGE_LAMPS[stage] ?? []).filter((r) => r.needsAction).map((r) => r.kind);
+export function actionEvidenceKinds(stage: number, bookId: string = DEFAULT_BOOK_ID): string[] {
+  return lampsFor(bookId, stage).filter((r) => r.needsAction).map((r) => r.kind);
 }
 
+/** v1 那本书的段数。**新代码别再直接用它**——段数属于书，用 stageCountFor(bookId)。
+ *  留着是因为「阶段 4 没有终点线」这类 v1 文案与判定仍按它写（docs/02 §4）。 */
 export const MAX_STAGE = 4;
 
 /** 灯的点亮判定 = 最近一次确认的评估里这盏灯亮不亮（评估结论，不是动作记录）。
- *  评估没说亮的灯，即使 stamps 里有历史存档印也不亮。阶段 4 无灯。
- *  每盏灯同时带出它所在的命题线与该线上的跨书程度——灯属书、命题属人（docs/05 §3.2）。 */
-export function computeStageProgress(stage: number, profile: GrowthProfile): StageProgress {
+ *  评估没说亮的灯，即使 stamps 里有历史存档印也不亮。最后一段无灯。
+ *  每盏灯同时带出它所在的命题线与该线上的跨书程度——灯属书、命题属人（docs/05 §3.2）。
+ *  bookId 缺省 = v1 的书：存量调用点不传也跟以前一模一样。 */
+export function computeStageProgress(
+  stage: number,
+  profile: GrowthProfile,
+  bookId: string = DEFAULT_BOOK_ID
+): StageProgress {
   const verdict = new Map((profile.assessment.confirmed?.lamps ?? []).map((l) => [l.kind, l.lit]));
-  const checks: StageCheck[] = (STAGE_LAMPS[stage] ?? []).map((r) => ({
+  const checks: StageCheck[] = lampsFor(bookId, stage).map((r) => ({
     kind: r.kind,
     labelKey: r.labelKey,
     done: verdict.get(r.kind) === true,
@@ -183,13 +190,19 @@ export function computeStageProgress(stage: number, profile: GrowthProfile): Sta
   return { checks, litCount: checks.filter((c) => c.done).length };
 }
 
-/** 四段刻度（全局进度条用）：走过的段整段填充（阶段推进只发生在评估确认仪式
+/** 分段刻度（全局进度条用）：走过的段整段填充（阶段推进只发生在评估确认仪式
  *  里，「走过」本身就是评估结论）；当前段按最近一次确认评估点亮的灯数；未到的
- *  段全空——没有评估过的进度不造假。stage4 total=0（无灯无刻度）。 */
-export function stageLampScales(profile: GrowthProfile): { id: number; lit: number; total: number }[] {
+ *  段全空——没有评估过的进度不造假。没有灯的那一段 total=0（无灯无刻度）。
+ *  画几格按这本书分几段来——第二本可以是三段或五段，进度栏不该永远画四格。 */
+export function stageLampScales(
+  profile: GrowthProfile,
+  bookId: string = DEFAULT_BOOK_ID
+): { id: number; lit: number; total: number }[] {
   const verdict = new Map((profile.assessment.confirmed?.lamps ?? []).map((l) => [l.kind, l.lit]));
-  return [1, 2, 3, 4].map((id) => {
-    const rules = STAGE_LAMPS[id] ?? [];
+  // 认不出这本书（内容还没上/拼错）就回落 v1 的段数——进度栏不能是空的
+  const count = stageCountFor(bookId) || MAX_STAGE;
+  return Array.from({ length: count }, (_, i) => i + 1).map((id) => {
+    const rules = lampsFor(bookId, id);
     const lit =
       id < profile.stage
         ? rules.length
@@ -203,10 +216,10 @@ export function stageLampScales(profile: GrowthProfile): { id: number; lit: numb
 /** 程度制联动：确认评估里本阶段灯全亮 = 本阶段应达程度全达成 → 下一阶段随之
  *  开启（不由素材/动作门槛决定，也不需要单独的推进动作）。返回应推进到的阶段
  *  号；无需推进返回 null。纯函数，getProfile 落库自愈与 confirm 收口共用同一判定。 */
-export function stageAdvanceTarget(profile: GrowthProfile): number | null {
+export function stageAdvanceTarget(profile: GrowthProfile, bookId: string = DEFAULT_BOOK_ID): number | null {
   const stage = profile.stage;
-  if (stage >= MAX_STAGE) return null;
-  const rules = STAGE_LAMPS[stage] ?? [];
+  if (stage >= (stageCountFor(bookId) || MAX_STAGE)) return null;
+  const rules = lampsFor(bookId, stage);
   if (rules.length === 0) return null;
   const lit = new Set((profile.assessment.confirmed?.lamps ?? []).filter((l) => l.lit).map((l) => l.kind));
   return rules.every((r) => lit.has(r.kind)) ? stage + 1 : null;

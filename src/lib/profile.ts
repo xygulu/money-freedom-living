@@ -362,7 +362,7 @@ export async function getProfile(userKey: string): Promise<GrowthProfile | null>
   // 程度制联动（含存量自愈）：确认评估里本阶段灯全亮 = 程度全达成 → 下一阶段
   // 自动开启，镜像 advance 语义（心印入档 + 埋点）。幂等——推进后灯集属新阶段，
   // 条件不再成立；并发请求各写一遍同值（心印 DISTINCT ON 去重）。
-  const to = stageAdvanceTarget(profile);
+  const to = stageAdvanceTarget(profile, activeBookId(profile));
   if (to !== null) {
     await appendStamps(userKey, [`stage${to}_entered`]);
     await saveStage(userKey, to);
