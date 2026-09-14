@@ -594,7 +594,8 @@
       "themeLabel": "Tone"
     },
     "versions": { "new": "New", "classic": "Classic" },
-    "themes": { "plain": "Plain", "paper": "Paper", "night": "Night" }
+    "themes": { "plain": "Plain", "paper": "Paper", "night": "Night" },
+    "backToJourney": "Back to the journey"
   },
   "nudge": {
     "fallback": "I am here."

@@ -594,7 +594,8 @@
       "themeLabel": "调性"
     },
     "versions": { "new": "新版", "classic": "经典版" },
-    "themes": { "plain": "极简留白", "paper": "温暖纸感", "night": "夜间" }
+    "themes": { "plain": "极简留白", "paper": "温暖纸感", "night": "夜间" },
+    "backToJourney": "回到旅程"
   },
   "nudge": {
     "fallback": "我在这儿。"

@@ -145,6 +145,30 @@ async function versionSwitchTest() {
   }
 }
 
+async function backLinkTest(browser, { locale, uiVersion, expectPath }) {
+  const { page } = await newPageWithCookies(browser, { locale, uiVersion });
+  try {
+    await page.goto(`${BASE}/${locale}/archive`, { waitUntil: 'networkidle' });
+    const link = page.locator('[data-back-to-journey]');
+    const count = await link.count();
+    check(
+      `[${locale}/${uiVersion}] /archive 有"回到旅程"链接`,
+      count === 1,
+      `count=${count}`,
+    );
+    if (count === 1) {
+      const href = await link.getAttribute('href');
+      check(
+        `[${locale}/${uiVersion}] 链接指向 ${expectPath}`,
+        href === expectPath,
+        `href=${href}`,
+      );
+    }
+  } finally {
+    await page.context().close();
+  }
+}
+
 async function main() {
   const browser = await chromium.launch({ headless: true });
 
@@ -157,7 +181,12 @@ async function main() {
     // ② classic 路径回归
     await classicPathTest(browser);
 
-    // ③ nudge API + ui-version API（无需浏览器）
+    // ③ /archive"回到旅程"链接按 ui_version 分流（前台改造 bugfix：旧 link 不存在 + /journey
+    //    在 new 时被守卫 redirect 到 /journey-new，会给人"返回到旧版"的错觉）
+    await backLinkTest(browser, { locale: 'zh-CN', uiVersion: 'new', expectPath: '/zh-CN/journey-new' });
+    await backLinkTest(browser, { locale: 'zh-CN', uiVersion: 'classic', expectPath: '/zh-CN/journey' });
+
+    // ④ nudge API + ui-version API（无需浏览器）
     await nudgeApiTest();
     await versionSwitchTest();
   } finally {

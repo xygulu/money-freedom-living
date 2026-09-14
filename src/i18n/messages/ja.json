@@ -594,7 +594,8 @@
       "themeLabel": "トーン"
     },
     "versions": { "new": "新しい版", "classic": "クラシック" },
-    "themes": { "plain": "プレーン", "paper": "紙", "night": "ナイト" }
+    "themes": { "plain": "プレーン", "paper": "紙", "night": "ナイト" },
+    "backToJourney": "旅に戻る"
   },
   "nudge": {
     "fallback": "わたしは、ここにいます。"

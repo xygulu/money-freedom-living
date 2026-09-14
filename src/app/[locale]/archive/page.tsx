@@ -14,6 +14,7 @@
 // 主题切换仅靠前端 data-scene-theme 属性；无持久化（与现有"无 cookie 即 plain"对齐）。
 
 import { notFound } from 'next/navigation';
+import Link from 'next/link';
 import { enabledLocales, isLocale } from '@/i18n/config';
 import { getDict } from '@/i18n/get-dict';
 import { getUiVersion } from '@/lib/ui-version';
@@ -30,9 +31,19 @@ export default async function ArchivePage({ params }: { params: Promise<{ locale
 
   const dict = getDict(locale);
   const uiVersion = await getUiVersion();
+  // 回到旅程按当前 ui_version 分流：
+  // - new → /journey-new（一幕）
+  // - classic → /journey（11 块经典版）
+  // 避免链接走 /journey 触发经典版守卫反向 redirect——直接落到正确版本。
+  const journeyHref = uiVersion === 'classic' ? `/${locale}/journey` : `/${locale}/journey-new`;
 
   return (
     <div className={styles.archive}>
+      <p className={styles.mini}>
+        <Link href={journeyHref} className={styles.backlink} data-back-to-journey>
+          ← {dict.archivePage.backToJourney}
+        </Link>
+      </p>
       <h2>{dict.archivePage.title}</h2>
       <p className={styles.lead}>{dict.archivePage.sub}</p>
 
