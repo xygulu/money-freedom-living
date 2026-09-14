@@ -15,3 +15,6 @@ next-env.d.ts
 *.tsbuildinfo
 .DS_Store
 *.log
+
+# 知识库镜像（生成物，由 Hermes 每 6h 同步；权威在 Mac 的知识库）
+docs/kb/
