@@ -15,9 +15,9 @@ import type {
 import { mergeDepth, recordThreadEvidence } from '@/lib/profile';
 import { getJournalEntries } from '@/lib/journal';
 import { LOCALE_NAME } from '@/lib/onboarding';
-import { MAX_STAGE, STAGE_LAMPS, actionEvidenceKinds, lampDepth, lampsFor } from '@/lib/stage';
+import { MAX_STAGE, actionEvidenceKinds, lampDepth, lampsFor } from '@/lib/stage';
 import type { EvolveMaterialCounts } from '@/lib/evolution';
-import { TOPICS_ZH, type JourneyStage } from '@/lib/content';
+import { DEFAULT_BOOK_ID, TOPICS_ZH, type JourneyStage } from '@/lib/content';
 import type { Locale } from '@/i18n/config';
 
 // ---------- 常量 ----------
@@ -72,7 +72,8 @@ export function shouldOfferAssess(
 export function validateAssessment(
   draft: unknown,
   stage: number,
-  hasActionRecord: boolean
+  hasActionRecord: boolean,
+  bookId: string = DEFAULT_BOOK_ID
 ): Omit<StageAssessment, 'assessedAt'> | null {
   if (typeof draft !== 'object' || draft === null) return null;
   const d = draft as Record<string, unknown>;
@@ -80,7 +81,7 @@ export function validateAssessment(
   if (typeof actualStage !== 'number' || !Number.isInteger(actualStage)) return null;
   if (actualStage < stage || actualStage > Math.min(stage + 1, MAX_STAGE)) return null;
 
-  const rules = STAGE_LAMPS[stage] ?? [];
+  const rules = lampsFor(bookId, stage); // 按书取灯：换书 = 换路线图，旧书的灯不该被拿来判新书
   if (!Array.isArray(d.lamps) || d.lamps.length !== rules.length) return null;
   const byKind = new Map<string, { lit: boolean; evidence: string }>();
   for (const raw of d.lamps) {
@@ -226,7 +227,7 @@ export function buildAssessMessages(
   stage: number,
   stages: JourneyStage[],
   material: AssessMaterial,
-  context: { confirmed?: StageAssessment | null; earnedKinds: string[]; hasActionRecord: boolean }
+  context: { confirmed?: StageAssessment | null; earnedKinds: string[]; hasActionRecord: boolean; bookId?: string }
 ) {
   const lang = LOCALE_NAME[locale] ?? 'English';
   const current = stages.find((s) => s.id === stage);
@@ -281,7 +282,7 @@ export function buildAssessMessages(
     next ? stageBlock(next) : '',
     '',
     `当前阶段的灯（评估对象，每盏是本阶段应达程度的一个切面——判定的是他到达了这个状态没有，不是他做过哪些动作）：`,
-    ...(STAGE_LAMPS[stage] ?? []).map(
+    ...lampsFor(context.bookId ?? DEFAULT_BOOK_ID, stage).map(
       (r) => `- ${r.kind}：${r.hint}${r.needsAction ? '【这盏灯必须有真实行为证据：他在日子里真的做过、并且留下了记录；只在对话里说得好不算】' : ''}`
     ),
     ...(actionLamps.length > 0 && !context.hasActionRecord

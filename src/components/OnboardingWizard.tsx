@@ -38,6 +38,9 @@ export default function OnboardingWizard({ locale, dict }: Props) {
   // 拒绝者可继续用问卷与日记，只是不生成画像、不进行 AI 深谈
   const [adultOk, setAdultOk] = useState(false);
   const [sensitiveOk, setSensitiveOk] = useState(false);
+  // 触达同意（M11-E）：与上面两项各自独立，默认不勾，不勾照样能往下走——
+  // 打包勾选在 GDPR 下不成立，而且"不收信"本来就该是无代价的（docs/05 §9.3）
+  const [touchOk, setTouchOk] = useState(false);
   const [supplement, setSupplement] = useState('');
   const [error, setError] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -191,6 +194,14 @@ export default function OnboardingWizard({ locale, dict }: Props) {
         body: JSON.stringify({ locale, sessionId, consent: true }),
       });
       if (!response.ok) throw new Error(String(response.status));
+      // 勾了才记：没勾 = 没表态，不给他写一条"拒绝"记录
+      if (touchOk) {
+        await fetch('/api/touch/consent', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ optIn: true }),
+        }).catch(() => {}); // 触达是可选项，记不上也不该挡住画像
+      }
       setStep('done');
     } catch {
       setError(true);
@@ -337,6 +348,11 @@ export default function OnboardingWizard({ locale, dict }: Props) {
               <span className="leading-relaxed">{o.consent.sensitiveLabel}</span>
             </label>
             <p className="text-xs leading-relaxed text-ink-soft">{o.consent.sensitiveHint}</p>
+            <label data-touch-optin className="mt-1 flex cursor-pointer items-start gap-3 border-t border-dashed border-line pt-3">
+              <input type="checkbox" checked={touchOk} onChange={(e) => setTouchOk(e.target.checked)} className="mt-1" />
+              <span className="leading-relaxed">{dict.touch.optInLabel}</span>
+            </label>
+            <p className="text-xs leading-relaxed text-ink-soft">{dict.touch.optInHint}</p>
           </div>
           )}
           {beenSeen && (

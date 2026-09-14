@@ -672,6 +672,40 @@ export async function claimTouchNode(userKey: string, node: string): Promise<boo
   return rows.length > 0;
 }
 
+/**
+ * 按退订 token 反查用户（M11-E）：退订链接点进来时没有登录态，只能靠信里那串 token。
+ * 空 token 一律不匹配——否则「touch 里没有 token 的行」会被一个空串全捞出来。
+ */
+export async function findUserKeyByUnsubToken(token: string): Promise<string | null> {
+  if (!token.trim()) return null;
+  const rows = await execWithFailover((sql: SqlClient) =>
+    sql`SELECT user_key FROM growth_profiles
+        WHERE touch->>'unsubToken' = ${token} LIMIT 1`
+  );
+  return rows[0] ? String(rows[0].user_key) : null;
+}
+
+/**
+ * 调度器的候选集（M11-E）：只捞**已 opt-in** 的行，未同意的人连查询都不进——
+ * 合规第一条（未 opt-in 收不到任何触达邮件）在 SQL 层就先关一道闸。
+ * 真正发不发还要过 `pickTouchNode`（活跃度/间隔/节点是否发过），这里只做粗筛。
+ */
+export async function listTouchCandidates(limit = 500): Promise<GrowthProfile[]> {
+  await ensureSchema();
+  const rows = await execWithFailover((sql: SqlClient) =>
+    sql`SELECT user_key, locale, portrait, concerns, stage, stage_started_at,
+               pinned, memories, experiments, letters, stamps, portrait_evolution,
+               stage_assessment, created_at, daily_seen, payday, total_active_days, last_active_date,
+               books, threads, touch
+        FROM growth_profiles
+        WHERE touch->>'emailOptIn' = 'true'
+          AND user_key LIKE 'u:%'
+        ORDER BY created_at ASC
+        LIMIT ${limit}`
+  );
+  return rows.map(rowToProfile);
+}
+
 /** 换书 / 开新书：把旧的当前书置为 paused（或 done），把目标书设为 active。 */
 export async function saveBooks(userKey: string, books: BookEntry[]): Promise<void> {
   await execWithFailover((sql: SqlClient) =>

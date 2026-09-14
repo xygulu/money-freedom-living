@@ -10,6 +10,7 @@ import { resolveIdentity } from '@/lib/identity';
 import { getEntitlement } from '@/lib/entitlements';
 import { getProfile } from '@/lib/profile';
 import MeAccount from '@/components/MeAccount';
+import TouchOptIn from '@/components/TouchOptIn';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,7 +26,8 @@ export default async function mePage({ params }: { params: Promise<{ locale: str
   const isVip = Boolean(entitlement?.vipUntil && new Date(entitlement.vipUntil) > new Date());
   // 游客也有档案（g: key）——画像入口对所有人可用
   const identity = await resolveIdentity({ headers: headersList, cookies: await cookies() });
-  const hasPortrait = Boolean((await getProfile(identity.key))?.portrait);
+  const profile = await getProfile(identity.key);
+  const hasPortrait = Boolean(profile?.portrait);
 
   const rows: { href: string; label: string; hint: string }[] = [
     {
@@ -63,6 +65,9 @@ export default async function mePage({ params }: { params: Promise<{ locale: str
           </li>
         ))}
       </ul>
+
+      {/* 节点来信的开关只对登录用户有意义——游客没有邮箱，发不了也不该问 */}
+      {user && <TouchOptIn dict={dict} initialOptIn={profile?.touch?.emailOptIn === true} />}
 
       {user ? (
         <MeAccount locale={locale} dict={dict} />

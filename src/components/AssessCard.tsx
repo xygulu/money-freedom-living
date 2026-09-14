@@ -10,7 +10,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Dict } from '@/i18n/get-dict';
 import type { StageAssessment } from '@/lib/profile';
-import { STAGE_LAMPS } from '@/lib/stage';
+import { DEFAULT_BOOK_ID } from '@/lib/content';
+import { lampsFor } from '@/lib/stage';
 
 type AssessAction = 'generate' | 'confirm' | 'advance' | 'dismiss';
 
@@ -21,6 +22,7 @@ export default function AssessCard({
   nextTitle,
   actualTitle,
   pending,
+  bookId,
 }: {
   locale: string;
   dict: Dict;
@@ -28,6 +30,7 @@ export default function AssessCard({
   nextTitle: string; // 下一阶段名（「走进{stage}」按钮文案）
   actualTitle: string; // 评估出的位置的阶段名（结果行文案）
   pending: StageAssessment | null; // null = offer 模式
+  bookId?: string; // 当前这本书的灯表（缺省 = v1 那本）
 }) {
   const t = dict.assess;
   const router = useRouter();
@@ -83,7 +86,7 @@ export default function AssessCard({
 
   // review 模式：它看到的你——位置 + 灯 + 依据 + 总结，确认才作数
   const canAdvance = pending.actualStage > stage;
-  const rules = new Map((STAGE_LAMPS[stage] ?? []).map((r) => [r.kind, r.labelKey]));
+  const rules = new Map(lampsFor(bookId ?? DEFAULT_BOOK_ID, stage).map((r) => [r.kind, r.labelKey]));
 
   return (
     <div className="mt-6 border border-accent/50 bg-white/70 p-6">

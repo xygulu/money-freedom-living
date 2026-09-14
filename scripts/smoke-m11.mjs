@@ -540,5 +540,130 @@ check(
 );
 
 
+// ⑦ 触达层合规（M11-E，docs/05 §9.3 三条硬约束 + §10 验收 D）
+// 这一段一封信都不真发：Resend 没配时 dispatch 自动降级成试算，正好把"该发谁"
+// 算清楚又不打扰任何人。真正要守住的是"谁收不到"：没同意的、人还在的、发过的、
+// 退订了的——四种人一个都不许出现在命中名单里。
+console.log('\n—— ⑦ 触达层合规（M11-E）——');
+const CRON = process.env.TOUCH_CRON_SECRET;
+const dispatch = (body = {}, secret = CRON) =>
+  fetch(BASE + '/api/touch/dispatch', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-touch-secret': secret ?? '' },
+    body: JSON.stringify({ dryRun: true, ...body }),
+  });
+
+const tu = await signUp('touch');
+await sql`
+  INSERT INTO growth_profiles (user_key, locale, portrait, concerns, stage, stage_started_at,
+    pinned, memories, experiments, letters, stamps, portrait_evolution, stage_assessment,
+    created_at, daily_seen, last_active_date)
+  VALUES (${tu.key}, 'zh-CN', ${JSON.stringify(portrait)}::jsonb, '[]'::jsonb, 1, ${daysAgo(40)},
+    '[]'::jsonb, '[]'::jsonb, '[]'::jsonb,
+    ${JSON.stringify([{ stage: 1, content: 'M11-E 原话：我不敢报那个价。', state: 'kept', aiReply: null, createdAt: daysAgo(35) }])}::jsonb,
+    '[]'::jsonb, '{}'::jsonb, '{}'::jsonb, ${daysAgo(40)}, '[]'::jsonb, ${dayStr(12)}::date)`;
+
+const nPlanned = (r) => (r.byNode ? Object.values(r.byNode).reduce((a, b) => a + b, 0) : 0);
+// 扫描是全库的，别的用户也可能在名单里 —— 所以一律看**增量**：
+// 只关心"我们这个测试用户有没有被算进去"，不关心库里本来有几个人该收信。
+const scan = async () => {
+  const r = await dispatch().then((x) => x.json());
+  return { r, n: nPlanned(r) };
+};
+
+if (!CRON) {
+  check('调度端点没配 secret → 直接关门（不开一个谁都能打的发信端点）', (await dispatch({}, 'x')).status === 503);
+} else {
+  check('错口令打不开调度端点', (await dispatch({}, 'wrong-secret')).status === 403);
+
+  // D-1：未 opt-in 收不到任何触达邮件
+  const base = await scan();
+  const touchBefore = (await sql`SELECT touch FROM growth_profiles WHERE user_key = ${tu.key}`)[0].touch ?? {};
+  check('没同意收信的人：touch 里空空如也，候选名单都进不去（合规第一条）',
+    Object.keys(touchBefore).length === 0, JSON.stringify(touchBefore));
+
+  const optIn = await post('/api/touch/consent', { optIn: true }, tu.cookie);
+  check('打开来信：opt-in 落库', optIn.status === 200);
+  const touchRow = (await sql`SELECT touch FROM growth_profiles WHERE user_key = ${tu.key}`)[0].touch ?? {};
+  check('生成了退订凭据（没有凭据的信不许发出去）', Boolean(touchRow.unsubToken) && touchRow.emailOptIn === true);
+  const tKinds = await sql`SELECT kind, granted FROM consent_records WHERE user_key = ${tu.key} ORDER BY id`;
+  check(
+    '触达同意记成 kind=touch，没污染敏感信息同意（两件事分开记）',
+    tKinds.length === 1 && tKinds[0].kind === 'touch' && tKinds[0].granted === true,
+    tKinds.map((k) => `${k.kind}:${k.granted}`).join(',')
+  );
+
+  // D-2：到了节点才发，且只发该发的那一封
+  const after = await scan();
+  check('同意之后、到了节点：命中该发的那一封（且只多出一封）', after.n === base.n + 1, `${base.n} → ${after.n}`);
+  const node = Object.keys(after.r.byNode ?? {}).find((k) => (after.r.byNode[k] ?? 0) > (base.r.byNode?.[k] ?? 0));
+  check('建档 40 天、12 天没来 → 命中 D30（节点取"已到期里最大的那个"）', node === 'D30', String(node));
+  check('试算不占位：sentNodes 还是空的（没发就不许记成发过）',
+    Object.keys((await sql`SELECT touch FROM growth_profiles WHERE user_key = ${tu.key}`)[0].touch?.sentNodes ?? {}).length === 0);
+  check('Resend 没配 → 自动降级成试算，不报错也不假装发了', after.r.configured === false && after.r.dryRun === true);
+
+  // 人还在这儿的时候不召回（邮件是节点召回，不是日活引擎）
+  await sql`UPDATE growth_profiles SET last_active_date = now()::date WHERE user_key = ${tu.key}`;
+  const present = await scan();
+  check('人今天还来过 → 不发（这不是日活引擎）', present.n === base.n, `${base.n} vs ${present.n}`);
+  await sql`UPDATE growth_profiles SET last_active_date = ${dayStr(12)}::date WHERE user_key = ${tu.key}`;
+
+  // 每个节点只发一次：占位过就不再命中（重发防护不靠"脚本别重复跑"）
+  await sql`
+    UPDATE growth_profiles
+    SET touch = touch || jsonb_build_object('sentNodes', jsonb_build_object('D30', ${daysAgo(1)}::text))
+    WHERE user_key = ${tu.key}`;
+  const resent = await scan();
+  check('D30 发过就不再发：同一封信一辈子只发一次', resent.n === base.n, `${base.n} vs ${resent.n}`);
+  await sql`UPDATE growth_profiles SET touch = touch - 'sentNodes', last_active_date = ${dayStr(12)}::date WHERE user_key = ${tu.key}`;
+
+  // D-2：退订链接生效且 events 有记录
+  const token = touchRow.unsubToken;
+  const unsub = await fetch(`${BASE}/api/touch/unsubscribe?token=${encodeURIComponent(token)}&locale=zh-CN`, { redirect: 'manual' });
+  check('退订链接一点就成（不要求先登录）', unsub.status === 307 || unsub.status === 302, `status=${unsub.status}`);
+  const afterUnsub = (await sql`SELECT touch FROM growth_profiles WHERE user_key = ${tu.key}`)[0].touch ?? {};
+  check('退订后来信关闭', afterUnsub.emailOptIn === false);
+  check('但退订凭据留着：已发出去那几封信的退订链接不能跟着失效', afterUnsub.unsubToken === token);
+  const ev = await sql`SELECT count(*)::int AS n FROM events WHERE user_key = ${tu.key} AND name = 'touch_opt_out'`;
+  check('退订有据可查（events 留痕）', ev[0].n >= 1, `n=${ev[0].n}`);
+  const lastConsent = await sql`SELECT kind, granted FROM consent_records WHERE user_key = ${tu.key} ORDER BY id DESC LIMIT 1`;
+  check('退订也记进同意链（kind=touch, granted=false）',
+    lastConsent[0].kind === 'touch' && lastConsent[0].granted === false);
+  const gone = await scan();
+  check('退订之后：一封都不再发', gone.n === base.n, `${base.n} vs ${gone.n}`);
+
+  const badTok = await fetch(`${BASE}/api/touch/unsubscribe?token=&locale=zh-CN`, { redirect: 'manual' });
+  const badLoc = badTok.headers.get('location') ?? '';
+  check('空 token 不会误退订别人（落地页给失败态）', badLoc.includes('ok=0'), badLoc.slice(-24));
+}
+
+// D-3/D-4：导出含 touch；游客期的 touch 跟着账号走；删除后随行清空
+const gid = crypto.randomUUID().replace(/-/g, '');
+const guestCookie = `guest_qk=${gid}`;
+await post('/api/journal', { content: 'M11-E 游客期的一篇心事', locale: 'zh-CN' }, guestCookie);
+await sql`UPDATE growth_profiles SET touch = jsonb_build_object('emailOptIn', true, 'unsubToken', 'guest-tok-m11e') WHERE user_key = ${`g:${gid}`}`;
+const gu = await signUp('merge');
+await get('/api/journal', `${gu.cookie}; ${guestCookie}`); // 登录态 + 游客 cookie 并存 → 顺手迁移
+const merged = (await sql`SELECT touch FROM growth_profiles WHERE user_key = ${gu.key}`)[0]?.touch ?? {};
+check(
+  '游客期打开的来信设置，登录后跟着账号走（验收 D-4）',
+  merged.emailOptIn === true && merged.unsubToken === 'guest-tok-m11e',
+  JSON.stringify(merged)
+);
+
+const exp = await get('/api/me/export', tu.cookie).then((r) => r.json());
+check('导出含 touch（用户能看到自己的来信设置）', 'touch' in (exp.profile ?? {}), Object.keys(exp.profile ?? {}).includes('touch') ? 'ok' : JSON.stringify(Object.keys(exp.profile ?? {})));
+const delRes = await post('/api/me/delete', { confirm: 'DELETE' }, tu.cookie);
+const leftover = await sql`
+  SELECT (SELECT count(*)::int FROM growth_profiles WHERE user_key = ${tu.key}) AS p,
+         (SELECT count(*)::int FROM consent_records WHERE user_key = ${tu.key}) AS c,
+         (SELECT count(*)::int FROM events WHERE user_key = ${tu.key}) AS e,
+         (SELECT count(*)::int FROM "user" WHERE id = ${tu.userId}) AS u`;
+check('删除账号 → 来信设置与同意链一起清空（零新表 = 没有漏网的行）',
+  delRes.status === 200 && leftover[0].p === 0 && leftover[0].c === 0 && leftover[0].e === 0 && leftover[0].u === 0,
+  JSON.stringify(leftover[0]));
+await post('/api/me/delete', { confirm: 'DELETE' }, gu.cookie);
+
+
 console.log(failures === 0 ? '\n全部通过 ✅' : `\n${failures} 处失败 ❌`);
 process.exit(failures === 0 ? 0 : 1);

@@ -1,0 +1,16 @@
+[Unit]
+Description=每天跑一次节点来信调度（M11-E / docs/05 §9.5）
+Documentation=file:///root/money-freedom-living/docs/05-多书架构与触达层.md
+
+[Timer]
+# 一天一次就够：节点是 D3/D7/D14/…，不是日频。每个节点一辈子只发一次
+#（`claimTouchNode` 原子占位），所以哪怕 timer 一天误触发几次也不会重发。
+#
+# 10:00 是服务器本地时间。RandomizedDelaySec 让实际发信时刻散开——一整批信同一秒
+# 发出去，对送达率（§9.3 第 3 条）没好处。
+OnCalendar=*-*-* 10:00:00
+RandomizedDelaySec=1800
+Persistent=true
+
+[Install]
+WantedBy=timers.target

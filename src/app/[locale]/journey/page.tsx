@@ -12,9 +12,9 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getDict } from '@/i18n/get-dict';
 import { enabledLocales, isLocale } from '@/i18n/config';
-import { getJourneyStages, pickDaily, pickExercise } from '@/lib/content';
+import { DEFAULT_BOOK_ID, getJourneyStages, pickDaily, pickExercise } from '@/lib/content';
 import { resolveIdentity } from '@/lib/identity';
-import { getProfile, recordDailySeen, type StageAssessment } from '@/lib/profile';
+import { activeBookId, getProfile, recordDailySeen, type StageAssessment } from '@/lib/profile';
 import { isAnchorDay } from '@/lib/anchor';
 import { timeZoneFrom } from '@/lib/time';
 import { track } from '@/lib/analytics';
@@ -46,8 +46,11 @@ export default async function journeyPage({ params }: { params: Promise<{ locale
 
   const stage = profile?.stage ?? 1;
   const today = todayISO();
+  // 当前在读的这本书：灯表与每日一签都按书取，去重名单却是全局的——
+  // 同一句话在第二本书里不该再当成新的（docs/05 §10 验收 C）
+  const bookId = profile ? activeBookId(profile) : DEFAULT_BOOK_ID;
 
-  const daily = pickDaily(locale, today, stage, (profile?.dailySeen ?? []).map((s) => s.text));
+  const daily = pickDaily(locale, today, stage, (profile?.dailySeen ?? []).map((s) => s.text), bookId);
   if (daily && profile) {
     // 看过的签记入档案（幂等：同一天只记一条）；无档案（未体检）不记——去重从有档案起算
     try {
@@ -181,6 +184,7 @@ export default async function journeyPage({ params }: { params: Promise<{ locale
           nextTitle={nextStage?.title ?? ''}
           actualTitle={stages.find((s) => s.id === (assessPending?.actualStage ?? stage))?.title ?? ''}
           pending={assessPending}
+          bookId={bookId}
         />
       )}
 

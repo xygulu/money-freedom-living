@@ -69,16 +69,19 @@ export async function POST(request: NextRequest) {
         // 行为证据：有没有留下过真实记录（不限基线后——做过就是做过，只增不减）。
         // 需行为证据的灯在这里为 false 时点不亮（prompt 说明 + validateAssessment 硬闸）。
         const hasActionRecord = profile.experiments.length > 0;
-        const { system, messages } = buildAssessMessages(locale, profile.stage, getJourneyStages(locale), material, {
+        // 灯表按当前这本书取：v1 只有一本，但评估从此不会拿旧书的灯去判新书
+        const activeBook = activeBookId(profile);
+        const { system, messages } = buildAssessMessages(locale, profile.stage, getJourneyStages(locale, activeBook), material, {
           confirmed: state.confirmed,
           earnedKinds: profile.stamps.map((s) => s.kind),
           hasActionRecord,
+          bookId: activeBook,
         });
 
-        let draft = validateAssessment(await llmCompleteJson({ system, messages, maxTokens: 2600 }), profile.stage, hasActionRecord);
+        let draft = validateAssessment(await llmCompleteJson({ system, messages, maxTokens: 2600 }), profile.stage, hasActionRecord, activeBook);
         if (!draft) {
           console.warn('[api/journey/assess] first draft invalid, retrying once');
-          draft = validateAssessment(await llmCompleteJson({ system, messages, maxTokens: 2600 }), profile.stage, hasActionRecord);
+          draft = validateAssessment(await llmCompleteJson({ system, messages, maxTokens: 2600 }), profile.stage, hasActionRecord, activeBook);
         }
         if (!draft) {
           // 现状态不动、提议不消失：只清锁

@@ -93,6 +93,53 @@
     "privacyLink": "Privacy policy",
     "error": "Something went wrong, please try again"
   },
+  "touch": {
+    "optInLabel": "I'd like to hear from you at a few points along the way (unsubscribe anytime)",
+    "optInHint": "This is a separate thing from the box above — tick them one at a time. Leaving it unticked changes nothing here: no streaks, no check-ins, nobody chasing you.",
+    "settingLabel": "Letters along the way",
+    "settingOn": "On. A few letters, now and then. Unsubscribe anytime.",
+    "settingOff": "Off. You won't receive any letters.",
+    "toggleOn": "Turn on",
+    "toggleOff": "Turn off",
+    "backLabel": "Come back here",
+    "unsubLead": "Rather not receive letters like this:",
+    "unsubLabel": "unsubscribe",
+    "bodyNoEcho": "You stopped by that day, then went on your way.\nI didn't press you, and I didn't write anything down for you.\n\nWhenever you feel like picking it up again, {title} is right where you left it.",
+    "unsubTitle": "You're unsubscribed",
+    "unsubDone": "From now on, no more letters. Everything you kept here is untouched — all of it is still here.",
+    "unsubResubHint": "If you ever want them again, you can turn letters back on from “Me”.",
+    "unsubFail": "This unsubscribe link is no longer valid. You can turn letters off directly from “Me”.",
+    "letters": {
+      "D3": {
+        "subject": "That line you wrote — I kept it",
+        "body": "Last time you said:\n\n{echo}\n\nI kept it exactly as you wrote it. Nothing's been touched.\nWhenever you want to pick it up again, I'm here."
+      },
+      "D7": {
+        "subject": "That line is still where you left it",
+        "body": "A few days on, I came across this again — your words:\n\n{echo}\n\nNobody's waiting on anything from you. Come back whenever you feel like it."
+      },
+      "D14": {
+        "subject": "It took something to write that",
+        "body": "It took something out of you to write this:\n\n{echo}\n\nI remember. That's all I wanted to say."
+      },
+      "D21": {
+        "subject": "That line of yours has stayed with me",
+        "body": "Some things get lighter the moment they're said out loud. You said:\n\n{echo}\n\nThat lightness was real."
+      },
+      "D30": {
+        "subject": "What you said a month ago",
+        "body": "A month ago, you said:\n\n{echo}\n\nA person and their own words can drift apart. Reading it now — does it land the same way?"
+      },
+      "D66": {
+        "subject": "The road you walked is still there",
+        "body": "Every step of the road you walked is still on the map. This is still on it:\n\n{echo}\n\nWhenever you want to look at it again, it's there."
+      },
+      "D90": {
+        "subject": "Three months ago, you wrote a letter",
+        "body": "Three months ago, you wrote a letter. It's still here.\n\n{echo}\n\nThe person who wrote it has probably come a little further since."
+      }
+    }
+  },
   "journey": {
     "title": "Journey",
     "sub": "Four stages, no deadlines. How far you go is up to you.",

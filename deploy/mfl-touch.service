@@ -1,0 +1,19 @@
+[Unit]
+Description=money-freedom-living 节点来信调度（M11-E / docs/05 §9.5）
+Documentation=file:///root/money-freedom-living/docs/05-多书架构与触达层.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/root/money-freedom-living
+# 凭据只从 .env.local 读，绝不写进 unit 文件（unit 会被 systemctl cat 明文打出来）
+ExecStart=/usr/bin/env node --env-file=/root/money-freedom-living/.env.local \
+  /root/money-freedom-living/scripts/touch-dispatch.mjs --send
+# 没配 TOUCH_CRON_SECRET / RESEND_* 时脚本自己会优雅退出（exit 0），不会刷红
+StandardOutput=journal
+StandardError=journal
+TimeoutStartSec=600
+
+[Install]
+WantedBy=multi-user.target
