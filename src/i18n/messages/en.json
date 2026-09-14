@@ -382,6 +382,11 @@
   "onboarding": {
     "title": "A check-up for your relationship with money",
     "start": "Begin",
+    "welcome": {
+      "title": "Take a breath. Then we start from one small thing.",
+      "sub": "No questionnaire. No sign-up. Just the two of us, talking.",
+      "start": "I'm here"
+    },
     "questions": {
       "moment_when": {
         "text": "When did you last buy something purely because you wanted it?",
@@ -428,6 +433,14 @@
         "placeholder": "As much or as little as you want"
       }
     },
+    "form": {
+      "title": "A few things about money",
+      "progress": "One at a time. You can skip any of them, and skipping costs you nothing.",
+      "next": "Next",
+      "skip": "Skip this one",
+      "placeholder": "One sentence is enough",
+      "noQuestion": "Nothing left to ask."
+    },
     "talk": {
       "title": "A short talk",
       "hint": "I'll ask about one thing only, and go deeper. You can stop any time.",
@@ -437,7 +450,7 @@
     "echo": {
       "title": "Here's what I heard",
       "loading": "Letting me say back what I heard…",
-      "hint": "This is the first thing that's yours. Tell me a little more and I can see you more clearly.",
+      "hint": "This is the first thing that's yours. There are a few more things I'd like to know — one at a time, from here on.",
       "next": "Tell me a little more",
       "amend": "Not quite right? You can fix it in the next step",
       "fallback": "I didn't catch it clearly yet. Let's talk a little first — no rush."

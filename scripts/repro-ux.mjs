@@ -15,24 +15,20 @@ const check = (name, cond, detail = '') => {
   cond ? pass++ : fail++;
 };
 
-// ── 1. 体检：选项可点选 ──
+// ── 1. 体检：首屏是欢迎与对话入口，不再是 6 题问卷（P0-3）──
 await page.goto(`${BASE}/zh-CN/onboarding`, { waitUntil: 'networkidle' });
-const step1 = page.locator('text=金钱关系体检').first();
-check('体检页加载', await step1.isVisible().catch(() => false));
-
-// 找问卷选项按钮（向导第一步：单选组）
-const option = page.locator('button:has-text("周")').first();
-const optionFallback = page.locator('[role="radio"], button').filter({ hasText: /工作日|周|发薪|月|每周|每月/ }).first();
-const target = (await option.count()) ? option : optionFallback;
-if (await target.count()) {
-  await target.click();
-  await page.waitForTimeout(300);
-  const cls = (await target.getAttribute('class')) ?? '';
-  const pressed = (await target.getAttribute('aria-pressed')) ?? '';
-  const checked = (await target.getAttribute('aria-checked')) ?? '';
-  check('体检选项点击后出现选中态', /accent|selected|ring|border-ink|bg-accent/.test(cls) || ['true'].includes(pressed) || ['true'].includes(checked), `class="${cls.slice(0, 80)}" aria-pressed=${pressed} aria-checked=${checked}`);
-} else {
-  check('体检选项点击后出现选中态', false, '未找到选项元素（需人工核对选择器）');
+const welcomeTitle = page.locator('[data-step="welcome"]').first();
+check('体检页加载（首屏是欢迎）', await welcomeTitle.isVisible().catch(() => false));
+// 选项 P0-3 不在首屏：检查问卷整块不在 welcome 屏里
+const surveyOnFirst = await page.locator('[data-step="welcome"] [data-question]').count();
+check('首屏不出现问卷（welcome 屏里没有 data-question）', surveyOnFirst === 0, `n=${surveyOnFirst}`);
+// 进入对话：点「我在」开始
+const startBtn = page.locator('button:has-text("我在")').first();
+check('首屏有「我在」入口', (await startBtn.count()) > 0);
+if ((await startBtn.count()) > 0) {
+  await startBtn.click();
+  await page.waitForSelector('[data-step="talk"]', { timeout: 8000 });
+  check('点「我在」进入对话屏', await page.locator('[data-step="talk"]').isVisible());
 }
 
 // ── 2. journey → chat CTA ──

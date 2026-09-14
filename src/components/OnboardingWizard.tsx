@@ -1,9 +1,11 @@
 'use client';
 
-// 体检向导：问卷 →「我听到的是…」（第 2 分钟，第一个物件）→ AI 初谈 → 复述确认
-// + 单独同意 → 画像生成 → 完成。
-// 顺序铁律（docs/05 §7）：先被说中 → 再注册 / 同意 / 定价。所以问卷交完立刻给那一句，
-// 敏感信息单独同意排在它**之后**、画像生成之前。
+// 体检向导（P0-3 首启重排后的顺序）：
+//   欢迎（一句，不问任何题）→ 一段对话 → 「我听到的是…」（前 3 分钟，第一个物件）
+//   → 问卷（6 题拆成多段，一次一件、能跳过）→ 复述确认 + 单独同意 → 画像生成 → 完成。
+// 两条红线没动：
+// - 顺序铁律（docs/05 §7）：先被说中 → 再注册 / 同意 / 定价。同意区仍在"被说中"**之后**。
+// - 首屏不出现问卷（docs/10 §P0-3）：进页第一眼是欢迎与对话，不是 6 道题。
 import { useRef, useState } from 'react';
 import Link from 'next/link';
 import { QUESTIONS } from '@/lib/onboarding';
@@ -21,18 +23,22 @@ interface Turn {
   content: string;
 }
 
-type Step = 'survey' | 'echo' | 'talk' | 'reflect' | 'generating' | 'done';
+type Step = 'welcome' | 'talk' | 'echo' | 'form' | 'reflect' | 'generating' | 'done';
 
 export default function OnboardingWizard({ locale, dict }: Props) {
-  const [step, setStep] = useState<Step>('survey');
+  const [step, setStep] = useState<Step>('welcome');
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [turns, setTurns] = useState<Turn[]>([]);
   const [streaming, setStreaming] = useState(false);
   const [summary, setSummary] = useState('');
-  // 第一次被说中：问卷交完就有的那一句（不等初谈、不要注册、不问同意）
+  // 第一次被说中：对话里拿到的那一句（不等注册、不问同意）
   const [echo, setEcho] = useState('');
   const [echoFailed, setEchoFailed] = useState(false);
+  const [echoLoading, setEchoLoading] = useState(false);
+  // 问卷一次一件（P0-3：不一次给 6 题）
+  const [qi, setQi] = useState(0);
+  const [savingForm, setSavingForm] = useState(false);
   const [reflectDone, setReflectDone] = useState(false);
   // 敏感信息单独同意 + 18+ 声明（P§9）：两个独立勾选，不与任何协议打包；
   // 拒绝者可继续用问卷与日记，只是不生成画像、不进行 AI 深谈
@@ -44,7 +50,9 @@ export default function OnboardingWizard({ locale, dict }: Props) {
   const [supplement, setSupplement] = useState('');
   const [error, setError] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
-  // 首次"说中了"耗时的起点：进到这个页面的那一刻（指标见 docs/05 §7）
+  // 首次"说中了"耗时的起点：进到这个页面的那一刻（指标见 docs/05 §7）。
+  // 首启重排后起点仍是落地那一刻——欢迎屏、对话、问卷都算在这 3 分钟里，
+  // 所以问卷必须排在"被说中"之后（否则它会把这一句顶出 3 分钟）。
   const startedAtRef = useRef(Date.now());
 
   const o = dict.onboarding;
@@ -55,29 +63,40 @@ export default function OnboardingWizard({ locale, dict }: Props) {
     setAnswers((prev) => ({ ...prev, [id]: value }));
   }
 
-  async function submitSurvey() {
-    setError(false);
+  /** 问卷收尾：一次提交已答的部分（全跳过也允许，服务端空答会拒——这里先兜住） */
+  async function submitAnswers(): Promise<boolean> {
+    const answerable = Object.fromEntries(Object.entries(answers).filter(([, v]) => v.trim()));
+    if (Object.keys(answerable).length === 0) return false;
+    setSavingForm(true);
     try {
       const response = await fetch('/api/onboarding/answers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ locale, answers }),
+        body: JSON.stringify({ locale, answers: answerable }),
       });
       if (!response.ok) throw new Error(String(response.status));
-      setStep('echo');
-      await loadEcho();
+      return true;
     } catch {
       setError(true);
+      return false;
+    } finally {
+      setSavingForm(false);
     }
   }
 
-  /** 问卷 →「我听到的是…」。失败不挡路：直接进初谈，那边同样能被说中 */
+  /** 对话里 →「我听到的是…」：素材是**他刚说的话**，不是问卷（P0-3 主素材） */
   async function loadEcho() {
+    setEchoLoading(true);
     try {
       const response = await fetch('/api/onboarding/reflect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ locale, elapsedMs: Date.now() - startedAtRef.current }),
+        body: JSON.stringify({
+          sessionId,
+          locale,
+          mode: 'echo',
+          elapsedMs: Date.now() - startedAtRef.current,
+        }),
       });
       if (!response.ok) throw new Error(String(response.status));
       const data = (await response.json()) as { summary: string };
@@ -85,12 +104,24 @@ export default function OnboardingWizard({ locale, dict }: Props) {
       setEcho(data.summary);
     } catch {
       setEchoFailed(true);
+    } finally {
+      setEchoLoading(false);
     }
   }
 
-  async function goTalk() {
-    setStep('talk');
-    if (!sessionId) await startTalk();
+  async function goEcho() {
+    setStep('echo');
+    await loadEcho();
+  }
+
+  /** 被说中之后才问的那几件小事：一次一件，跳过的照样往下走 */
+  async function goForm() {
+    if (Object.keys(answers).some((k) => answers[k]?.trim())) {
+      const ok = await submitAnswers();
+      if (!ok && !error) return; // 提交失败停在原地，别把答案弄丢
+    }
+    setStep('reflect');
+    void goReflect();
   }
 
   async function startTalk() {
@@ -122,6 +153,11 @@ export default function OnboardingWizard({ locale, dict }: Props) {
     } finally {
       setStreaming(false);
     }
+  }
+
+  async function goTalk() {
+    setStep('talk');
+    if (!sessionId) await startTalk();
   }
 
   async function sendMessage(text: string, silent = false) {
@@ -165,9 +201,8 @@ export default function OnboardingWizard({ locale, dict }: Props) {
   async function goReflect() {
     if (!sessionId) {
       setReflectDone(true);
-      return setStep('reflect');
+      return;
     }
-    setStep('reflect');
     try {
       const response = await fetch('/api/onboarding/reflect', {
         method: 'POST',
@@ -211,97 +246,26 @@ export default function OnboardingWizard({ locale, dict }: Props) {
 
   // ---------- 各步渲染 ----------
 
-  if (step === 'survey') {
-    const answerable = QUESTIONS.filter((q) => answers[q.id]?.trim());
+  // 首屏：一句欢迎 + 直接开始一段对话。不问任何题（P0-3）
+  if (step === 'welcome') {
     return (
-      <div className="flex flex-col pt-12">
-        <h1 className="text-2xl font-medium tracking-tight">{o.title}</h1>
-        <div className="mt-8 flex flex-col gap-8">
-          {QUESTIONS.map((q, i) => {
-            const qd = (o.questions as Record<string, { text: string; options?: Record<string, string>; placeholder?: string }>)[q.id];
-            return (
-              <div key={q.id}>
-                <p className="text-sm leading-relaxed">
-                  <span className="text-ink-soft">{i + 1}.</span> {qd.text}
-                </p>
-                {q.kind === 'choice' && qd.options ? (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {q.options!.map((value) => (
-                      <button
-                        key={value}
-                        type="button"
-                        onClick={() => setAnswer(q.id, value)}
-                        className={`rounded-full border px-4 py-2 text-sm transition-colors ${
-                          answers[q.id] === value ? 'border-accent bg-accent text-paper' : 'border-line text-ink-soft hover:text-ink'
-                        }`}
-                      >
-                        {qd.options![value]}
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <textarea
-                    value={answers[q.id] ?? ''}
-                    onChange={(e) => setAnswer(q.id, e.target.value)}
-                    placeholder={qd.placeholder}
-                    rows={2}
-                    maxLength={500}
-                    className="mt-3 w-full resize-none rounded border border-line bg-white/60 p-3 text-sm leading-relaxed outline-none focus:border-accent"
-                  />
-                )}
-              </div>
-            );
-          })}
-        </div>
-        {error && <p className="mt-4 text-sm text-red-700">{o.error}</p>}
+      <div className="flex flex-col pt-16" data-step="welcome">
+        <h1 className="text-2xl font-medium leading-relaxed tracking-tight">{o.welcome.title}</h1>
+        <p className="mt-4 text-sm leading-relaxed text-ink-soft">{o.welcome.sub}</p>
         <button
           type="button"
-          onClick={submitSurvey}
-          disabled={answerable.length === 0}
-          className="mt-10 rounded-full bg-accent px-8 py-3 text-base text-paper transition-opacity hover:opacity-90 disabled:opacity-40"
+          onClick={goTalk}
+          className="mt-10 self-start rounded-full bg-accent px-8 py-3 text-base text-paper transition-opacity hover:opacity-90"
         >
-          {o.talk.title} →
+          {o.welcome.start}
         </button>
-      </div>
-    );
-  }
-
-  // 第一个物件：问卷交完就拿到的那一句。这一步不要注册、不问同意、不提价钱
-  if (step === 'echo') {
-    return (
-      <div className="flex flex-col pt-12" data-step="echo">
-        <h2 className="text-xl font-medium">{o.echo.title}</h2>
-        {echo && (
-          <div data-echo className="mt-6 whitespace-pre-wrap border border-line bg-white/60 p-5 text-base leading-loose">
-            {echo}
-          </div>
-        )}
-        {!echo && !echoFailed && <p className="mt-6 animate-pulse text-sm text-ink-soft">{o.echo.loading}</p>}
-        {echoFailed && <p className="mt-6 text-sm text-ink-soft">{o.echo.fallback}</p>}
-        {(echo || echoFailed) && (
-          <>
-            <p className="mt-6 text-sm leading-relaxed text-ink-soft">{echoFailed ? o.talk.hint : o.echo.hint}</p>
-            <button
-              type="button"
-              onClick={goTalk}
-              className="mt-8 self-start rounded-full bg-accent px-8 py-3 text-base text-paper transition-opacity hover:opacity-90"
-            >
-              {o.echo.next} →
-            </button>
-            {echo && (
-              <button type="button" onClick={goTalk} className="mt-3 self-start text-sm text-ink-soft underline underline-offset-4 hover:text-ink">
-                {o.echo.amend}
-              </button>
-            )}
-          </>
-        )}
       </div>
     );
   }
 
   if (step === 'talk') {
     return (
-      <div className="flex flex-col pt-12">
+      <div className="flex flex-col pt-12" data-step="talk">
         <h1 className="text-2xl font-medium tracking-tight">{o.talk.title}</h1>
         <p className="mt-2 text-sm text-ink-soft">{o.talk.hint}</p>
         <div className="mt-6 flex min-h-[40vh] flex-col gap-4">
@@ -317,18 +281,124 @@ export default function OnboardingWizard({ locale, dict }: Props) {
         </div>
         {error && <p className="mt-4 text-sm text-red-700">{o.error}</p>}
         <TalkInput disabled={streaming} onSend={(text) => sendMessage(text)} />
-        {canGenerate && !streaming && (
-          <button type="button" onClick={goReflect} className="mt-6 self-start rounded-full border border-accent px-6 py-2 text-sm text-accent hover:bg-accent hover:text-paper">
-            {o.talk.done} · {o.talk.generate}
+        {userTurns >= 1 && !streaming && (
+          <button
+            type="button"
+            onClick={goEcho}
+            className="mt-6 self-start rounded-full border border-accent px-6 py-2 text-sm text-accent hover:bg-accent hover:text-paper"
+          >
+            {o.echo.title} →
           </button>
         )}
       </div>
     );
   }
 
+  // 第一个物件：对话里拿到的那一句。这一步不要注册、不问同意、不提价钱
+  if (step === 'echo') {
+    return (
+      <div className="flex flex-col pt-12" data-step="echo">
+        <h2 className="text-xl font-medium">{o.echo.title}</h2>
+        {echo && (
+          <div data-echo className="mt-6 whitespace-pre-wrap border border-line bg-white/60 p-5 text-base leading-loose">
+            {echo}
+          </div>
+        )}
+        {!echo && !echoFailed && (echoLoading || !echo) && <p className="mt-6 animate-pulse text-sm text-ink-soft">{o.echo.loading}</p>}
+        {echoFailed && <p className="mt-6 text-sm text-ink-soft">{o.echo.fallback}</p>}
+        {(echo || echoFailed) && (
+          <>
+            <p className="mt-6 text-sm leading-relaxed text-ink-soft">{echoFailed ? o.talk.hint : o.echo.hint}</p>
+            <button
+              type="button"
+              onClick={goForm}
+              className="mt-8 self-start rounded-full bg-accent px-8 py-3 text-base text-paper transition-opacity hover:opacity-90"
+            >
+              {o.echo.next} →
+            </button>
+            {echo && (
+              <button type="button" onClick={goTalk} className="mt-3 self-start text-sm text-ink-soft underline underline-offset-4 hover:text-ink">
+                {o.echo.amend}
+              </button>
+            )}
+          </>
+        )}
+      </div>
+    );
+  }
+
+  // 被说中之后的体检：6 题拆成多段，一次一件，跳过的没有任何代价
+  if (step === 'form') {
+    const q = QUESTIONS[qi];
+    const qd = (o.questions as Record<string, { text: string; options?: Record<string, string>; placeholder?: string }>)[q.id];
+    const last = qi === QUESTIONS.length - 1;
+    const advance = () => (last ? void goForm() : setQi((n) => n + 1));
+    return (
+      <div className="flex flex-col pt-12" data-step="form">
+        <h2 className="text-xl font-medium">{o.form.title}</h2>
+        <p className="mt-2 text-sm leading-relaxed text-ink-soft">{o.form.progress}</p>
+        <p className="mt-8 text-xs text-ink-soft" data-form-progress>
+          {qi + 1} / {QUESTIONS.length}
+        </p>
+        <p className="mt-2 text-sm leading-relaxed" data-question={q.id}>
+          {qd.text}
+        </p>
+        {q.kind === 'choice' && qd.options ? (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {q.options!.map((value) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => {
+                  setAnswer(q.id, value);
+                  advance();
+                }}
+                className={`rounded-full border px-4 py-2 text-sm transition-colors ${
+                  answers[q.id] === value ? 'border-accent bg-accent text-paper' : 'border-line text-ink-soft hover:text-ink'
+                }`}
+              >
+                {qd.options![value]}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <textarea
+            value={answers[q.id] ?? ''}
+            onChange={(e) => setAnswer(q.id, e.target.value)}
+            placeholder={qd.placeholder ?? o.form.placeholder}
+            rows={2}
+            maxLength={500}
+            className="mt-4 w-full resize-none rounded border border-line bg-white/60 p-3 text-sm leading-relaxed outline-none focus:border-accent"
+          />
+        )}
+        {error && <p className="mt-4 text-sm text-red-700">{o.error}</p>}
+        <div className="mt-8 flex items-center gap-4">
+          {q.kind !== 'choice' && (
+            <button
+              type="button"
+              onClick={advance}
+              disabled={savingForm}
+              className="rounded-full bg-accent px-8 py-3 text-base text-paper transition-opacity hover:opacity-90 disabled:opacity-40"
+            >
+              {o.form.next}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={advance}
+            disabled={savingForm}
+            className="text-sm text-ink-soft underline underline-offset-4 hover:text-ink disabled:opacity-40"
+          >
+            {o.form.skip}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (step === 'reflect') {
     // 顺序铁律（docs/05 §7）：同意区只在他已经被说中之后才出现——
-    // echo 是第 2 分钟那一句，summary 是初谈复述，两者都没拿到就等这一步结束再放行
+    // echo 是前 3 分钟那一句，summary 是初谈复述，两者都没拿到就等这一步结束再放行
     const beenSeen = Boolean(echo || summary) || reflectDone;
     return (
       <div className="flex flex-col pt-12" data-step="reflect">
@@ -359,7 +429,7 @@ export default function OnboardingWizard({ locale, dict }: Props) {
           <button
             type="button"
             onClick={generatePortrait}
-            disabled={!adultOk || !sensitiveOk}
+            disabled={!adultOk || !sensitiveOk || (canGenerate === false && userTurns === 0)}
             className="self-start rounded-full bg-accent px-6 py-2 text-sm text-paper hover:opacity-90 disabled:opacity-40"
           >
             {o.reflect.confirm} · {o.reflect.next}

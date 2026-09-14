@@ -71,8 +71,8 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ sessio
       if (!message) return bail('empty_message', 400);
       const userTurns = (await getSessionMessages(sessionId)).filter((m) => m.role === 'user').length;
       if (userTurns >= TALK_MAX_USER_MESSAGES) return bail('talk_limit_reached', 409);
-      const questionnaire = profile?.portrait?.questionnaire;
-      if (!questionnaire) return bail('questionnaire_required', 400);
+      // P0-3：初谈先于问卷，问卷可能还不存在——空素材是正常状态，不是错误
+      const questionnaire = profile?.portrait?.questionnaire ?? {};
       return respondToMessage({
         request,
         identity,

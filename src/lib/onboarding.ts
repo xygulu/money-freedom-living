@@ -42,9 +42,11 @@ export const LOCALE_NAME: Record<string, string> = {
   ja: '日本語',
 };
 
-/** 初谈 system：阶段 1 姿态（内容层）+ 初谈专用纪律 + 问卷素材。
- *  tz = 用户时区：这里也会说到「今天/最近」，得和用户的钟对上 */
-export function buildTalkSystem(locale: Locale, questionnaire: Record<string, string>, tz: string = DEFAULT_TZ): string {
+/** 初谈 system：阶段 1 姿态（内容层）+ 初谈专用纪律 + 问卷素材（可空）。
+ *  tz = 用户时区：这里也会说到「今天/最近」，得和用户的钟对上。
+ *  P0-3 首启重排后，初谈**先于**问卷发生（首屏不出现问卷），所以 questionnaire
+ *  允许为空——那时候素材只有他刚说出口的那一句话，纪律相应更严（见下方规则）。 */
+export function buildTalkSystem(locale: Locale, questionnaire: Record<string, string> = {}, tz: string = DEFAULT_TZ): string {
   const stage = getJourneyStage(locale, 1);
   const practices = getPracticesForStage(1);
   const lines: string[] = [];
@@ -60,20 +62,27 @@ export function buildTalkSystem(locale: Locale, questionnaire: Record<string, st
     for (const p of practices) lines.push(`[${p.date}] ${p.body}`);
   }
 
+  const hasQuestionnaire = Object.keys(questionnaire).length > 0;
   lines.push(
     '',
     '## 初谈规则（与阶段原则叠加，冲突时以这里更严格的为准）',
-    '- 你只有 3-5 轮机会。第一轮：从问卷答案里挑情绪重量最重的一处，用 1-2 句话接住情绪 + 一个具体的追问开场。',
+    hasQuestionnaire
+      ? '- 你只有 3-5 轮机会。第一轮：从问卷答案里挑情绪重量最重的一处，用 1-2 句话接住情绪 + 一个具体的追问开场。'
+      : '- 你只有 3-5 轮机会。这一次没有问卷，你手上什么都没有——所以第一轮：用一句短的欢迎 + 一个**你自己也不知道答案**的具体问题开场（例如最近一次为钱心里一动的时刻）。绝不许在用户开口之前描述他、猜他、给他任何评价。',
     '- 每轮只追问一个点，往深处走（什么时候、当时发生了什么、心里什么感觉），绝不换话题、绝不问清单式问题。',
     '- 全程不给建议、不安慰、不纠正、不总结——只反映和好奇。',
     '- 把用户原话里最生动的一句原样复述回去（这是「被听见」的来源）。',
     '- 用户明显不适时，放慢并说明可以随时停。不要为了流程推进而推进。',
   );
 
-  lines.push('', '## 用户问卷答案（原始素材，禁止当作已确认的事实转述给用户）');
-  for (const q of QUESTIONS) {
-    const v = questionnaire[q.field];
-    if (v) lines.push(`- ${q.id}: ${v}`);
+  if (hasQuestionnaire) {
+    lines.push('', '## 用户问卷答案（原始素材，禁止当作已确认的事实转述给用户）');
+    for (const q of QUESTIONS) {
+      const v = questionnaire[q.field];
+      if (v) lines.push(`- ${q.id}: ${v}`);
+    }
+  } else {
+    lines.push('', '## 素材状态', '问卷尚未进行（首启顺序：先说话，被说中之后才逐题体检）。用户说的每一句原话是你唯一的素材。');
   }
   return lines.join('\n');
 }
@@ -90,27 +99,39 @@ export function echoOpener(locale: Locale): string {
 }
 
 /**
- * 第一次被说中（M11-C，docs/05 §7）：问卷交完就给的那一句，不等初谈。
- * 这是用户拿到的**第一个属于自己的东西**，所以只有两条硬规则——只用他自己写下的东西、
- * 不许多说。素材薄（全是选择题）时宁可只说一句，也不编。
+ * 第一次被说中（M11-C，docs/05 §7；P0-3 后素材来源改为对话）。
+ * 这是他拿到的**第一个属于自己的东西**，所以只有两条硬规则——只用他自己说过的、
+ * 不许多说。素材薄（只说了半句）时宁可只说一句，也不编。
+ *
+ * 素材两种，可以同时给：
+ * - `questionnaire`：逐题体检的答案（P0-3 后这部分排在"被说中"之后，通常为空）
+ * - `chatText`：他刚在对话里说的话——P0-3 之后的**主素材**，且必须是「对话里用户自己说过的词」
  */
 export function buildEchoMessages(
   locale: Locale,
-  questionnaire: Record<string, string>
+  questionnaire: Record<string, string> = {},
+  chatText = ''
 ): { system: string; messages: { role: 'user' | 'assistant'; content: string }[] } {
   const opener = echoOpener(locale);
   const answers = QUESTIONS.map((q) => (questionnaire[q.field] ? `- ${q.id}: ${questionnaire[q.field]}` : null))
     .filter(Boolean)
     .join('\n');
+  const material = [
+    chatText ? `【他刚在对话里说的话】\n${chatText}` : '',
+    answers ? `【他填下的几件事】\n${answers}` : '',
+  ]
+    .filter(Boolean)
+    .join('\n\n');
   return {
     system: [
-      `你是一位温和的倾听者。用户刚填完一份关于钱的问卷，你要用 2-3 句话把你听到的说回给他（「${opener}」）。请始终用${LOCALE_NAME[locale] ?? 'English'}输出。`,
-      `规则：以「${opener}」开头；只说他自己写下/选下的内容，一个字都不许编；`,
-      '开放题里的原话优先原样引用（这是「被听见」的来源）；素材少就少说，宁可两句，不许凑。',
+      `你是一位温和的倾听者。用户刚和你说了几句话，你要用 2-3 句话把你听到的说回给他（「${opener}」）。请始终用${LOCALE_NAME[locale] ?? 'English'}输出。`,
+      `规则：以「${opener}」开头；只说他自己说过/选过的内容，一个字都不许编；`,
+      '引用他**自己的词**，不要换成一个更漂亮的说法——他用的那个词就是被他听见的地方；',
+      '素材少就少说，宁可两句，不许凑；他什么都没说就直说还没听清，不许替他填。',
       '不做评价、不给建议、不下结论、不升华；最后一句可以用问句（「我理解得对吗」）。',
       '直接输出这 2-3 句话本身，不要任何前后缀。',
     ].join('\n'),
-    messages: [{ role: 'user', content: `以下是我刚填的问卷：\n\n${answers}\n\n请输出「${opener}」。` }],
+    messages: [{ role: 'user', content: `${material || '(他还没有说过什么)'}\n\n请输出「${opener}」。` }],
   };
 }
 

@@ -1,7 +1,8 @@
-// POST /api/onboarding/reflect：「我听到的是…」。两种素材，一个出口：
-// - 无 sessionId（M11-C，docs/05 §7）：问卷一交完就说回给他——这是**第一个物件、
-//   第一次被说中**，在第 2 分钟，早于注册 / 同意 / 定价（顺序铁律）。
-// - 有 sessionId：初谈结束前的 3-5 句复述（画像生成前的素材校验）。
+// POST /api/onboarding/reflect：两次复述，一个出口。
+// - mode='echo'（P0-3 首启重排后的**第一句「我听到的是…」**）：素材只有他刚在对话里
+//   说的那句话——首屏不出现问卷，所以这一句必须在**前 3 分钟内**、用他自己的词说回去。
+// - mode='reflect' + sessionId：初谈结束前的 3-5 句复述（画像生成前的素材校验）。
+// - mode='reflect' 无 sessionId（M11-C 旧路径）：问卷一交完就说回给他（保留兼容）。
 // 复述本身不入库——画像素材 = 问卷 + 会话记录 + 用户补充。
 import { NextRequest } from 'next/server';
 import { resolveIdentity } from '@/lib/identity';
@@ -22,9 +23,15 @@ const ELAPSED_MAX_S = 7200;
 
 export async function POST(request: NextRequest) {
   try {
-    const body = (await request.json().catch(() => ({}))) as { sessionId?: string; locale?: string; elapsedMs?: number };
+    const body = (await request.json().catch(() => ({}))) as {
+      sessionId?: string;
+      locale?: string;
+      elapsedMs?: number;
+      mode?: string;
+    };
     const sessionId = body.sessionId;
     const locale = body.locale;
+    const mode = body.mode === 'echo' ? 'echo' : 'reflect';
     if (!isLocale(locale) || !enabledLocales.includes(locale)) return jsonError('invalid_locale', 400);
 
     const identity = await resolveIdentity(request);
@@ -40,12 +47,13 @@ export async function POST(request: NextRequest) {
       const history = await getSessionMessages(sessionId);
       if (history.length === 0) return jsonError('empty_session', 400);
       const chatText = history.map((m) => `${m.role === 'user' ? '用户' : '你'}：${m.content}`).join('\n\n');
-      prompt = buildReflectMessages(locale, chatText);
+      prompt = mode === 'echo' ? buildEchoMessages(locale, {}, chatText) : buildReflectMessages(locale, chatText);
       source = 'talk';
     } else {
-      // 问卷版：素材就是他刚写下的那几行（answers 路由已落进 portrait.questionnaire）
+      // 问卷版（旧路径）：素材就是他刚写下的那几行（answers 路由已落进 portrait.questionnaire）
       const profile = await getProfile(identity.key);
       const questionnaire = (profile?.portrait?.questionnaire ?? {}) as Record<string, string>;
+      // 什么都没说过就不能编（P0-3 后首启是先说话；没说话 = 没有素材）
       if (Object.keys(questionnaire).length === 0) return jsonError('empty_answers', 400);
       prompt = buildEchoMessages(locale, questionnaire);
       source = 'survey';

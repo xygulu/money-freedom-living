@@ -1,6 +1,9 @@
 // POST /api/onboarding/talk：创建体检初谈会话并流式产出 AI 开场。
 // 初谈是首次流程的一部分，永不占配额（P§7）。触发 LLM 的首条 user 消息
 // 只用于调用、不落库（聊天记录里只有 AI 追问与用户回答）。
+//
+// P0-3 首启重排：初谈现在**先于**问卷发生（首屏不出现问卷、直接开始一段对话），
+// 所以这里不再要求问卷已交——没有问卷时开场纪律更严（见 buildTalkSystem）。
 import { NextRequest } from 'next/server';
 import { resolveIdentity } from '@/lib/identity';
 import { getProfile } from '@/lib/profile';
@@ -15,7 +18,7 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 const OPENING_TRIGGER =
-  '(The user has just submitted the questionnaire. Please begin the conversation with your first sentence according to the "first-round" rule in the initial conversation rules.)';
+  '(Please begin the conversation with your first sentence, following the "first-round" rule in the initial conversation rules.)';
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,10 +28,8 @@ export async function POST(request: NextRequest) {
 
     const identity = await resolveIdentity(request);
     const profile = await getProfile(identity.key);
-    const questionnaire = profile?.portrait?.questionnaire;
-    if (!questionnaire || Object.keys(questionnaire).length === 0) {
-      return jsonError('questionnaire_required', 400);
-    }
+    // 问卷可能还没开始（首启就是一段对话）——没有就不给，不是错误
+    const questionnaire = profile?.portrait?.questionnaire ?? {};
 
     const session = await createSession({ userKey: identity.key, locale, kind: 'onboarding_talk' });
     const system = buildTalkSystem(locale, questionnaire, timeZoneFrom(request.cookies));
