@@ -70,7 +70,9 @@ const reflect = await api('/api/onboarding/reflect', { sessionId, locale: 'zh-CN
 check('我听到的是（复述）', reflect.status === 200 && (reflect.json?.summary ?? '').length > 30, `：${(reflect.json?.summary ?? '').slice(0, 80)}…`);
 
 // ---- 5. 画像生成 ----
-const portrait = await api('/api/onboarding/portrait', { sessionId, locale: 'zh-CN' });
+// consent: true —— 敏感信息单独同意（P§9）是画像生成的硬前置；M11-C 后它排在
+// 「我听到的是…」之后（先被说中 → 再同意），顺序与前端一致
+const portrait = await api('/api/onboarding/portrait', { sessionId, locale: 'zh-CN', consent: true });
 const p = portrait.json?.portrait;
 check('画像生成', portrait.status === 200 && Boolean(p?.baseColor && p?.script && p?.spoken?.length >= 1 && p?.moments?.length >= 1));
 if (p) {

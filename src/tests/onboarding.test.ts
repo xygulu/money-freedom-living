@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyCalibration, parseCalibrateSection, validatePortraitDraft } from '@/lib/onboarding';
+import { applyCalibration, buildEchoMessages, buildReflectMessages, echoOpener, parseCalibrateSection, validatePortraitDraft } from '@/lib/onboarding';
 import type { Portrait } from '@/lib/profile';
 import { guestKeyFromId } from '@/lib/quota';
 
@@ -107,5 +107,44 @@ describe('identity：游客档案键跨日稳定', () => {
     const id = 'a'.repeat(32);
     expect(guestKeyFromId(id, '2026-09-11')).not.toBe(guestKeyFromId(id, '2026-09-12'));
     expect(id).toMatch(/^[0-9a-f]{32}$/);
+  });
+});
+
+describe('第一次被说中（M11-C）：问卷交完就给的那一句', () => {
+  const questionnaire = {
+    specific_moments: 'cant_remember',
+    script_source: '我妈说，咱家不配',
+    concerns_seed: '上周看到余额突然心慌',
+  };
+
+  it('以「我听到的是…」开头，且素材只有用户自己写下的答案', () => {
+    const { system, messages } = buildEchoMessages('zh-CN', questionnaire);
+    expect(system).toContain(echoOpener('zh-CN'));
+    expect(system).toContain('一个字都不许编');
+    expect(messages).toHaveLength(1);
+    expect(messages[0].content).toContain('我妈说，咱家不配');
+    expect(messages[0].content).toContain('上周看到余额突然心慌');
+  });
+
+  it('没答的题不进素材（别让它替用户补空）', () => {
+    const { messages } = buildEchoMessages('zh-CN', { script_source: '只答了这一题' });
+    expect(messages[0].content).toContain('只答了这一题');
+    expect(messages[0].content).not.toContain('concerns_seed');
+    expect(messages[0].content).not.toContain('payday_habit');
+  });
+
+  it('四语言各有自己的开场白（复述与初谈复述共用同一句口径）', () => {
+    expect(echoOpener('en')).toBe('What I heard is…');
+    expect(echoOpener('ja')).toBe('私が聞いたのは…');
+    expect(echoOpener('zh-TW')).toBe('我聽到的是…');
+    expect(buildEchoMessages('en', questionnaire).system).toContain('English');
+    // 初谈结束前的复述用的是同一句开头——两处"被说中"口径一致
+    expect(buildReflectMessages('zh-CN', '对话记录').system).toContain(echoOpener('zh-CN'));
+  });
+
+  it('只要 2-3 句，不许升华（这一步之后才谈同意与注册）', () => {
+    const { system } = buildEchoMessages('zh-CN', questionnaire);
+    expect(system).toContain('2-3 句');
+    expect(system).toContain('不升华');
   });
 });

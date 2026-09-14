@@ -1,7 +1,9 @@
 'use client';
 
-// 体检向导：问卷 → AI 初谈（SSE 流式）→「我听到的是」确认 → 画像生成 → 完成。
-// 状态机五步；对话区极简（气泡式，纸感配色与全站一致）。
+// 体检向导：问卷 →「我听到的是…」（第 2 分钟，第一个物件）→ AI 初谈 → 复述确认
+// + 单独同意 → 画像生成 → 完成。
+// 顺序铁律（docs/05 §7）：先被说中 → 再注册 / 同意 / 定价。所以问卷交完立刻给那一句，
+// 敏感信息单独同意排在它**之后**、画像生成之前。
 import { useRef, useState } from 'react';
 import Link from 'next/link';
 import { QUESTIONS } from '@/lib/onboarding';
@@ -19,7 +21,7 @@ interface Turn {
   content: string;
 }
 
-type Step = 'survey' | 'talk' | 'reflect' | 'generating' | 'done';
+type Step = 'survey' | 'echo' | 'talk' | 'reflect' | 'generating' | 'done';
 
 export default function OnboardingWizard({ locale, dict }: Props) {
   const [step, setStep] = useState<Step>('survey');
@@ -28,6 +30,10 @@ export default function OnboardingWizard({ locale, dict }: Props) {
   const [turns, setTurns] = useState<Turn[]>([]);
   const [streaming, setStreaming] = useState(false);
   const [summary, setSummary] = useState('');
+  // 第一次被说中：问卷交完就有的那一句（不等初谈、不要注册、不问同意）
+  const [echo, setEcho] = useState('');
+  const [echoFailed, setEchoFailed] = useState(false);
+  const [reflectDone, setReflectDone] = useState(false);
   // 敏感信息单独同意 + 18+ 声明（P§9）：两个独立勾选，不与任何协议打包；
   // 拒绝者可继续用问卷与日记，只是不生成画像、不进行 AI 深谈
   const [adultOk, setAdultOk] = useState(false);
@@ -35,6 +41,8 @@ export default function OnboardingWizard({ locale, dict }: Props) {
   const [supplement, setSupplement] = useState('');
   const [error, setError] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  // 首次"说中了"耗时的起点：进到这个页面的那一刻（指标见 docs/05 §7）
+  const startedAtRef = useRef(Date.now());
 
   const o = dict.onboarding;
   const userTurns = turns.filter((t) => t.role === 'user').length;
@@ -53,11 +61,33 @@ export default function OnboardingWizard({ locale, dict }: Props) {
         body: JSON.stringify({ locale, answers }),
       });
       if (!response.ok) throw new Error(String(response.status));
-      setStep('talk');
-      await startTalk();
+      setStep('echo');
+      await loadEcho();
     } catch {
       setError(true);
     }
+  }
+
+  /** 问卷 →「我听到的是…」。失败不挡路：直接进初谈，那边同样能被说中 */
+  async function loadEcho() {
+    try {
+      const response = await fetch('/api/onboarding/reflect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ locale, elapsedMs: Date.now() - startedAtRef.current }),
+      });
+      if (!response.ok) throw new Error(String(response.status));
+      const data = (await response.json()) as { summary: string };
+      if (!data.summary.trim()) throw new Error('empty');
+      setEcho(data.summary);
+    } catch {
+      setEchoFailed(true);
+    }
+  }
+
+  async function goTalk() {
+    setStep('talk');
+    if (!sessionId) await startTalk();
   }
 
   async function startTalk() {
@@ -130,7 +160,10 @@ export default function OnboardingWizard({ locale, dict }: Props) {
   }
 
   async function goReflect() {
-    if (!sessionId) return setStep('reflect');
+    if (!sessionId) {
+      setReflectDone(true);
+      return setStep('reflect');
+    }
     setStep('reflect');
     try {
       const response = await fetch('/api/onboarding/reflect', {
@@ -143,6 +176,8 @@ export default function OnboardingWizard({ locale, dict }: Props) {
       setSummary(data.summary);
     } catch {
       setSummary(''); // 复述失败不阻塞：确认步可跳过，画像仍可生成
+    } finally {
+      setReflectDone(true);
     }
   }
 
@@ -220,6 +255,39 @@ export default function OnboardingWizard({ locale, dict }: Props) {
     );
   }
 
+  // 第一个物件：问卷交完就拿到的那一句。这一步不要注册、不问同意、不提价钱
+  if (step === 'echo') {
+    return (
+      <div className="flex flex-col pt-12" data-step="echo">
+        <h2 className="text-xl font-medium">{o.echo.title}</h2>
+        {echo && (
+          <div data-echo className="mt-6 whitespace-pre-wrap border border-line bg-white/60 p-5 text-base leading-loose">
+            {echo}
+          </div>
+        )}
+        {!echo && !echoFailed && <p className="mt-6 animate-pulse text-sm text-ink-soft">{o.echo.loading}</p>}
+        {echoFailed && <p className="mt-6 text-sm text-ink-soft">{o.echo.fallback}</p>}
+        {(echo || echoFailed) && (
+          <>
+            <p className="mt-6 text-sm leading-relaxed text-ink-soft">{echoFailed ? o.talk.hint : o.echo.hint}</p>
+            <button
+              type="button"
+              onClick={goTalk}
+              className="mt-8 self-start rounded-full bg-accent px-8 py-3 text-base text-paper transition-opacity hover:opacity-90"
+            >
+              {o.echo.next} →
+            </button>
+            {echo && (
+              <button type="button" onClick={goTalk} className="mt-3 self-start text-sm text-ink-soft underline underline-offset-4 hover:text-ink">
+                {o.echo.amend}
+              </button>
+            )}
+          </>
+        )}
+      </div>
+    );
+  }
+
   if (step === 'talk') {
     return (
       <div className="flex flex-col pt-12">
@@ -248,14 +316,18 @@ export default function OnboardingWizard({ locale, dict }: Props) {
   }
 
   if (step === 'reflect') {
+    // 顺序铁律（docs/05 §7）：同意区只在他已经被说中之后才出现——
+    // echo 是第 2 分钟那一句，summary 是初谈复述，两者都没拿到就等这一步结束再放行
+    const beenSeen = Boolean(echo || summary) || reflectDone;
     return (
-      <div className="flex flex-col pt-12">
+      <div className="flex flex-col pt-12" data-step="reflect">
         <h2 className="text-xl font-medium">{o.reflect.title}</h2>
         {summary && <div className="mt-6 whitespace-pre-wrap border border-line bg-white/60 p-5 text-sm leading-relaxed">{summary}</div>}
         {!summary && <p className="mt-6 text-sm text-ink-soft">{o.talk.hint}</p>}
         <div className="mt-8 flex flex-col gap-3">
           {/* 单独同意区（P§9）：两项各自独立、默认不勾、拒绝不影响问卷/日记使用 */}
-          <div className="flex flex-col gap-3 border border-line bg-white/60 p-5 text-sm">
+          {beenSeen && (
+          <div data-consent className="flex flex-col gap-3 border border-line bg-white/60 p-5 text-sm">
             <label className="flex cursor-pointer items-start gap-3">
               <input type="checkbox" checked={adultOk} onChange={(e) => setAdultOk(e.target.checked)} className="mt-1" />
               <span>{o.consent.adultLabel}</span>
@@ -266,6 +338,8 @@ export default function OnboardingWizard({ locale, dict }: Props) {
             </label>
             <p className="text-xs leading-relaxed text-ink-soft">{o.consent.sensitiveHint}</p>
           </div>
+          )}
+          {beenSeen && (
           <button
             type="button"
             onClick={generatePortrait}
@@ -274,6 +348,7 @@ export default function OnboardingWizard({ locale, dict }: Props) {
           >
             {o.reflect.confirm} · {o.reflect.next}
           </button>
+          )}
           <div className="flex gap-2">
             <input
               value={supplement}

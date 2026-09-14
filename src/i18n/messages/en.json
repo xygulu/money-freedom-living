@@ -329,6 +329,14 @@
       "done": "Ready to see your portrait?",
       "generate": "Draw my portrait"
     },
+    "echo": {
+      "title": "Here's what I heard",
+      "loading": "Letting me say back what I heard…",
+      "hint": "This is the first thing that's yours. Tell me a little more and I can see you more clearly.",
+      "next": "Tell me a little more",
+      "amend": "Not quite right? You can fix it in the next step",
+      "fallback": "I didn't catch it clearly yet. Let's talk a little first — no rush."
+    },
     "reflect": {
       "title": "Here's what I heard",
       "confirm": "That's right",

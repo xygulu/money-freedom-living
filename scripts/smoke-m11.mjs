@@ -335,5 +335,63 @@ check(
   `${del.status} ${JSON.stringify(leftovers[0])}`
 );
 
+// ───────────────────── ⑤ 上手路径前置（M11-C）─────────────────────
+console.log('\n—— ⑤ 先被说中 → 再同意：问卷交完就给「我听到的是…」——');
+const up = await signUp('onboard');
+const echoNoAnswers = await post('/api/onboarding/reflect', { locale: 'zh-CN', elapsedMs: 5000 }, up.cookie);
+check('还没答问卷 → 不编（400，不许无中生有一句"被说中"）', echoNoAnswers.status === 400, String(echoNoAnswers.status));
+
+const answersRes = await post(
+  '/api/onboarding/answers',
+  {
+    locale: 'zh-CN',
+    answers: {
+      moment_when: 'cant_remember',
+      balance_feeling: 'panic',
+      childhood: 'M11 问卷原话：我妈总说咱家不配',
+      recent_worry: 'M11 问卷原话：上周看余额突然心慌',
+    },
+  },
+  up.cookie
+);
+check('问卷落库（第 1 分钟，不要注册、不问同意）', answersRes.status === 200);
+
+const t0 = Date.now();
+const echoRes = await post('/api/onboarding/reflect', { locale: 'zh-CN', elapsedMs: 92_000 }, up.cookie);
+const echoBody = await echoRes.json().catch(() => ({}));
+const echoOk = echoRes.status === 200 && typeof echoBody.summary === 'string' && echoBody.summary.trim().length > 0;
+check(
+  '不用 sessionId、不用初谈就能拿到那一句（LLM 不可用时 502，前端降级去初谈）',
+  echoOk || echoRes.status === 502,
+  `${echoRes.status} ${Math.round((Date.now() - t0) / 1000)}s`
+);
+if (echoOk) {
+  check('这一句以「我听到的是」开头（第一个物件）', echoBody.summary.trim().startsWith('我听到的是'), echoBody.summary.slice(0, 24));
+  check('素材来源标的是问卷，不是初谈', echoBody.source === 'survey', String(echoBody.source));
+}
+const echoEvents = await sql`
+  SELECT metadata FROM events WHERE user_key = ${up.key} AND name = 'first_echo_shown' ORDER BY id`;
+if (echoOk) {
+  check('首次"说中了"耗时进埋点', echoEvents.length === 1, `n=${echoEvents.length}`);
+  check(
+    '埋点只有秒数与来源，没有复述原文（敏感内容不进日志）',
+    echoEvents[0]?.metadata?.seconds === 92 &&
+      echoEvents[0]?.metadata?.under3min === true &&
+      !JSON.stringify(echoEvents[0]?.metadata ?? {}).includes('我听到的是'),
+    JSON.stringify(echoEvents[0]?.metadata ?? {})
+  );
+  const again = await post('/api/onboarding/reflect', { locale: 'zh-CN', elapsedMs: 999_000 }, up.cookie);
+  const againEvents = await sql`
+    SELECT count(*)::int AS n FROM events WHERE user_key = ${up.key} AND name = 'first_echo_shown'`;
+  check('"首次"就是首次：再来一次不覆盖也不重复记', again.status !== 500 && againEvents[0].n === 1);
+}
+const consentBefore = await sql`SELECT count(*)::int AS n FROM consent_records WHERE user_key = ${up.key}`;
+check('被说中之前一次同意都没要过（顺序铁律：先被说中 → 再注册/同意/定价）', consentBefore[0].n === 0);
+
+const wizardHtml = await (await get('/zh-CN/onboarding', up.cookie)).text();
+check('体检页从问卷开始（同意区不在首屏）', !wizardHtml.includes('data-consent'));
+
+await post('/api/me/delete', { confirm: 'DELETE' }, up.cookie);
+
 console.log(failures === 0 ? '\n全部通过 ✅' : `\n${failures} 处失败 ❌`);
 process.exit(failures === 0 ? 0 : 1);

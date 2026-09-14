@@ -78,19 +78,48 @@ export function buildTalkSystem(locale: Locale, questionnaire: Record<string, st
   return lines.join('\n');
 }
 
+/** 「我听到的是…」这句话本身（第一个物件的开头，各语言口径统一在这里） */
+export function echoOpener(locale: Locale): string {
+  return locale === 'en'
+    ? 'What I heard is…'
+    : locale === 'ja'
+      ? '私が聞いたのは…'
+      : locale === 'zh-TW'
+        ? '我聽到的是…'
+        : '我听到的是…';
+}
+
+/**
+ * 第一次被说中（M11-C，docs/05 §7）：问卷交完就给的那一句，不等初谈。
+ * 这是用户拿到的**第一个属于自己的东西**，所以只有两条硬规则——只用他自己写下的东西、
+ * 不许多说。素材薄（全是选择题）时宁可只说一句，也不编。
+ */
+export function buildEchoMessages(
+  locale: Locale,
+  questionnaire: Record<string, string>
+): { system: string; messages: { role: 'user' | 'assistant'; content: string }[] } {
+  const opener = echoOpener(locale);
+  const answers = QUESTIONS.map((q) => (questionnaire[q.field] ? `- ${q.id}: ${questionnaire[q.field]}` : null))
+    .filter(Boolean)
+    .join('\n');
+  return {
+    system: [
+      `你是一位温和的倾听者。用户刚填完一份关于钱的问卷，你要用 2-3 句话把你听到的说回给他（「${opener}」）。请始终用${LOCALE_NAME[locale] ?? 'English'}输出。`,
+      `规则：以「${opener}」开头；只说他自己写下/选下的内容，一个字都不许编；`,
+      '开放题里的原话优先原样引用（这是「被听见」的来源）；素材少就少说，宁可两句，不许凑。',
+      '不做评价、不给建议、不下结论、不升华；最后一句可以用问句（「我理解得对吗」）。',
+      '直接输出这 2-3 句话本身，不要任何前后缀。',
+    ].join('\n'),
+    messages: [{ role: 'user', content: `以下是我刚填的问卷：\n\n${answers}\n\n请输出「${opener}」。` }],
+  };
+}
+
 /** 「我听到的是」确认：3-5 句复述，供用户确认/补充（素材校验，不是总结陈词） */
 export function buildReflectMessages(
   locale: Locale,
   chatText: string
 ): { system: string; messages: { role: 'user' | 'assistant'; content: string }[] } {
-  const opener =
-    locale === 'en'
-      ? 'What I heard is…'
-      : locale === 'ja'
-        ? '私が聞いたのは…'
-        : locale === 'zh-TW'
-          ? '我聽到的是…'
-          : '我听到的是…';
+  const opener = echoOpener(locale);
   return {
     system: [
       `你是初谈的倾听者。初谈结束前，用 3-5 句话向用户复述你听到的关键点（「${opener}」）。请始终用${LOCALE_NAME[locale] ?? 'English'}输出。`,
