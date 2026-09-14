@@ -11,6 +11,7 @@ import { findOpenChatSession, getSessionMessages } from '@/lib/chat';
 import { getQuotaStatus, clientIpFromHeaders, guestKeyForRequest, GUEST_ID_COOKIE } from '@/lib/quota';
 import { timeZoneFrom, todayIn } from '@/lib/time';
 import ChatView from '@/components/ChatView';
+import CompanionDoor from '@/components/CompanionDoor';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,6 +51,9 @@ export default async function chatPage({
       <h1 className="text-2xl font-medium tracking-tight">{dict.chat.title}</h1>
       <p className="mt-2 text-sm text-ink-soft">{dict.chat.subtitle}</p>
       <p className="mt-1 text-xs text-ink-soft/70">{dict.common.aiNotice}</p>
+      {/* 门入口：从 /journey-new 的"想多说两句"链接跳来 (?door=1[&quote=…]) 时
+          显示这条提示，让用户知道门接到了、AI 先开口会引用他的话 */}
+      <CompanionDoor fallback={dict.companion?.doorFallback ?? '今天到这里了。想说什么就说，我在。'} />
       <div className="mt-8">
         <ChatView
           locale={locale}
