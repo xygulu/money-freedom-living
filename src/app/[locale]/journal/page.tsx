@@ -6,7 +6,8 @@ import { getDict } from '@/i18n/get-dict';
 import { enabledLocales, isLocale } from '@/i18n/config';
 import { resolveIdentity } from '@/lib/identity';
 import { getJournalEntries } from '@/lib/journal';
-import { getQuotaStatus, clientIpFromHeaders, guestKeyForRequest, GUEST_ID_COOKIE, todayUtc } from '@/lib/quota';
+import { getQuotaStatus, clientIpFromHeaders, guestKeyForRequest, GUEST_ID_COOKIE } from '@/lib/quota';
+import { timeZoneFrom, todayIn } from '@/lib/time';
 import JournalView from '@/components/JournalView';
 
 export const dynamic = 'force-dynamic';
@@ -21,12 +22,15 @@ export default async function journalPage({ params }: { params: Promise<{ locale
   const identity = await resolveIdentity({ headers: headersList, cookies: cookieList });
   const entries = await getJournalEntries(identity.key);
 
+  // 日界线按用户所在时区，不按服务器：游客 key 与配额桶都得用同一个「今天」
+  const today = todayIn(timeZoneFrom(cookieList));
+
   const guest = guestKeyForRequest(
     cookieList.get(GUEST_ID_COOKIE)?.value,
     clientIpFromHeaders(headersList),
-    todayUtc()
+    today
   );
-  const quota = await getQuotaStatus({ userId: identity.userId, guestKey: guest.guestKey });
+  const quota = await getQuotaStatus({ userId: identity.userId, guestKey: guest.guestKey, day: today });
 
   return (
     <div className="flex flex-col pt-16">

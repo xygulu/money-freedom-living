@@ -153,6 +153,8 @@ check(
   '聊天入口带落地即开聊意图（随便聊聊 + 开始今天的对话 两处）',
   (journeyHtml.match(/\/zh-CN\/chat\?start=1/g) ?? []).length >= 2
 );
+// 用户时区：内联脚本必须在首帧就把 mfl_tz 写下，服务端据此算「今天」并告诉 AI 现在几点
+check('时区探针在场（mfl_tz cookie 由内联脚本首帧写入）', journeyHtml.includes('mfl_tz=') && journeyHtml.includes('resolvedOptions'));
 
 // ───────────────────── ③④ 微行动：即时见证回应 + 首次埋点 ─────────────────────
 console.log('\n—— ③④ 微行动：receipt 非空 + 首次埋点恰一次 ——');

@@ -14,6 +14,7 @@ import { getJourneyStages, pickDaily, pickExercise } from '@/lib/content';
 import { resolveIdentity } from '@/lib/identity';
 import { getProfile, recordDailySeen, type StageAssessment } from '@/lib/profile';
 import { isAnchorDay } from '@/lib/anchor';
+import { timeZoneFrom } from '@/lib/time';
 import { track } from '@/lib/analytics';
 import { buildTimeline, formatTimelineDay } from '@/lib/timeline';
 import { computeStageProgress, MAX_STAGE } from '@/lib/stage';
@@ -134,7 +135,7 @@ export default async function journeyPage({ params }: { params: Promise<{ locale
   }
   const welcomeBack = gapDays >= 3;
   // 锚点日被动感知：只有用户自己设了锚点才会出现（默认不猜）
-  const anchorToday = profile?.payday ? isAnchorDay(profile.payday) : false;
+  const anchorToday = profile?.payday ? isAnchorDay(profile.payday, timeZoneFrom(cookieList)) : false;
 
   // 验收指标：24h-72h 回访等（docs/02 §11）。查询端按 user+day 去重，这里无条件打点。
   const gapBucket = gapDays < 0 ? 'first' : gapDays === 0 ? 'same_day' : gapDays <= 3 ? '1-3' : gapDays <= 7 ? '4-7' : '8+';

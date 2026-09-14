@@ -6,7 +6,8 @@ import { NextRequest } from 'next/server';
 import { resolveIdentity } from '@/lib/identity';
 import { createSession, findOpenChatSession } from '@/lib/chat';
 import { settleSession } from '@/lib/memory';
-import { getQuotaStatus, clientIpFromHeaders, guestKeyForRequest, guestCookieHeader, GUEST_ID_COOKIE, todayUtc } from '@/lib/quota';
+import { getQuotaStatus, clientIpFromHeaders, guestKeyForRequest, guestCookieHeader, GUEST_ID_COOKIE } from '@/lib/quota';
+import { timeZoneFrom, todayIn } from '@/lib/time';
 import { track } from '@/lib/analytics';
 import { enabledLocales, isLocale } from '@/i18n/config';
 import { jsonError } from '@/lib/sse';
@@ -23,16 +24,18 @@ export async function POST(request: NextRequest) {
     // 惰性结算：上次对话若没走"结束"流程（直接关页面/轮数未到），在此补摘要并关闭。
     // settleSession 内部 best-effort，LLM 失败也会关会话，不阻塞新会话。
     const stale = await findOpenChatSession(identity.key);
-    if (stale) await settleSession(identity.key, locale, stale.id);
+    if (stale) await settleSession(identity.key, locale, stale.id, timeZoneFrom(request.cookies));
 
     // 配额预检：游客 1/日、免费 3/日、VIP 充裕（quota.ts 三档常量）。
     // 用完时返回 403 + 档位状态，前端展示付费墙文案①（"今天先到这里，VIP 随时继续"）。
+    // 日界线按用户所在时区，不按服务器：游客 key 与配额桶都得用同一个「今天」
+    const today = todayIn(timeZoneFrom(request.cookies));
     const guest = guestKeyForRequest(
       request.cookies.get(GUEST_ID_COOKIE)?.value,
       clientIpFromHeaders(request.headers),
-      todayUtc()
+      today
     );
-    const status = await getQuotaStatus({ userId: identity.userId, guestKey: guest.guestKey });
+    const status = await getQuotaStatus({ userId: identity.userId, guestKey: guest.guestKey, day: today });
     if (status.remaining <= 0) {
       return jsonError('quota_exhausted', 403, { limit: String(status.limit), used: String(status.used) });
     }

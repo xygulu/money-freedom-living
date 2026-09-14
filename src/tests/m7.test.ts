@@ -14,28 +14,36 @@ describe('isAnchorDay（docs/02 §5：默认不猜，锚点日被动感知）', 
 
   it('monthly：日期命中才显示，1-28 之外不合法即永不显示', () => {
     const p: Payday = { type: 'monthly', day: 10 };
-    expect(isAnchorDay(p, new Date('2026-09-10T02:00:00Z'))).toBe(true);
-    expect(isAnchorDay(p, new Date('2026-09-09T23:59:00Z'))).toBe(false);
-    expect(isAnchorDay({ type: 'monthly', day: 10 }, new Date('2026-10-10T00:01:00Z'))).toBe(true); // 每月都提
+    expect(isAnchorDay(p, 'UTC', new Date('2026-09-10T02:00:00Z'))).toBe(true);
+    expect(isAnchorDay(p, 'UTC', new Date('2026-09-09T23:59:00Z'))).toBe(false);
+    expect(isAnchorDay({ type: 'monthly', day: 10 }, 'UTC', new Date('2026-10-10T00:01:00Z'))).toBe(true); // 每月都提
   });
 
   it('weekly：星期命中即显示', () => {
-    expect(isAnchorDay({ type: 'weekly', day: 4 }, thu)).toBe(true); // 周四 = 4
-    expect(isAnchorDay({ type: 'weekly', day: 1 }, thu)).toBe(false);
+    expect(isAnchorDay({ type: 'weekly', day: 4 }, 'UTC', thu)).toBe(true); // 周四 = 4
+    expect(isAnchorDay({ type: 'weekly', day: 1 }, 'UTC', thu)).toBe(false);
   });
 
   it('biweekly：星期命中 + epoch 偶数周才显示（相位近似）', () => {
     const week = Math.floor((thu.getTime() / 86_400_000 + 4) / 7);
     const payday: Payday = { type: 'biweekly', day: 4 };
-    expect(isAnchorDay(payday, thu)).toBe(week % 2 === 0);
+    expect(isAnchorDay(payday, 'UTC', thu)).toBe(week % 2 === 0);
     // 无论相位，非锚定星期永不命中
-    expect(isAnchorDay(payday, new Date('2026-09-11T12:00:00Z'))).toBe(false);
+    expect(isAnchorDay(payday, 'UTC', new Date('2026-09-11T12:00:00Z'))).toBe(false);
   });
 
   it('day 缺失/越界一律不显示（不猜）', () => {
-    expect(isAnchorDay({ type: 'monthly' }, thu)).toBe(false);
-    expect(isAnchorDay({ type: 'weekly' }, thu)).toBe(false);
-    expect(isAnchorDay({ type: 'monthly', day: 29 }, new Date('2026-09-29T00:00:00Z'))).toBe(false);
+    expect(isAnchorDay({ type: 'monthly' }, 'UTC', thu)).toBe(false);
+    expect(isAnchorDay({ type: 'weekly' }, 'UTC', thu)).toBe(false);
+    expect(isAnchorDay({ type: 'monthly', day: 29 }, 'UTC', new Date('2026-09-29T00:00:00Z'))).toBe(false);
+  });
+
+  it('锚点日按用户日历翻页：同一时刻在两个时区不同天', () => {
+    // 北京 9/10 07:00 已经是发薪日，UTC 还停在 9/9
+    const t = new Date('2026-09-09T23:00:00Z');
+    const payday: Payday = { type: 'monthly', day: 10 };
+    expect(isAnchorDay(payday, 'Asia/Shanghai', t)).toBe(true);
+    expect(isAnchorDay(payday, 'UTC', t)).toBe(false);
   });
 });
 

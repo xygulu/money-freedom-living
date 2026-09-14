@@ -5,6 +5,7 @@
 import { llmCompleteJson } from '@/lib/llm';
 import { appendMemories, addPinned, ensureProfile, type SessionMemory } from '@/lib/profile';
 import { getSessionMessages, claimSession } from '@/lib/chat';
+import { todayIn } from '@/lib/time';
 import type { Locale } from '@/i18n/config';
 
 export interface PinnedCandidate {
@@ -75,14 +76,15 @@ export async function buildSessionDigest(locale: Locale, turns: { role: string; 
  * 全程 best-effort：LLM 失败也要关会话（已在抢占时关掉）。
  * 对话本身就是建档动作：没有档案行先建（appendMemories 才有落点）。
  */
-export async function settleSession(userKey: string, locale: Locale, sessionId: string): Promise<void> {
+export async function settleSession(userKey: string, locale: Locale, sessionId: string, tz: string): Promise<void> {
   if (!(await claimSession(sessionId))) return;
   const turns = await getSessionMessages(sessionId);
   const digest = await buildSessionDigest(locale, turns);
   if (!digest) return;
   await ensureProfile(userKey, locale);
   // sessionId 让时间线的对话摘要能跳回原文回看页（存量条目无此字段，渲染为不可点）
-  const entry: SessionMemory = { date: new Date().toISOString().slice(0, 10), text: digest.summary, sessionId };
+  // 日期按用户时区：他在自己的深夜聊的天，应该记在他的那一天，不是 UTC 的次日/前日
+  const entry: SessionMemory = { date: todayIn(tz), text: digest.summary, sessionId };
   await appendMemories(userKey, [entry]);
   if (digest.pinned.length > 0) await addPinned(userKey, digest.pinned);
 }

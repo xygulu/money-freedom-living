@@ -53,6 +53,20 @@ export default async function LocaleLayout({
 
   return (
     <html lang={htmlLang(locale)}>
+      <head>
+        {/* 把浏览器报的 IANA 时区写进 cookie，服务端据此算「今天」并告诉 AI 现在几点。
+            内联脚本而不是组件：要在 hydration 之前就跑完，首屏之后的每个请求都带得上。
+            第一次访问的那个请求还没有 cookie（服务端回落 UTC）；用户换城市时自动刷新。 */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "try{var t=Intl.DateTimeFormat().resolvedOptions().timeZone;" +
+              "var m=document.cookie.match(/(?:^|; )mfl_tz=([^;]*)/);" +
+              "if(t&&(!m||decodeURIComponent(m[1])!==t)){" +
+              "document.cookie='mfl_tz='+encodeURIComponent(t)+';path=/;max-age=31536000;samesite=lax'}}catch(e){}",
+          }}
+        />
+      </head>
       <body className="min-h-dvh antialiased">
         <div className="mx-auto flex min-h-dvh max-w-xl flex-col px-5">
           <main className="flex-1">{children}</main>

@@ -3,6 +3,7 @@
 // 内容层改动即生效，这里不做任何文案硬编码（除 JSON 结构指令）。
 import { getJourneyStage, getPracticesForStage } from '@/lib/content';
 import type { Portrait } from '@/lib/profile';
+import { DEFAULT_TZ, nowBlock } from '@/lib/time';
 import type { Locale } from '@/i18n/config';
 
 // ---------- 问卷（docs/02 §2①：收集具体的事，不是量表分数） ----------
@@ -41,13 +42,15 @@ export const LOCALE_NAME: Record<string, string> = {
   ja: '日本語',
 };
 
-/** 初谈 system：阶段 1 姿态（内容层）+ 初谈专用纪律 + 问卷素材 */
-export function buildTalkSystem(locale: Locale, questionnaire: Record<string, string>): string {
+/** 初谈 system：阶段 1 姿态（内容层）+ 初谈专用纪律 + 问卷素材。
+ *  tz = 用户时区：这里也会说到「今天/最近」，得和用户的钟对上 */
+export function buildTalkSystem(locale: Locale, questionnaire: Record<string, string>, tz: string = DEFAULT_TZ): string {
   const stage = getJourneyStage(locale, 1);
   const practices = getPracticesForStage(1);
   const lines: string[] = [];
 
   lines.push(`你是一位温和的陪伴者，正在和用户做「金钱关系体检」的初谈。请始终用${LOCALE_NAME[locale] ?? 'English'}回复。`);
+  lines.push('', nowBlock(locale, tz));
   if (stage) {
     lines.push('', '## 这个阶段的引导原则（必须遵守）', stage.body);
     lines.push('', '本阶段 AI 姿态：', ...stage.ai_stance.do.map((d) => `- DO: ${d}`), ...stage.ai_stance.dont.map((d) => `- DON'T: ${d}`));

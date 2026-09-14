@@ -6,7 +6,8 @@ import { NextRequest } from 'next/server';
 import { resolveIdentity } from '@/lib/identity';
 import { getJournalEntry, saveJournalReply, buildJournalReplySystem } from '@/lib/journal';
 import { referralMessage } from '@/lib/safety';
-import { getQuotaStatus, clientIpFromHeaders, guestKeyForRequest, GUEST_ID_COOKIE, todayUtc } from '@/lib/quota';
+import { getQuotaStatus, clientIpFromHeaders, guestKeyForRequest, GUEST_ID_COOKIE } from '@/lib/quota';
+import { timeZoneFrom, todayIn } from '@/lib/time';
 import { getLlmProviders, llmComplete } from '@/lib/llm';
 import { isLocale, enabledLocales, type Locale } from '@/i18n/config';
 import { jsonError } from '@/lib/sse';
@@ -42,12 +43,16 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
       });
     }
 
+    // 日界线按用户所在时区，不按服务器：游客 key 与配额桶都得用同一个「今天」
+
+    const today = todayIn(timeZoneFrom(request.cookies));
+
     const guest = guestKeyForRequest(
       request.cookies.get(GUEST_ID_COOKIE)?.value,
       clientIpFromHeaders(request.headers),
-      todayUtc()
+      today
     );
-    const status = await getQuotaStatus({ userId: identity.userId, guestKey: guest.guestKey });
+    const status = await getQuotaStatus({ userId: identity.userId, guestKey: guest.guestKey, day: today });
     if (!status.isVip) {
       return new Response(JSON.stringify({ error: 'vip_required' }), {
         status: 403,
@@ -58,7 +63,7 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
 
     const reply = (
       await llmComplete({
-        system: buildJournalReplySystem(locale),
+        system: buildJournalReplySystem(locale, timeZoneFrom(request.cookies)),
         messages: [{ role: 'user', content: entry.content }],
         maxTokens: 500,
         temperature: 0.7,

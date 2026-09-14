@@ -3,6 +3,7 @@
 // 安全性：crisis 命中的日记不走 LLM 回应（写库时已标记 safety_hit，回应时直接转介）。
 import { execWithFailover, ensureSchema, iso } from '@/lib/db';
 import { LOCALE_NAME } from '@/lib/onboarding';
+import { DEFAULT_TZ, nowBlock } from '@/lib/time';
 import type { Locale } from '@/i18n/config';
 
 export interface JournalEntry {
@@ -65,9 +66,10 @@ export async function countJournalEntriesSince(userKey: string, sinceISO: string
  * VIP 日记回应提示词：接住、回应具体的那个细节，简短。
  * 不给理财建议、不诊断、不要求"更积极"；结尾最多一个开放的轻问题，也可以没有。
  */
-export function buildJournalReplySystem(locale: Locale): string {
+export function buildJournalReplySystem(locale: Locale, tz: string = DEFAULT_TZ): string {
   return [
     `你是一位温和的陪伴者。用户刚写完一段金钱心事（日记），你是唯一读到它的人。请始终用${LOCALE_NAME[locale] ?? 'English'}回复。`,
+    nowBlock(locale, tz),
     '## 回应规则',
     '- 100-200 字；接住情绪，回应日记里至少一个具体细节（引用其中的原词）。',
     '- 不评价写得好不好，不总结，不升华。没问怎么办，就不要给怎么办。',

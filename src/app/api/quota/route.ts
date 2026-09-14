@@ -6,8 +6,8 @@ import {
   guestKeyForRequest,
   guestCookieHeader,
   GUEST_ID_COOKIE,
-  todayUtc,
 } from '@/lib/quota';
+import { timeZoneFrom, todayIn } from '@/lib/time';
 import { getEntitlement, getLatestLiveSubscription } from '@/lib/entitlements';
 
 // GET /api/quota：当前用户的配额 + 会员状态。
@@ -25,12 +25,14 @@ export async function GET(request: NextRequest) {
     const userId = user?.id ?? null;
 
     // 游客身份：匿名 cookie 优先，IP 兜底（裸 IP 会因 v4/v6 双栈翻转分裂配额桶）
+    // 日界线按用户所在时区，不按服务器：游客 key 与配额桶都得用同一个「今天」
+    const today = todayIn(timeZoneFrom(request.cookies));
     const guest = guestKeyForRequest(
       request.cookies.get(GUEST_ID_COOKIE)?.value,
       clientIpFromHeaders(request.headers),
-      todayUtc()
+      today
     );
-    const status = await getQuotaStatus({ userId, guestKey: guest.guestKey });
+    const status = await getQuotaStatus({ userId, guestKey: guest.guestKey, day: today });
 
     // 会员详情（到期时间/订阅状态）仅登录用户需要。
     // subscription.status 是平台中立枚举（live/grace/ended），UI 一律消费

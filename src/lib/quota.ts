@@ -37,7 +37,11 @@ export function dailyLimitFor(authenticated: boolean, isVip: boolean): number {
   return isVip ? VIP_DAILY_QUOTA : FREE_DAILY_QUOTA;
 }
 
-/** 当前 UTC 日期（YYYY-MM-DD） */
+/**
+ * 当前 UTC 日期（YYYY-MM-DD）。
+ * ⚠️ 别拿它当"今天"用在业务里——用户的今天在用户的时区里（见 lib/time.ts 的 todayIn）。
+ * 这里只留给没有用户上下文的场合（如系统内部批处理）。
+ */
 export function todayUtc(now = new Date()): string {
   return now.toISOString().slice(0, 10);
 }
@@ -117,15 +121,18 @@ export interface QuotaStatus {
   remaining: number;
 }
 
-/** 查询当日配额使用情况（登录用户按 user_id，游客按 guest_key） */
+/** 查询当日配额使用情况（登录用户按 user_id，游客按 guest_key）。
+ *  day 必传：日界线按用户时区算，调用方用 todayIn(tz) 取——这里不给 UTC 默认值，
+ *  免得某个调用点漏传就把用户的"今天"悄悄挪回 UTC。 */
 export async function getQuotaStatus(input: {
   userId: string | null;
   guestKey: string;
+  day: string;
 }): Promise<QuotaStatus> {
   const authenticated = Boolean(input.userId);
   const isVip = authenticated ? await isUserVip(input.userId as string) : false;
   const limit = dailyLimitFor(authenticated, isVip);
-  const day = todayUtc();
+  const day = input.day;
 
   await ensureSchema();
   const rows = await execWithFailover((sql) =>
@@ -155,12 +162,13 @@ export type ConsumeResult =
 export async function consumeQuota(input: {
   userId: string | null;
   guestKey: string;
+  day: string;
   kind?: string;
 }): Promise<ConsumeResult> {
   const status = await getQuotaStatus(input);
   if (status.remaining <= 0) return { ok: false, status };
 
-  const day = todayUtc();
+  const day = input.day;
   const kind = input.kind ?? 'default';
   await ensureSchema();
   // ⚠️ 单条 INSERT ... SELECT ... WHERE count < limit：查数与插行在一个原子操作里，

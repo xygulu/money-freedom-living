@@ -21,7 +21,8 @@ import { buildChatContext } from '@/lib/prompt';
 import { settleSession } from '@/lib/memory';
 import { checkSafety, recordSafetyEvent, referralMessage, type SafetyVerdict } from '@/lib/safety';
 import { bumpActiveDay, getProfile } from '@/lib/profile';
-import { consumeQuota, getQuotaStatus, clientIpFromHeaders, guestKeyForRequest, GUEST_ID_COOKIE, todayUtc } from '@/lib/quota';
+import { consumeQuota, getQuotaStatus, clientIpFromHeaders, guestKeyForRequest, GUEST_ID_COOKIE } from '@/lib/quota';
+import { timeZoneFrom, todayIn } from '@/lib/time';
 import { getLlmProviders, llmStream } from '@/lib/llm';
 import { getDict } from '@/i18n/get-dict';
 import { enabledLocales, isLocale, type Locale } from '@/i18n/config';
@@ -79,7 +80,7 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ sessio
         locale: sessionLocale,
         message,
         silent: body.silent === true,
-        system: buildTalkSystem(sessionLocale, questionnaire),
+        system: buildTalkSystem(sessionLocale, questionnaire, timeZoneFrom(request.cookies)),
         stableMode: false, // 初谈轮数极短，命中后的转介轮已足够；画像生成有独立红线
       });
     }
@@ -95,7 +96,7 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ sessio
         (async function* () {
           try {
             yield { session: sessionId, wrap: true, delta: dict.chat.wrapUp };
-            await settleSession(identity.key, sessionLocale, sessionId);
+            await settleSession(identity.key, sessionLocale, sessionId, timeZoneFrom(request.cookies));
           } finally {
             releaseSlot();
           }
@@ -113,6 +114,7 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ sessio
       history: await getSessionMessages(sessionId),
       stableMode: session.safetyFlagged,
       opener: isOpener,
+      tz: timeZoneFrom(request.cookies),
     });
 
     return respondToMessage({
@@ -242,16 +244,18 @@ async function respondToMessage(params: ReplyParams): Promise<Response> {
       // VIP 无限额度：不占配额，仅置位避免后续每轮重复预检。
       if (params.consumeAfterReply) {
         try {
+          // 日界线按用户所在时区：额度在用户的午夜刷新，不是服务器的
+          const today = todayIn(timeZoneFrom(request.cookies));
           const guest = guestKeyForRequest(
             request.cookies.get(GUEST_ID_COOKIE)?.value,
             clientIpFromHeaders(request.headers),
-            todayUtc()
+            today
           );
-          const status = await getQuotaStatus({ userId: identity.userId, guestKey: guest.guestKey });
+          const status = await getQuotaStatus({ userId: identity.userId, guestKey: guest.guestKey, day: today });
           if (status.isVip) {
             await markQuotaConsumed(sessionId);
           } else {
-            const result = await consumeQuota({ userId: identity.userId, guestKey: guest.guestKey, kind: 'chat_session' });
+            const result = await consumeQuota({ userId: identity.userId, guestKey: guest.guestKey, kind: 'chat_session', day: today });
             if (result.ok) await markQuotaConsumed(sessionId);
             else console.error('[api/chat/sessionId] consume rejected after reply:', JSON.stringify(result.status));
           }
@@ -278,7 +282,7 @@ export async function DELETE(request: NextRequest, ctx: { params: Promise<{ sess
     if (!session || session.userKey !== identity.key) return jsonError('session_not_found', 404);
     if (session.kind === 'chat') {
       const locale: Locale = isLocale(session.locale) && enabledLocales.includes(session.locale) ? session.locale : 'en';
-      await settleSession(identity.key, locale, sessionId);
+      await settleSession(identity.key, locale, sessionId, timeZoneFrom(request.cookies));
     } else {
       await closeSession(sessionId);
     }

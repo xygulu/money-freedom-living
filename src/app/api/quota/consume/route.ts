@@ -6,9 +6,9 @@ import {
   guestKeyForRequest,
   guestCookieHeader,
   GUEST_ID_COOKIE,
-  todayUtc,
   isVipOnlyKind,
 } from '@/lib/quota';
+import { timeZoneFrom, todayIn } from '@/lib/time';
 import { isUserVip } from '@/lib/entitlements';
 
 // POST /api/quota/consume：动作门禁（消耗一次当日配额）+ VIP-only 功能门禁。
@@ -56,10 +56,12 @@ export async function POST(request: NextRequest) {
 
   // 游客身份：匿名 cookie 优先，IP 兜底（与 GET /api/quota 同一解析——
   // 展示桶和扣减桶必须是同一个，否则剩余次数显示与实际扣减错位）
+  // 日界线按用户所在时区，不按服务器：游客 key 与配额桶都得用同一个「今天」
+  const today = todayIn(timeZoneFrom(request.cookies));
   const guest = guestKeyForRequest(
     request.cookies.get(GUEST_ID_COOKIE)?.value,
     clientIpFromHeaders(request.headers),
-    todayUtc()
+    today
   );
   const headers: Record<string, string> = { 'Cache-Control': 'no-store' };
   if (!userId && guest.newCookieId) {
@@ -67,7 +69,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const result = await consumeQuota({ userId, guestKey: guest.guestKey, kind });
+    const result = await consumeQuota({ userId, guestKey: guest.guestKey, kind, day: today });
     if (!result.ok) {
       return NextResponse.json(
         {

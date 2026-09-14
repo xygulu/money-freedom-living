@@ -6,6 +6,7 @@ import { resolveIdentity } from '@/lib/identity';
 import { getProfile } from '@/lib/profile';
 import { createSession, appendMessage } from '@/lib/chat';
 import { buildTalkSystem } from '@/lib/onboarding';
+import { timeZoneFrom } from '@/lib/time';
 import { llmStream } from '@/lib/llm';
 import { enabledLocales, isLocale } from '@/i18n/config';
 import { jsonError, sseResponse } from '@/lib/sse';
@@ -30,7 +31,7 @@ export async function POST(request: NextRequest) {
     }
 
     const session = await createSession({ userKey: identity.key, locale, kind: 'onboarding_talk' });
-    const system = buildTalkSystem(locale, questionnaire);
+    const system = buildTalkSystem(locale, questionnaire, timeZoneFrom(request.cookies));
 
     async function* events() {
       yield { session: session.id };

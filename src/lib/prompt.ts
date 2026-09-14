@@ -5,6 +5,7 @@ import { getJourneyStage, getPracticesForStage } from '@/lib/content';
 import type { Portrait, SessionMemory } from '@/lib/profile';
 import type { ChatTurn } from '@/lib/chat';
 import { LOCALE_NAME } from '@/lib/onboarding';
+import { nowBlock, relativeDay, todayIn } from '@/lib/time';
 import type { Locale } from '@/i18n/config';
 
 /** system 固定块总预算（字符；中文 ≈1 token/字，12k 字符 ≈ 6-12k tokens，glm 窗口内成本可控） */
@@ -116,6 +117,10 @@ export interface ChatContextInput {
   stableMode: boolean;
   /** 会话第一条 AI 主动开场（归来问候：自然接上 memories 里的上次内容） */
   opener: boolean;
+  /** 用户所在时区（IANA）。AI 的"今天"必须是用户的今天，不是服务器的 */
+  tz: string;
+  /** 注入时刻，仅测试需要固定时传 */
+  now?: Date;
 }
 
 export interface ChatContext {
@@ -135,6 +140,10 @@ export function buildChatContext(input: ChatContextInput): ChatContext {
 
   blocks.push(SAFETY_RULES[locale]);
   blocks.push(LANGUAGE_RULES[locale]);
+  // 现在几点几号（用户时区）：模型自己没有"现在"，不给它就用训练时的时间瞎猜
+  const now = input.now ?? new Date();
+  const today = todayIn(input.tz, now);
+  blocks.push(nowBlock(locale, input.tz, now));
   if (input.stableMode) blocks.push(STABLE_MODE[locale]);
 
   // pinned（优先级 2：禁忌 > 承诺 > 未完成话题；超预算也不裁）
@@ -218,7 +227,7 @@ export function buildChatContext(input: ChatContextInput): ChatContext {
   if (recentMemories.length > 0) {
     const block =
       (locale === 'en' ? '## Recent memories\n' : '## 最近的记忆（上次对话的摘要，自然接上，勿逐条复述）\n') +
-      recentMemories.map((m) => `- [${m.date}] ${clipped(m.text, MEMORY_MAX_CHARS)}`).join('\n');
+      recentMemories.map((m) => `- [${m.date} · ${relativeDay(locale, m.date, today)}] ${clipped(m.text, MEMORY_MAX_CHARS)}`).join('\n');
     if (system.length + block.length <= SYSTEM_BUDGET) system += `\n\n${block}`;
   }
   if (system.length > SYSTEM_BUDGET) system = clipped(system, SYSTEM_BUDGET);

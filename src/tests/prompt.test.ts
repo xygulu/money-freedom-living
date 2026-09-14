@@ -26,6 +26,8 @@ const base = {
   history: [],
   stableMode: false,
   opener: false,
+  tz: 'Asia/Shanghai',
+  now: new Date('2026-09-14T01:20:00Z'), // = 北京时间 9/14 09:20，断言里按这个算远近
 };
 
 describe('buildChatContext：P§6 优先级组装', () => {
@@ -90,6 +92,24 @@ describe('buildChatContext：P§6 优先级组装', () => {
     expect(buildChatContext({ ...base, stableMode: true }).system).toContain('稳定陪伴模式');
     expect(buildChatContext({ ...base, opener: true }).system).toContain('开场');
     expect(buildChatContext(base).system).not.toContain('稳定陪伴模式');
+  });
+
+  it('「现在」块：用户本地时间进 system，且排在内容块之前（预算裁不到）', () => {
+    const { system } = buildChatContext(base);
+    expect(system).toContain('## 现在');
+    expect(system).toContain('Asia/Shanghai');
+    expect(system).toContain('2026年9月14日'); // 那一刻 UTC 还是 9/13，必须按用户时区说 9/14
+    expect(system.indexOf('## 现在')).toBeLessThan(system.indexOf('## 当前阶段'));
+  });
+
+  it('记忆日期带远近说法（模型不知道今天几号，得直接告诉它）', () => {
+    const memories: SessionMemory[] = [
+      { date: '2026-09-13', text: '昨天那条' },
+      { date: '2026-08-31', text: '半个月前那条' },
+    ];
+    const { system } = buildChatContext({ ...base, memories });
+    expect(system).toContain('[2026-09-13 · 昨天]');
+    expect(system).toContain('[2026-08-31 · 2 周前]');
   });
 
   it('对话历史从最新往回装进预算，最旧的先被裁', () => {
