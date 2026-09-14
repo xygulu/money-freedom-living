@@ -54,7 +54,7 @@ describe('validateAssessment（结构校验：禁止半成品评估入库）', (
       actions: ['这周把那个场景讲给它听一次。'],
       nextHint: '下一阶段在门口。',
     };
-    const out = validateAssessment(draft, 1);
+    const out = validateAssessment(draft, 1, true);
     expect(out).not.toBeNull();
     expect(out!.actualStage).toBe(2);
     expect(out!.lamps.map((l) => l.kind)).toEqual(rules.map((r) => r.kind));
@@ -66,13 +66,13 @@ describe('validateAssessment（结构校验：禁止半成品评估入库）', (
   });
 
   it('actualStage 越界（倒退/跳两级/非整数）一律拒绝', () => {
-    expect(validateAssessment(draftFor(2, { actualStage: 1 }), 2)).toBeNull();
-    expect(validateAssessment(draftFor(2, { actualStage: 4 }), 2)).toBeNull();
-    expect(validateAssessment(draftFor(2, { actualStage: 2.5 }), 2)).toBeNull();
-    expect(validateAssessment(draftFor(2, { actualStage: '2' }), 2)).toBeNull();
+    expect(validateAssessment(draftFor(2, { actualStage: 1 }), 2, true)).toBeNull();
+    expect(validateAssessment(draftFor(2, { actualStage: 4 }), 2, true)).toBeNull();
+    expect(validateAssessment(draftFor(2, { actualStage: 2.5 }), 2, true)).toBeNull();
+    expect(validateAssessment(draftFor(2, { actualStage: '2' }), 2, true)).toBeNull();
     // 在允许区间 [stage, stage+1] 内合法；stage3 最多评到 4（封顶）
-    expect(validateAssessment(draftFor(2, { actualStage: 3 }), 2)).not.toBeNull();
-    expect(validateAssessment(draftFor(3, { actualStage: 4 }), 3)).not.toBeNull();
+    expect(validateAssessment(draftFor(2, { actualStage: 3 }), 2, true)).not.toBeNull();
+    expect(validateAssessment(draftFor(3, { actualStage: 4 }), 3, true)).not.toBeNull();
   });
 
   it('程度制硬约束：本阶段灯全亮 ⇒ actualStage 必须判下一阶段（阶段完成即开启）；有灯未点亮不受限', () => {
@@ -81,68 +81,165 @@ describe('validateAssessment（结构校验：禁止半成品评估入库）', (
       lamps: (STAGE_LAMPS[stage] ?? []).map((r) => ({ kind: r.kind, lit: true, evidence: '程度达成的依据。' })),
     });
     // 全亮 + 停在原地 → 拒绝（不允许「程度全达成却不开下一阶段」的结论存在）
-    expect(validateAssessment(allLit(1), 1)).toBeNull();
-    expect(validateAssessment(allLit(3), 3)).toBeNull();
+    expect(validateAssessment(allLit(1), 1, true)).toBeNull();
+    expect(validateAssessment(allLit(3), 3, true)).toBeNull();
     // 全亮 + 下一阶段 → 合法（stage 3 全亮开到 4，封顶不越界）
-    expect(validateAssessment({ ...allLit(1), actualStage: 2 }, 1)).not.toBeNull();
-    expect(validateAssessment({ ...allLit(3), actualStage: 4 }, 3)).not.toBeNull();
+    expect(validateAssessment({ ...allLit(1), actualStage: 2 }, 1, true)).not.toBeNull();
+    expect(validateAssessment({ ...allLit(3), actualStage: 4 }, 3, true)).not.toBeNull();
     // 有灯未点亮 → 写当前阶段合法（评估未完成，等素材补充），判在门口也合法
-    expect(validateAssessment(draftFor(1, { actualStage: 1 }), 1)).not.toBeNull();
-    expect(validateAssessment(draftFor(1, { actualStage: 2 }), 1)).not.toBeNull();
+    expect(validateAssessment(draftFor(1, { actualStage: 1 }), 1, true)).not.toBeNull();
+    expect(validateAssessment(draftFor(1, { actualStage: 2 }), 1, true)).not.toBeNull();
   });
 
   it('lamps 必须恰好覆盖当前阶段灯集：缺/多/重复/未知 kind 都拒绝', () => {
     const short = draftFor(1);
     short.lamps = short.lamps.slice(1);
-    expect(validateAssessment(short, 1)).toBeNull();
+    expect(validateAssessment(short, 1, true)).toBeNull();
     const extra = draftFor(1);
     extra.lamps = [...extra.lamps, { kind: 'stage2_claim', lit: false, evidence: '' }];
-    expect(validateAssessment(extra, 1)).toBeNull();
+    expect(validateAssessment(extra, 1, true)).toBeNull();
     const dup = draftFor(1);
     dup.lamps = [...dup.lamps, { kind: 'stage1_story', lit: false, evidence: '' }];
-    expect(validateAssessment(dup, 1)).toBeNull();
+    expect(validateAssessment(dup, 1, true)).toBeNull();
   });
 
   it('点亮必须有依据；evidence trim 后空串同样拒绝', () => {
     const noEvidence = draftFor(1);
     noEvidence.lamps = STAGE_LAMPS[1].map((r, i) => ({ kind: r.kind, lit: i === 0, evidence: i === 0 ? '   ' : '' }));
-    expect(validateAssessment(noEvidence, 1)).toBeNull();
+    expect(validateAssessment(noEvidence, 1, true)).toBeNull();
     const missing = draftFor(1);
     missing.lamps = STAGE_LAMPS[1].map((r, i) => ({ kind: r.kind, lit: i === 0, evidence: undefined as unknown as string }));
-    expect(validateAssessment(missing, 1)).toBeNull();
+    expect(validateAssessment(missing, 1, true)).toBeNull();
   });
 
   it('summary 10..800（语言感知边界：英文 120 词 ≈ 800 字符）、nextHint 非空且超长截断；非对象输入拒绝', () => {
-    expect(validateAssessment(draftFor(1, { summary: '太短了' }), 1)).toBeNull();
-    expect(validateAssessment(draftFor(1, { summary: 'x'.repeat(801) }), 1)).toBeNull();
+    expect(validateAssessment(draftFor(1, { summary: '太短了' }), 1, true)).toBeNull();
+    expect(validateAssessment(draftFor(1, { summary: 'x'.repeat(801) }), 1, true)).toBeNull();
     // 英文 80-120 词 ≈ 500-800 字符——smoke 实测英文草稿 551 字符曾撞 400 上限
-    expect(validateAssessment(draftFor(1, { summary: 'x'.repeat(700) }), 1)).not.toBeNull();
-    expect(validateAssessment(draftFor(1, { nextHint: '' }), 1)).toBeNull();
-    expect(validateAssessment(draftFor(1, { nextHint: '长'.repeat(500) }), 1)).not.toBeNull();
-    expect(validateAssessment(null, 1)).toBeNull();
-    expect(validateAssessment('ok', 1)).toBeNull();
+    expect(validateAssessment(draftFor(1, { summary: 'x'.repeat(700) }), 1, true)).not.toBeNull();
+    expect(validateAssessment(draftFor(1, { nextHint: '' }), 1, true)).toBeNull();
+    expect(validateAssessment(draftFor(1, { nextHint: '长'.repeat(500) }), 1, true)).not.toBeNull();
+    expect(validateAssessment(null, 1, true)).toBeNull();
+    expect(validateAssessment('ok', 1, true)).toBeNull();
   });
 
   it('诊断式报告三件套：diagnosis/distance 缺失、过短、超长都拒绝', () => {
-    expect(validateAssessment(draftFor(1, { diagnosis: undefined }), 1)).toBeNull();
-    expect(validateAssessment(draftFor(1, { diagnosis: '太短' }), 1)).toBeNull();
-    expect(validateAssessment(draftFor(1, { diagnosis: '长'.repeat(801) }), 1)).toBeNull();
-    expect(validateAssessment(draftFor(1, { diagnosis: '长'.repeat(800) }), 1)).not.toBeNull();
-    expect(validateAssessment(draftFor(1, { distance: '' }), 1)).toBeNull();
-    expect(validateAssessment(draftFor(1, { distance: '还远' }), 1)).toBeNull();
-    expect(validateAssessment(draftFor(1, { distance: '长'.repeat(601) }), 1)).toBeNull();
-    expect(validateAssessment(draftFor(1, { distance: '长'.repeat(600) }), 1)).not.toBeNull();
+    expect(validateAssessment(draftFor(1, { diagnosis: undefined }), 1, true)).toBeNull();
+    expect(validateAssessment(draftFor(1, { diagnosis: '太短' }), 1, true)).toBeNull();
+    expect(validateAssessment(draftFor(1, { diagnosis: '长'.repeat(801) }), 1, true)).toBeNull();
+    expect(validateAssessment(draftFor(1, { diagnosis: '长'.repeat(800) }), 1, true)).not.toBeNull();
+    expect(validateAssessment(draftFor(1, { distance: '' }), 1, true)).toBeNull();
+    expect(validateAssessment(draftFor(1, { distance: '还远' }), 1, true)).toBeNull();
+    expect(validateAssessment(draftFor(1, { distance: '长'.repeat(601) }), 1, true)).toBeNull();
+    expect(validateAssessment(draftFor(1, { distance: '长'.repeat(600) }), 1, true)).not.toBeNull();
   });
 
   it('actions：非数组/空数组/超 4 条/空白条目/单条超 200 字符都拒绝；2-3 条合法', () => {
-    expect(validateAssessment(draftFor(1, { actions: '想一想' }), 1)).toBeNull();
-    expect(validateAssessment(draftFor(1, { actions: [] }), 1)).toBeNull();
-    expect(validateAssessment(draftFor(1, { actions: ['一', '二', '三', '四', '五'] }), 1)).toBeNull();
+    expect(validateAssessment(draftFor(1, { actions: '想一想' }), 1, true)).toBeNull();
+    expect(validateAssessment(draftFor(1, { actions: [] }), 1, true)).toBeNull();
+    expect(validateAssessment(draftFor(1, { actions: ['一', '二', '三', '四', '五'] }), 1, true)).toBeNull();
     // 空白条目会被过滤导致数量不一致——半成品拒绝
-    expect(validateAssessment(draftFor(1, { actions: ['  ', '第二条行动建议'] }), 1)).toBeNull();
-    expect(validateAssessment(draftFor(1, { actions: ['长'.repeat(201)] }), 1)).toBeNull();
-    expect(validateAssessment(draftFor(1, { actions: ['  去掉首尾空格  '] }), 1)).not.toBeNull();
-    expect(validateAssessment(draftFor(1, { actions: ['一', '二', '三'] }), 1)).not.toBeNull();
+    expect(validateAssessment(draftFor(1, { actions: ['  ', '第二条行动建议'] }), 1, true)).toBeNull();
+    expect(validateAssessment(draftFor(1, { actions: ['长'.repeat(201)] }), 1, true)).toBeNull();
+    expect(validateAssessment(draftFor(1, { actions: ['  去掉首尾空格  '] }), 1, true)).not.toBeNull();
+    expect(validateAssessment(draftFor(1, { actions: ['一', '二', '三'] }), 1, true)).not.toBeNull();
+  });
+});
+
+describe('行为证据硬闸（评估必须以真实记录为依据）', () => {
+  // 阶段 2：stage2_try 需要行为证据，claim/voice 不需要（认知与话语）
+  const litAll = (stage: number, actualStage: number) => ({
+    ...draftFor(stage, { actualStage }),
+    lamps: (STAGE_LAMPS[stage] ?? []).map((r) => ({ kind: r.kind, lit: true, evidence: `${r.kind} 的依据` })),
+  });
+
+  it('标注：每盏灯都声明了要不要行为证据；需要的是「做过」类，不需要的是「看见/认领/话语」类', () => {
+    expect(STAGE_LAMPS[1].every((r) => r.needsAction === false)).toBe(true); // 阶段 1 全是认知
+    expect(STAGE_LAMPS[2].find((r) => r.kind === 'stage2_try')!.needsAction).toBe(true);
+    expect(STAGE_LAMPS[2].find((r) => r.kind === 'stage2_claim')!.needsAction).toBe(false);
+    expect(STAGE_LAMPS[2].find((r) => r.kind === 'stage2_voice')!.needsAction).toBe(false);
+    expect(STAGE_LAMPS[3].every((r) => r.needsAction === true)).toBe(true); // 阶段 3 讲的是日子里的练习
+  });
+
+  it('一条记录都没有：需行为证据的灯被按灭、依据清空；认知类的灯不受影响', () => {
+    const out = validateAssessment(litAll(2, 3), 2, false);
+    expect(out).not.toBeNull();
+    const byKind = new Map(out!.lamps.map((l) => [l.kind, l]));
+    expect(byKind.get('stage2_try')!.lit).toBe(false);
+    expect(byKind.get('stage2_try')!.evidence).toBe('');
+    expect(byKind.get('stage2_claim')!.lit).toBe(true);
+    expect(byKind.get('stage2_voice')!.lit).toBe(true);
+  });
+
+  it('被按灭的灯连带把位置拉回当前阶段：不能「有灯没亮却已进下一阶段」', () => {
+    expect(validateAssessment(litAll(2, 3), 2, false)!.actualStage).toBe(2);
+    expect(validateAssessment(litAll(3, 4), 3, false)!.actualStage).toBe(3);
+  });
+
+  it('有记录时闸不生效：全亮仍判进下一阶段', () => {
+    const out = validateAssessment(litAll(2, 3), 2, true);
+    expect(out!.lamps.every((l) => l.lit)).toBe(true);
+    expect(out!.actualStage).toBe(3);
+  });
+
+  it('闸只按灯不废报告：诊断三件套与行动照常留下（无记录不是「评估失败」）', () => {
+    const out = validateAssessment(litAll(2, 3), 2, false);
+    expect(out!.summary.length).toBeGreaterThan(0);
+    expect(out!.diagnosis.length).toBeGreaterThan(0);
+    expect(out!.actions.length).toBeGreaterThan(0);
+  });
+
+  it('闸不会把本就没亮的灯算成「被拦」：位置该是几就是几', () => {
+    // 阶段 2 只亮 claim（认知类）、actualStage 判在门口 = 2：没有触发闸，原样返回
+    const draft = {
+      ...draftFor(2, { actualStage: 2 }),
+      lamps: (STAGE_LAMPS[2] ?? []).map((r) => ({
+        kind: r.kind,
+        lit: r.kind === 'stage2_claim',
+        evidence: r.kind === 'stage2_claim' ? '你亲口认领了那句话。' : '',
+      })),
+    };
+    const out = validateAssessment(draft, 2, false);
+    expect(out!.actualStage).toBe(2);
+    expect(out!.lamps.filter((l) => l.lit).map((l) => l.kind)).toEqual(['stage2_claim']);
+  });
+
+  it('提示词：需行为证据的灯带标注；无记录时点名这几盏不许点亮并指向记录', () => {
+    const material = {
+      portrait: null,
+      memories: [],
+      journals: [],
+      experiments: [],
+      letters: [],
+      missCorrections: [],
+    };
+    const none = buildAssessMessages('zh-CN', 2, [stageFixture(2), stageFixture(3)], material, {
+      earnedKinds: [],
+      hasActionRecord: false,
+    }).system;
+    expect(none).toContain('这盏灯必须有真实行为证据');
+    expect(none).toContain('没有任何微行动记录');
+    expect(none).toContain('stage2_try');
+    expect(none).toContain('记下一件真实发生的事');
+    // 认知类的灯不该被卷进禁令
+    expect(none).not.toContain('stage2_claim 这');
+
+    const some = buildAssessMessages('zh-CN', 2, [stageFixture(2), stageFixture(3)], material, {
+      earnedKinds: [],
+      hasActionRecord: true,
+    }).system;
+    expect(some).not.toContain('没有任何微行动记录');
+    expect(some).toContain('的证据来源');
+  });
+
+  it('阶段 1 没有需行为证据的灯：无记录也照常评估，不平白拦人', () => {
+    const out = validateAssessment(
+      { ...draftFor(1, { actualStage: 2 }), lamps: STAGE_LAMPS[1].map((r) => ({ kind: r.kind, lit: true, evidence: '依据' })) },
+      1,
+      false
+    );
+    expect(out!.lamps.every((l) => l.lit)).toBe(true);
+    expect(out!.actualStage).toBe(2);
   });
 });
 
@@ -246,7 +343,7 @@ describe('buildAssessMessages（评估 prompt：诊断四问、红线、语言�
   };
 
   it('诊断四问逐字在场：他在哪/为什么是这里/离活法多远/下一步做什么；JSON shape 含新字段', () => {
-    const { system } = buildAssessMessages('zh-CN', 1, [stageFixture(1), stageFixture(2)], material, { earnedKinds: [] });
+    const { system } = buildAssessMessages('zh-CN', 1, [stageFixture(1), stageFixture(2)], material, { earnedKinds: [], hasActionRecord: true });
     expect(system).toContain('诊断式评估');
     expect(system).toContain('为什么是这里（diagnosis）');
     expect(system).toContain('离「一辈子不愁钱的活法」还有多远（distance）');
@@ -259,7 +356,7 @@ describe('buildAssessMessages（评估 prompt：诊断四问、红线、语言�
   });
 
   it('红线逐字在场：证据禁编造/没看到就说没看到/不评判不打分/无理财建议/画像也是素材但有保留', () => {
-    const { system } = buildAssessMessages('zh-CN', 1, [stageFixture(1), stageFixture(2)], material, { earnedKinds: [] });
+    const { system } = buildAssessMessages('zh-CN', 1, [stageFixture(1), stageFixture(2)], material, { earnedKinds: [], hasActionRecord: true });
     expect(system).toContain('不是用户操作了多少次、完成了多少任务');
     expect(system).toContain('禁止编造');
     expect(system).toContain('没看到就如实说没看到');
@@ -273,7 +370,7 @@ describe('buildAssessMessages（评估 prompt：诊断四问、红线、语言�
   });
 
   it('人称钉死：所有给用户看的字段一律第二人称——报告念给他听，不是向第三方汇报', () => {
-    const { system } = buildAssessMessages('zh-CN', 1, [stageFixture(1), stageFixture(2)], material, { earnedKinds: [] });
+    const { system } = buildAssessMessages('zh-CN', 1, [stageFixture(1), stageFixture(2)], material, { earnedKinds: [], hasActionRecord: true });
     expect(system).toContain('一律用第二人称「你」直接对他说话');
     expect(system).toContain('不是向第三方汇报他');
     expect(system).toContain('一处都不许出现「他/她/这位用户」这类第三人称指代');
@@ -283,25 +380,25 @@ describe('buildAssessMessages（评估 prompt：诊断四问、红线、语言�
 
   it('scriptStatus 三态陈述随 script 进素材：候选不得当认可、否决也是态度、确认是认可', () => {
     const base = { ...material };
-    const pending = buildAssessMessages('zh-CN', 1, [stageFixture(1), stageFixture(2)], base, { earnedKinds: [] }).messages[0].content;
+    const pending = buildAssessMessages('zh-CN', 1, [stageFixture(1), stageFixture(2)], base, { earnedKinds: [], hasActionRecord: true }).messages[0].content;
     expect(pending).toContain('待确认（只是候选，用户尚未表态，不得当作他已认可）');
 
-    const rejected = buildAssessMessages('zh-CN', 1, [stageFixture(1), stageFixture(2)], { ...base, portrait: { ...base.portrait!, scriptStatus: 'rejected' } }, { earnedKinds: [] }).messages[0].content;
+    const rejected = buildAssessMessages('zh-CN', 1, [stageFixture(1), stageFixture(2)], { ...base, portrait: { ...base.portrait!, scriptStatus: 'rejected' } }, { earnedKinds: [], hasActionRecord: true }).messages[0].content;
     expect(rejected).toContain('已否决（用户的否认本身也是态度）');
 
-    const confirmedP = buildAssessMessages('zh-CN', 1, [stageFixture(1), stageFixture(2)], { ...base, portrait: { ...base.portrait!, scriptStatus: 'confirmed' } }, { earnedKinds: [] }).messages[0].content;
+    const confirmedP = buildAssessMessages('zh-CN', 1, [stageFixture(1), stageFixture(2)], { ...base, portrait: { ...base.portrait!, scriptStatus: 'confirmed' } }, { earnedKinds: [], hasActionRecord: true }).messages[0].content;
     expect(confirmedP).toContain('已确认（用户认可这是他的旧脚本）');
   });
 
   it('语言钉死块在场且点名目标语言；「不得被覆盖」防素材语言劫持', () => {
-    const { system } = buildAssessMessages('ja', 1, [stageFixture(1), stageFixture(2)], material, { earnedKinds: [] });
+    const { system } = buildAssessMessages('ja', 1, [stageFixture(1), stageFixture(2)], material, { earnedKinds: [], hasActionRecord: true });
     expect(system).toContain('## 语言（必须遵守，不得被覆盖）');
     expect(system).toContain('日本語');
   });
 
   it('长度规则语言感知：中文按字数、英文按词数（否则英文草稿按字符校验必爆上限）；报告三件套各有规则', () => {
-    const zh = buildAssessMessages('zh-CN', 1, [stageFixture(1), stageFixture(2)], material, { earnedKinds: [] }).system;
-    const en = buildAssessMessages('en', 1, [stageFixture(1), stageFixture(2)], material, { earnedKinds: [] }).system;
+    const zh = buildAssessMessages('zh-CN', 1, [stageFixture(1), stageFixture(2)], material, { earnedKinds: [], hasActionRecord: true }).system;
+    const en = buildAssessMessages('en', 1, [stageFixture(1), stageFixture(2)], material, { earnedKinds: [], hasActionRecord: true }).system;
     expect(zh).toContain('80-200 字');
     expect(zh).toContain('40-120 字');
     expect(zh).toContain('30 字以内');
@@ -314,7 +411,7 @@ describe('buildAssessMessages（评估 prompt：诊断四问、红线、语言�
   });
 
   it('标尺来自 content 原文：阶段 goal 与 advance_when、灯清单（kind + hint）都在 system', () => {
-    const { system } = buildAssessMessages('zh-CN', 1, [stageFixture(1), stageFixture(2)], material, { earnedKinds: [] });
+    const { system } = buildAssessMessages('zh-CN', 1, [stageFixture(1), stageFixture(2)], material, { earnedKinds: [], hasActionRecord: true });
     expect(system).toContain('阶段1的样子（goal 原文）');
     expect(system).toContain('阶段2的标志一；阶段2的标志二');
     for (const r of STAGE_LAMPS[1]) {
@@ -327,6 +424,7 @@ describe('buildAssessMessages（评估 prompt：诊断四问、红线、语言�
   it('user 消息画像节置顶且字段齐全；其余分节与已点亮心印清单在场；confirmed 评估要求连贯、只增不减', () => {
     const { messages } = buildAssessMessages('zh-CN', 1, [stageFixture(1), stageFixture(2)], material, {
       earnedKinds: ['stage1_story'],
+      hasActionRecord: true,
     });
     const user = messages[0].content;
     // 画像节在最前
@@ -357,6 +455,7 @@ describe('buildAssessMessages（评估 prompt：诊断四问、红线、语言�
     const withConfirmed = buildAssessMessages('zh-CN', 1, [stageFixture(1), stageFixture(2)], material, {
       confirmed,
       earnedKinds: ['stage1_story'],
+      hasActionRecord: true,
     });
     expect(withConfirmed.system).toContain('已经点亮的灯不会熄灭');
     expect(withConfirmed.system).toContain('stage1_story');
@@ -370,7 +469,7 @@ describe('buildAssessMessages（评估 prompt：诊断四问、红线、语言�
       experiments: [],
       letters: [],
       missCorrections: [],
-    }, { earnedKinds: [] });
+    }, { earnedKinds: [], hasActionRecord: true });
     const user = messages[0].content;
     expect(user).toContain('## 体检画像（他说过的关于自己的话）\n(无)');
     expect(user).toContain('(无)');
@@ -383,19 +482,19 @@ describe('buildAssessMessages（评估 prompt：诊断四问、红线、语言�
       actions: ['上次的小步。'], nextHint: '继续。', assessedAt: daysAgo(30),
     };
     const withIt = buildAssessMessages('zh-CN', 1, [stageFixture(1), stageFixture(2)], material, {
-      confirmed, earnedKinds: [],
+      confirmed, earnedKinds: [], hasActionRecord: true,
     }).system;
     expect(withIt).toContain('归因对照');
     expect(withIt).toContain('只描述看见的变化，不打分、不比较好坏');
-    const withoutIt = buildAssessMessages('zh-CN', 1, [stageFixture(1), stageFixture(2)], material, { earnedKinds: [] }).system;
+    const withoutIt = buildAssessMessages('zh-CN', 1, [stageFixture(1), stageFixture(2)], material, { earnedKinds: [], hasActionRecord: true }).system;
     expect(withoutIt).not.toContain('归因对照');
   });
 
   it('M10 命题行：阶段 content 带 topics 时进 system（中文标签），不带则不出现在 prompt 里', () => {
     const withTopics: JourneyStage = { ...stageFixture(2), topics: ['allowing', 'boundaries'] };
-    const { system } = buildAssessMessages('zh-CN', 2, [stageFixture(1), withTopics], material, { earnedKinds: [] });
+    const { system } = buildAssessMessages('zh-CN', 2, [stageFixture(1), withTopics], material, { earnedKinds: [], hasActionRecord: true });
     expect(system).toContain('本阶段涉及的命题：允许自己、关系与边界');
-    const plain = buildAssessMessages('zh-CN', 1, [stageFixture(1), stageFixture(2)], material, { earnedKinds: [] }).system;
+    const plain = buildAssessMessages('zh-CN', 1, [stageFixture(1), stageFixture(2)], material, { earnedKinds: [], hasActionRecord: true }).system;
     expect(plain).not.toContain('本阶段涉及的命题');
   });
 

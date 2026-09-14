@@ -266,6 +266,41 @@ check(
 check('旧 narration 缓存过期（forConfirmedAt ≠ 新 confirmedAt）', asmt.changeList?.forConfirmedAt !== asmt.confirmedAt);
 check('stage_assessment_confirmed 埋点', (await eventCount(main.key, 'stage_assessment_confirmed')) === 1);
 
+// ───────────────────── ⑦.5 行为证据：没记录时，需真实行为的灯把原因说在灯下 ─────────────────────
+console.log('\n—— ⑦.5 灯要真实行为证据：无 experiments → 灯下给出原因 + 记录入口；有记录即消失 ——');
+const ev = await signUp('evidence');
+// stage=3：两盏灯都要行为证据（stage3_seven / stage3_review），先给零记录
+const evConfirmed = {
+  actualStage: 3,
+  lamps: [
+    { kind: 'stage3_seven', lit: false, evidence: '' },
+    { kind: 'stage3_review', lit: false, evidence: '' },
+  ],
+  summary: 'M10 证据种子：它看到你正站在练习这一段。',
+  diagnosis: 'M10 证据诊断：新做法还在试，旧脚本还会回来。',
+  distance: 'M10 证据距离：前面是把它过成日常。',
+  actions: ['M10 证据行动：这周挑一件小事做一次。'],
+  nextHint: '',
+  assessedAt: daysAgo(5),
+};
+await sql`
+  INSERT INTO growth_profiles (user_key, locale, portrait, concerns, stage, stage_started_at,
+    pinned, memories, experiments, letters, stamps, portrait_evolution, stage_assessment, created_at, daily_seen)
+  VALUES (${ev.key}, 'zh-CN', ${JSON.stringify(portrait)}::jsonb, '[]'::jsonb, 3, ${daysAgo(5)},
+    '[]'::jsonb, '[]'::jsonb, '[]'::jsonb, '[]'::jsonb, '[]'::jsonb, '{}'::jsonb,
+    ${JSON.stringify({ pending: null, confirmed: evConfirmed, confirmedAt: daysAgo(5), dismissedAt: null, generatingAt: null, proposedSeenAt: null, previousConfirmed: null, changeList: null, changeListLockAt: null })}::jsonb,
+    ${daysAgo(40)}, '[]'::jsonb)`;
+const evHtmlNone = await (await get('/zh-CN/journey', ev.cookie)).text();
+check('无行为记录：默认展开的那盏灯给出「要等你真的做过一次」', evHtmlNone.includes('data-lamp-needs-action="stage3_seven"'));
+check('记录入口就在同一处（灯下的记录按钮）', evHtmlNone.includes('data-lamp-cta="stage3_seven"'));
+check('微行动区锚点在场（灯下说法与页内记录入口对得上）', evHtmlNone.includes('id="micro-action"'));
+
+await sql`UPDATE growth_profiles SET experiments = ${JSON.stringify([{ date: dayStr(2), action: 'M10 证据：把舍不得用的杯子拿出来用了', feeling: '松' }])}::jsonb WHERE user_key = ${ev.key}`;
+const evHtmlSome = await (await get('/zh-CN/journey', ev.cookie)).text();
+check('有了一条真实记录：这句提示自动退场（灯本身仍由评估判定）', !evHtmlSome.includes('data-lamp-needs-action='));
+
+await post('/api/me/delete', { confirm: 'DELETE' }, ev.cookie);
+
 // ───────────────────── ⑧ 导出与级联删除 ─────────────────────
 console.log('\n—— ⑧ 导出含 previousConfirmed/changeList + 级联删除归零（含 events）——');
 const exported = await (await get('/api/me/export', main.cookie)).json();

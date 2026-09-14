@@ -189,7 +189,7 @@ export default async function journeyPage({ params }: { params: Promise<{ locale
         </section>
       )}
 
-      <section className="mt-8 border border-line p-6">
+      <section id="micro-action" className="mt-8 border border-line p-6">
         <p className="text-xs tracking-widest text-ink-soft">{dict.journey.microLabel}</p>
         {exercise ? (
           <>
@@ -334,6 +334,7 @@ export default async function journeyPage({ params }: { params: Promise<{ locale
                   checks={stProgress.checks}
                   evidence={Object.fromEntries(confirmedEvidence)}
                   actions={confirmed?.actions ?? []}
+                  hasActionRecord={(profile?.experiments.length ?? 0) > 0}
                 />
               )}
               {/* 阶段 4 无灯不画图，行动记录列表单独给（与灯图同一组件同一管线） */}

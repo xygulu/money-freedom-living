@@ -36,6 +36,7 @@ export default function ChatView({ locale, dict, openSessionId, initialMessages,
   const [error, setError] = useState('');
   // 自动开聊只许一次：StrictMode 下 effect 会跑两遍，ref 同实例保留，避免建出两个会话
   const autoStarted = useRef(false);
+  const openerAsked = useRef(false);
 
   const inputDisabled = busy || ended || !sessionId;
 
@@ -47,6 +48,17 @@ export default function ChatView({ locale, dict, openSessionId, initialMessages,
     void start();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // 归来问候：一条消息都还没有的会话，由它先开口（接上 memories 里的上次内容），
+  // 别让人对着空白自己找话头。续上的旧会话已有消息，这里天然不触发。
+  // 额度语义：opener 就是本会话首条 AI 回复，落账即「新开了一段对话」——
+  // 而新开一段本来就该记 1 次，续聊不再扣，所以这里不会凭空多扣。
+  useEffect(() => {
+    if (!sessionId || openerAsked.current || messages.length > 0 || ended) return;
+    openerAsked.current = true;
+    void stream(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId]);
 
   // 发消息（text）或请求开场（null）：SSE 增量合并到末条 assistant
   async function stream(text: string | null) {

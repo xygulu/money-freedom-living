@@ -25,12 +25,15 @@ export default function StageLampChart({
   checks,
   evidence,
   actions,
+  hasActionRecord,
 }: {
   locale: string;
   dict: Dict;
   checks: StageCheck[];
   evidence: Record<string, string>; // 评估依据随灯显示（服务端已按 kind 摘好；对象可跨 RSC 边界）
   actions: string[]; // 最近一次确认评估的下一步行动（每条直接展开记录表单）
+  /** 有没有留下过真实行为记录——没有时，需行为证据的灯把「为什么还没亮」说明白 */
+  hasActionRecord: boolean;
 }) {
   const t = dict.journey;
   const lampName = (labelKey: string) => (dict.journey as unknown as Record<string, string>)[labelKey] ?? labelKey;
@@ -109,6 +112,14 @@ export default function StageLampChart({
                         <p className="text-xs leading-relaxed text-ink-soft/70">
                           {t.stageLampHintLead}
                           {hint}
+                        </p>
+                      )}
+                      {/* 这盏灯要真实做过才点得亮，而他一条记录都还没有：
+                          把原因说在这儿，别让人以为是评估看漏了他。下面那颗
+                          按钮就是记录入口，话和入口挨着，不用再找。 */}
+                      {c.needsAction && !hasActionRecord && (
+                        <p data-lamp-needs-action={c.kind} className="mt-1.5 text-xs leading-relaxed text-ink-soft">
+                          {t.stageLampNeedsAction}
                         </p>
                       )}
                       {lampForm ? (

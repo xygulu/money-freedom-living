@@ -11,6 +11,8 @@ export interface StageCheck {
   kind: Stamp['kind']; // 关联评估结论与确认时入档的心印 kind；展示名走 dict.journey.<labelKey>
   labelKey: string; // 「这盏灯是什么」的文案 key（dict.journey.<labelKey>），点亮/未点亮共用
   done: boolean;
+  /** 这盏灯要真实行为记录才点得亮（见 LampRule.needsAction）——未亮时据此提示去记录 */
+  needsAction: boolean;
 }
 
 export interface StageProgress {
@@ -38,6 +40,14 @@ export interface LampRule {
   labelKey: string;
   /** 给评估 prompt 的内部备注（中文，不面向用户）：什么样的言行才算点亮这盏灯 */
   hint: string;
+  /**
+   * 这盏灯是否必须有真实行为证据（experiments 里的记录）才允许点亮。
+   * true = 说得再对也不算，得真的做过一次；false = 认知/态度类，说出来本身就是到达。
+   * 分界看灯判的是什么：认出、听见、认领、话语松动 —— 这些发生在人心里，
+   * 对话和日记就是证据；「允许真的发生过」「新做法稳定成日常」「自己看见变化」
+   * 讲的是他在日子里做了什么，没有记录就无从谈起，光凭他在聊天里说得漂亮不能点。
+   */
+  needsAction: boolean;
 }
 
 /**
@@ -52,16 +62,19 @@ export const STAGE_LAMPS: Record<number, LampRule[]> = {
       kind: 'stage1_story',
       labelKey: 'stageLampStory',
       hint: '判定的是程度不是动作：他认出今天的钱模式有来历——早期场景至今还在他身上运行（不只是「记得一件事」，而是「原来它一直在影响我」）',
+      needsAction: false,
     },
     {
       kind: 'stage1_script',
       labelKey: 'stageLampScript',
       hint: '他听得见那个常年在耳边说话的旧声音——知道它说什么、它怎么拦他，并且对它有了自己的态度（认下它的分量，或说出它哪里不对）',
+      needsAction: false,
     },
     {
       kind: 'stage1_color',
       labelKey: 'stageLampColor',
       hint: '他认得自己面对钱时反复泛起的底色感受（怕/愧/不配……），并能承认「这是我的底色」——只是看见，不评判',
+      needsAction: false,
     },
   ],
   2: [
@@ -69,16 +82,19 @@ export const STAGE_LAMPS: Record<number, LampRule[]> = {
       kind: 'stage2_claim',
       labelKey: 'stageLampClaim',
       hint: '旧脚本从「天经地义的事实」变成「他自己的东西」——他亲口认领它（它当年保护过他），或明确说它已经不再是我；认领的那一刻，松动就开始了',
+      needsAction: false,
     },
     {
       kind: 'stage2_try',
       labelKey: 'stageLampTry',
       hint: '允许真的在他身上发生过——为自己破过一次例、放自己一马，或改写过一句内在台词，体感松了一点（心虚、做砸都算，那说明碰到了旧脚本）；做过什么是证据，「允许了自己」才是标准',
+      needsAction: true,
     },
     {
       kind: 'stage2_voice',
       labelKey: 'stageLampVoice',
       hint: '他的话语里看得见松动——「我可以选择」「我想试试」开始替代「必须/应该/不敢」；话语是内心松紧的体温计',
+      needsAction: false,
     },
   ],
   3: [
@@ -86,14 +102,21 @@ export const STAGE_LAMPS: Record<number, LampRule[]> = {
       kind: 'stage3_seven',
       labelKey: 'stageLampSeven',
       hint: '新做法在他的日子里稳定下来——与钱打交道时自然用它，不再靠硬撑和提醒；做过几轮只是证据，稳定成日常才是标准',
+      needsAction: true,
     },
     {
       kind: 'stage3_review',
       labelKey: 'stageLampReview',
       hint: '他能自己看见变化——不用别人告诉他，他自己说得出「哪里不一样了」；有变化、没变化、说不清都算，只要是自己的观察',
+      needsAction: true,
     },
   ],
 };
+
+/** 本阶段里「必须有真实行为记录才允许点亮」的灯 kind（评估 prompt 与硬闸共用）。 */
+export function actionEvidenceKinds(stage: number): string[] {
+  return (STAGE_LAMPS[stage] ?? []).filter((r) => r.needsAction).map((r) => r.kind);
+}
 
 export const MAX_STAGE = 4;
 
@@ -105,6 +128,7 @@ export function computeStageProgress(stage: number, profile: GrowthProfile): Sta
     kind: r.kind,
     labelKey: r.labelKey,
     done: verdict.get(r.kind) === true,
+    needsAction: r.needsAction,
   }));
   return { checks, litCount: checks.filter((c) => c.done).length };
 }

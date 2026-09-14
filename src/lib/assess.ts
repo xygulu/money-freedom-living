@@ -14,7 +14,7 @@ import type {
 } from '@/lib/profile';
 import { getJournalEntries } from '@/lib/journal';
 import { LOCALE_NAME } from '@/lib/onboarding';
-import { MAX_STAGE, STAGE_LAMPS } from '@/lib/stage';
+import { MAX_STAGE, STAGE_LAMPS, actionEvidenceKinds } from '@/lib/stage';
 import type { EvolveMaterialCounts } from '@/lib/evolution';
 import { TOPICS_ZH, type JourneyStage } from '@/lib/content';
 import type { Locale } from '@/i18n/config';
@@ -61,8 +61,18 @@ export function shouldOfferAssess(
  * （禁止半成品评估入库）。actualStage 只能是当前阶段或下一阶段（不倒退）；
  * lamps 必须恰好覆盖当前阶段灯集（顺序不限、不得多不得少）；点亮必须有依据。
  * 返回值不带 assessedAt——由路由填生成时刻，本函数保持可测的确定性。
+ *
+ * hasActionRecord = 这个人有没有过真实行为记录（experiments）。行为证据硬闸：
+ * needsAction 的灯（「允许真的发生过」「稳定成日常」「自己看见变化」）在没有任何
+ * 记录时一律不许点亮——提示词里已经写了这条，但灯是长期入档的心印（只增不减、
+ * 点了就熄不掉），不能只靠模型自觉，这里再拦一道。被拦下的灯连带把 actualStage
+ * 拉回当前阶段：本阶段还有灯没亮就不算走完，不该顺势判进下一阶段。
  */
-export function validateAssessment(draft: unknown, stage: number): Omit<StageAssessment, 'assessedAt'> | null {
+export function validateAssessment(
+  draft: unknown,
+  stage: number,
+  hasActionRecord: boolean
+): Omit<StageAssessment, 'assessedAt'> | null {
   if (typeof draft !== 'object' || draft === null) return null;
   const d = draft as Record<string, unknown>;
   const actualStage = d.actualStage;
@@ -83,11 +93,27 @@ export function validateAssessment(draft: unknown, stage: number): Omit<StageAss
   }
   if (byKind.size !== rules.length || rules.some((rule) => !byKind.has(rule.kind))) return null;
 
+  // 行为证据硬闸：一条记录都没有时，把需要行为证据的灯按灭（不判整份无效——
+  // 其余认知类的灯与诊断报告仍然成立，只是这几面还不能算到达）
+  const litBeforeGate = rules.every((rule) => byKind.get(rule.kind)?.lit === true);
+  let gated = false;
+  if (!hasActionRecord) {
+    for (const rule of rules) {
+      const e = byKind.get(rule.kind)!;
+      if (rule.needsAction && e.lit) {
+        byKind.set(rule.kind, { lit: false, evidence: '' });
+        gated = true;
+      }
+    }
+  }
+
   // 程度制硬约束：本阶段灯全亮 = 应达程度全达成 → 位置必须判下一阶段（阶段完成
   // 即开启，不由素材/动作门槛决定）；反过来不必成立（评估可以自由判在门口）。
   if (rules.length > 0 && rules.every((rule) => byKind.get(rule.kind)?.lit === true)) {
     if (actualStage !== Math.min(stage + 1, MAX_STAGE)) return null;
   }
+  // 闸前全亮、闸后不全亮：位置随之回落，否则会出现「有灯没亮却已进下一阶段」
+  const finalStage = gated && litBeforeGate ? stage : actualStage;
 
   const summary = typeof d.summary === 'string' ? d.summary.trim() : '';
   // 上限是防失控的结构边界（中文 200 字 ≈ 200 字符，英文 120 词 ≈ 800 字符），
@@ -110,7 +136,7 @@ export function validateAssessment(draft: unknown, stage: number): Omit<StageAss
     const e = byKind.get(rule.kind);
     return { kind: rule.kind, lit: e!.lit, evidence: e!.evidence };
   });
-  return { actualStage, lamps, summary, diagnosis, distance, actions, nextHint };
+  return { actualStage: finalStage, lamps, summary, diagnosis, distance, actions, nextHint };
 }
 
 // ---------- prompt ----------
@@ -199,7 +225,7 @@ export function buildAssessMessages(
   stage: number,
   stages: JourneyStage[],
   material: AssessMaterial,
-  context: { confirmed?: StageAssessment | null; earnedKinds: string[] }
+  context: { confirmed?: StageAssessment | null; earnedKinds: string[]; hasActionRecord: boolean }
 ) {
   const lang = LOCALE_NAME[locale] ?? 'English';
   const current = stages.find((s) => s.id === stage);
@@ -240,6 +266,9 @@ export function buildAssessMessages(
   const evidenceLen = locale === 'en' ? '80 words or fewer' : '120 字以内';
   const nextLen = locale === 'en' ? '30 words or fewer' : '40 字以内';
 
+  // 需真实行为证据的灯：没记录就点不亮（校验层还有一道硬闸，这里先把话说清楚）
+  const actionLamps = actionEvidenceKinds(stage);
+
   const system = [
     `你是这段旅程的见证者。你要评估的不是用户操作了多少次、完成了多少任务，而是他从说过的话、写下的事里，实际表现出的认知与行为——他真实走到了旅程的哪个位置。全程用${lang}书写。`,
     '',
@@ -251,7 +280,18 @@ export function buildAssessMessages(
     next ? stageBlock(next) : '',
     '',
     `当前阶段的灯（评估对象，每盏是本阶段应达程度的一个切面——判定的是他到达了这个状态没有，不是他做过哪些动作）：`,
-    ...(STAGE_LAMPS[stage] ?? []).map((r) => `- ${r.kind}：${r.hint}`),
+    ...(STAGE_LAMPS[stage] ?? []).map(
+      (r) => `- ${r.kind}：${r.hint}${r.needsAction ? '【这盏灯必须有真实行为证据：他在日子里真的做过、并且留下了记录；只在对话里说得好不算】' : ''}`
+    ),
+    ...(actionLamps.length > 0 && !context.hasActionRecord
+      ? [
+          '',
+          `行为证据：这个人目前没有任何微行动记录。所以 ${actionLamps.join('、')} 这${actionLamps.length === 1 ? '盏' : '几盏'}灯这次一律 lit: false、evidence 留空——不是他不够好，是这几面讲的就是「在日子里真的发生过」，没有记录就没有证据。请在 actions 里给出一个小到今天就能做、做完能记一句的具体小步；nextHint 里也自然提一句「先去记下一件真实发生的事」。`,
+        ]
+      : []),
+    ...(actionLamps.length > 0 && context.hasActionRecord
+      ? ['', `行为证据：素材里的「这段时间的微行动」就是 ${actionLamps.join('、')} 的证据来源，点亮时请引用其中具体的一件事。`]
+      : []),
     ...(current?.topics?.length
       ? [`本阶段涉及的命题：${current.topics.map((t) => TOPICS_ZH[t] ?? t).join('、')}（diagnosis 归属参考，不必点名）`]
       : []),
@@ -269,6 +309,7 @@ export function buildAssessMessages(
     '',
     '红线：',
     '- 证据必须来自素材：引用原话或具体的事，禁止编造',
+    '- 标了「必须有真实行为证据」的灯：证据只能是「这段时间的微行动」里真实记下的事——他在对话里说打算做、想做、觉得自己能做，都不算',
     '- 所有给用户看的文字（summary/diagnosis/distance/actions/nextHint/每盏灯的 evidence）一律用第二人称「你」直接对他说话（英文用 you），一处都不许出现「他/她/这位用户」这类第三人称指代——这份报告是念给他听的，不是向第三方汇报他；本提示词里用「他」指代他只是内部视角，不得带进任何输出字段',
     '- 判定程度，不数动作：灯的标准是「离活法在本阶段应达的程度」，他做过什么只是判断程度的证据——不要核对任务清单、不要数次数',
     '- 体检画像也是素材：引用其中他说的原话作依据是允许的；但画像是他在体检时的自我陈述，判断他现在的样子时，要与这段时间的言行放在一起看',
