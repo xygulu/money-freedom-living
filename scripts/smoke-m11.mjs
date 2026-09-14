@@ -629,10 +629,24 @@ if (!CRON) {
   check('D30 发过就不再发：同一封信一辈子只发一次', resent.n === base.n, `${base.n} vs ${resent.n}`);
   await sql`UPDATE growth_profiles SET touch = touch - 'sentNodes', last_active_date = ${dayStr(12)}::date WHERE user_key = ${tu.key}`;
 
-  // D-2：退订链接生效且 events 有记录
+  // D-2：退订两步走（GET 只问一句，POST 才算数）且 events 有记录
   const token = touchRow.unsubToken;
-  const unsub = await fetch(`${BASE}/api/touch/unsubscribe?token=${encodeURIComponent(token)}&locale=zh-CN`, { redirect: 'manual' });
-  check('退订链接一点就成（不要求先登录）', unsub.status === 307 || unsub.status === 302, `status=${unsub.status}`);
+  const unsubUrl = `${BASE}/api/touch/unsubscribe?token=${encodeURIComponent(token)}&locale=zh-CN`;
+  const peek = await fetch(unsubUrl, { redirect: 'manual' });
+  const peekLoc = peek.headers.get('location') ?? '';
+  check('GET 退订链接：只送到确认页，不动任何字段（邮件客户端会替用户预取）',
+    (peek.status === 307 || peek.status === 302) && peekLoc.includes(`token=${token}`) && !peekLoc.includes('ok='),
+    `status=${peek.status} loc=${peekLoc.slice(-40)}`);
+  const stillOn = (await sql`SELECT touch FROM growth_profiles WHERE user_key = ${tu.key}`)[0].touch ?? {};
+  check('预取之后来信还开着（GET 不是退订动作）', stillOn.emailOptIn === true);
+
+  const oneClick = await fetch(unsubUrl, {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: 'List-Unsubscribe=One-Click', // RFC 8058：收件方替用户按的那一下
+    redirect: 'manual',
+  });
+  check('POST 一键退订（RFC 8058）真的退掉', oneClick.status === 200, `status=${oneClick.status}`);
   const afterUnsub = (await sql`SELECT touch FROM growth_profiles WHERE user_key = ${tu.key}`)[0].touch ?? {};
   check('退订后来信关闭', afterUnsub.emailOptIn === false);
   check('但退订凭据留着：已发出去那几封信的退订链接不能跟着失效', afterUnsub.unsubToken === token);
@@ -644,7 +658,12 @@ if (!CRON) {
   const gone = await scan();
   check('退订之后：一封都不再发', gone.n === base.n, `${base.n} vs ${gone.n}`);
 
-  const badTok = await fetch(`${BASE}/api/touch/unsubscribe?token=&locale=zh-CN`, { redirect: 'manual' });
+  const badTok = await fetch(`${BASE}/api/touch/unsubscribe?token=&locale=zh-CN`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: 'token=',
+    redirect: 'manual',
+  });
   const badLoc = badTok.headers.get('location') ?? '';
   check('空 token 不会误退订别人（落地页给失败态）', badLoc.includes('ok=0'), badLoc.slice(-24));
 }

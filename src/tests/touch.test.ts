@@ -66,6 +66,30 @@ describe('pickTouchNode：每一道闸都是"不发"的理由', () => {
     expect(pickTouchNode(justSent)).toBeNull();
   });
 
+  it('间隔门槛不能大于 D3→D7 的四天，否则 D7 会被推迟到第八天以后', () => {
+    expect(MIN_GAP_DAYS).toBeLessThanOrEqual(4);
+    // 第 3 天发了 D3，第 7 天整到 D7：门槛正好卡在边界上，这一封必须准时
+    const p = profileOf({
+      created_at: ago(7),
+      last_active_date: agoDate(4),
+      touch: { emailOptIn: true, unsubToken: 't', sentNodes: { D3: ago(4) }, lastSentAt: ago(4) },
+    });
+    expect(pickTouchNode(p)).toBe('D7');
+  });
+
+  it('D3 的门槛单独放宽：第二天露了一面，第三天那封照发', () => {
+    // D3 是冲着"第三天断崖"去的。要求连着两天不来，等于把它唯一想接住的那个人错过
+    const p = profileOf({ created_at: ago(3), last_active_date: agoDate(1) });
+    expect(pickTouchNode(p)).toBe('D3');
+    // 今天还在的人不需要召回——放宽也只放宽到这儿为止
+    expect(pickTouchNode(profileOf({ created_at: ago(3), last_active_date: agoDate(0) }))).toBeNull();
+  });
+
+  it('后面的节点仍要求离开满两天（别打扰还在的人）', () => {
+    expect(pickTouchNode(profileOf({ created_at: ago(7), last_active_date: agoDate(1) }))).toBeNull();
+    expect(pickTouchNode(profileOf({ created_at: ago(7), last_active_date: agoDate(2) }))).toBe('D7');
+  });
+
   it('到了节点就发；到期的挑最大的那个，不补发一串旧信', () => {
     expect(pickTouchNode(profileOf({ created_at: ago(3) }))).toBe('D3');
     expect(pickTouchNode(profileOf({ created_at: ago(40) }))).toBe('D30');
@@ -131,6 +155,32 @@ describe('pickEcho：引用的必须是他自己说过的话', () => {
   it('什么都没说过 → 不引用，绝不编一句替他说', () => {
     expect(pickEcho(profileOf())).toBeNull();
   });
+
+  it('信与命题线一起按时间排：三个月前的信不该压过昨天那句话', () => {
+    const p = profileOf({
+      letters: [{ stage: 1, content: '三个月前写的', state: 'kept', aiReply: null, createdAt: ago(90) }],
+      threads: {
+        'self-worth': {
+          firstSeenAt: ago(90), lastSeenAt: ago(1), depth: 'seen',
+          evidence: [{ at: ago(1), bookId: 'money-freedom', source: 'chat', ref: 'x', quote: '昨天说的' }],
+        },
+      },
+    });
+    expect(pickEcho(p)).toEqual({ text: '昨天说的', from: 'thread' });
+  });
+
+  it('反过来也一样：信更近就引用信', () => {
+    const p = profileOf({
+      letters: [{ stage: 1, content: '昨天写的', state: 'kept', aiReply: null, createdAt: ago(1) }],
+      threads: {
+        'self-worth': {
+          firstSeenAt: ago(30), lastSeenAt: ago(30), depth: 'seen',
+          evidence: [{ at: ago(30), bookId: 'money-freedom', source: 'chat', ref: 'x', quote: '一个月前说的' }],
+        },
+      },
+    });
+    expect(pickEcho(p)).toEqual({ text: '昨天写的', from: 'letter' });
+  });
 });
 
 const DICTS: [string, Dict][] = [
@@ -191,6 +241,9 @@ describe('composeTouch：每封信都必须能退订', () => {
     expect(letter.text).toContain('我不敢报那个价');
     expect(letter.text).toContain(unsubUrl(base, 'zh-CN', 'tok-1'));
     expect(letter.text).toContain(`${base}/zh-CN/journey`);
+    // 回来的路带出处：他是从哪一封信回来的，journey 页据此记一笔 touch_return
+    expect(letter.text).toContain('from=touch&node=D7');
+    expect(letter.unsub).toBe(unsubUrl(base, 'zh-CN', 'tok-1'));
     expect(letter.html).toContain('unsubscribe?token=tok-1');
     expect(letter.subject.length).toBeGreaterThan(0);
   });

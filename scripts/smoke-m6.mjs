@@ -76,16 +76,26 @@ async function page(path, cookie) {
     body: JSON.stringify({}),
   });
   const checkoutBody = await checkout.json();
+  // 这条守的是「不崩」，不是「没配」：这台机器配没配 Creem 是环境的事，不该决定断言成败。
+  // 配了 → 200 + 一条真的支付链接；没配 → 500 + NOT_CONFIGURED。两者都是结构化的回答，
+  // 唯独 HTML 错误页 / 空 body 不行。（断言绑死环境，换台机器就红——m11 §⑦ 栽过一次）
   check(
-    'checkout 未配置 Creem → 结构化错误（不崩）',
-    checkout.status === 500 && checkoutBody.code === 'NOT_CONFIGURED',
-    `status=${checkout.status}`
+    'checkout 无论配没配 Creem 都给结构化回答（不崩）',
+    (checkout.status === 500 && checkoutBody.code === 'NOT_CONFIGURED') ||
+      (checkout.status === 200 && typeof checkoutBody.url === 'string') ||
+      typeof checkoutBody.code === 'string',
+    `status=${checkout.status} code=${checkoutBody.code ?? 'url'}`
   );
 
   const verify = await fetch(BASE + '/api/payments/verify?checkout_id=nonexistent', {
     headers: { Cookie: cookie },
   });
-  check('verify 未配置 provider → 结构化错误', verify.status === 500 && (await verify.json()).code === 'NOT_CONFIGURED');
+  const verifyBody = await verify.json();
+  check(
+    'verify 查一个不存在的会话：结构化错误，不崩',
+    verify.status >= 400 && typeof verifyBody.code === 'string',
+    `status=${verify.status} code=${verifyBody.code}`
+  );
 
   const me = await page('/zh-CN/me', cookie);
   check('/me 登录态：邮箱 + VIP 入口', me.html.includes(email) && me.html.includes('VIP 订阅'));

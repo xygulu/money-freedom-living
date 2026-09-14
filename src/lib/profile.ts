@@ -673,6 +673,36 @@ export async function claimTouchNode(userKey: string, node: string): Promise<boo
 }
 
 /**
+ * 占位回滚：发信真的没发出去时，把 claimTouchNode 写下的那一笔撤掉。
+ *
+ * 不撤会怎样：占位是"宁可漏发不可重发"的一半，另一半得有人还回来。Resend 401 那一刻
+ * 节点已经记成"发过了"，而信一个字都没出去——这个人从此永远收不到这个节点的信，
+ * 而且没有任何地方会再提起它。漏一次可以，漏得无声无息不行。
+ *
+ * lastSentAt 也一并回退到"剩下的节点里最晚的那次"（节点时间戳是 ISO 串，字典序即时序）；
+ * 一条都不剩就整个删掉，免得一个从没发出去的时间挡住后面的间隔闸。
+ */
+export async function releaseTouchNode(userKey: string, node: string): Promise<void> {
+  await execWithFailover((sql: SqlClient) =>
+    sql`WITH cur AS (
+          SELECT user_key,
+                 (CASE WHEN jsonb_typeof(touch->'sentNodes') = 'object' THEN touch->'sentNodes' ELSE '{}'::jsonb END)
+                 - ${node}::text AS remaining
+          FROM growth_profiles WHERE user_key = ${userKey}
+        )
+        UPDATE growth_profiles g
+        SET touch = ((CASE WHEN jsonb_typeof(g.touch) = 'object' THEN g.touch ELSE '{}'::jsonb END) - 'lastSentAt')
+                    || jsonb_build_object('sentNodes', cur.remaining)
+                    || (SELECT CASE WHEN max(value) IS NULL THEN '{}'::jsonb
+                                    ELSE jsonb_build_object('lastSentAt', max(value)) END
+                        FROM jsonb_each_text(cur.remaining)),
+            updated_at = now()
+        FROM cur
+        WHERE g.user_key = cur.user_key`
+  );
+}
+
+/**
  * 按退订 token 反查用户（M11-E）：退订链接点进来时没有登录态，只能靠信里那串 token。
  * 空 token 一律不匹配——否则「touch 里没有 token 的行」会被一个空串全捞出来。
  */

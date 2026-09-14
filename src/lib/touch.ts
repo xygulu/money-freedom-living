@@ -17,10 +17,21 @@ import type { GrowthProfile } from './profile';
 export const TOUCH_NODES = [3, 7, 14, 21, 30, 66, 90] as const;
 export type TouchNode = `D${(typeof TOUCH_NODES)[number]}`;
 
-/** 两封信之间至少隔这么多天——节点撞在一起时也不会连着轰 */
-export const MIN_GAP_DAYS = 5;
+/** 两封信之间至少隔这么多天——节点撞在一起时也不会连着轰。
+ *  取 4 不取 5 是被节点表逼出来的：D3 → D7 只差 4 天，门槛定 5 就会把 D7 的信推到
+ *  第 8 天之后。而 D7 是留存的关键断点，晚一天就是晚一天。 */
+export const MIN_GAP_DAYS = 4;
 /** 今天还活跃的人不需要召回（他人就在这儿） */
 export const AWAY_DAYS = 2;
+
+/**
+ * 这个节点要求"离开多久"才发。D3 单独放宽到 1 天：D3 本来就是冲着"第三天断崖"去的，
+ * 要求连着两天不来，等于 D2 露了一面就把这次干预推迟——那就错过了它唯一想接住的那个人。
+ * 后面的节点隔得远，2 天的门槛只起"别打扰还在的人"的作用，不影响时机。
+ */
+export function awayDaysFor(node: TouchNode): number {
+  return node === 'D3' ? 1 : AWAY_DAYS;
+}
 
 const DAY = 86_400_000;
 
@@ -39,14 +50,15 @@ function daysSinceDate(date: string | null, now: Date): number {
 
 /**
  * 该给这个人发哪个节点的信——发不得就返回 null。
- * 顺序是有意的：opt-in → 还在活跃 → 刚发过 → 到没到节点 → 发过没有。
+ * 顺序是有意的：opt-in → 刚发过 → 到没到节点 → 发过没有 → 人还在不在。
  * 每一道都是「不发」的理由，最后才轮到「发」。
+ * 「人还在不在」挪到最后一道，是因为门槛按节点而定（见 `awayDaysFor`）——得先知道
+ * 是哪一封，才知道该用几天的门槛。
  */
 export function pickTouchNode(profile: GrowthProfile, now: Date = new Date()): TouchNode | null {
   const touch = profile.touch ?? {};
   if (touch.emailOptIn !== true) return null; // 没同意收信 —— 一封都不发
   if (!touch.unsubToken) return null; // 退不掉的信不发
-  if (daysSinceDate(profile.last_active_date, now) < AWAY_DAYS) return null; // 人就在这儿
   if (touch.lastSentAt && daysBetween(touch.lastSentAt, now) < MIN_GAP_DAYS) return null; // 刚发过
 
   const age = daysBetween(profile.created_at, now);
@@ -62,21 +74,35 @@ export function pickTouchNode(profile: GrowthProfile, now: Date = new Date()): T
     const node = `D${n}` as TouchNode;
     if (age >= n && !sent[node]) hit = node;
   }
+  if (!hit) return null;
+  if (daysSinceDate(profile.last_active_date, now) < awayDaysFor(hit)) return null; // 人就在这儿
   return hit;
 }
 
-/** 这封信引用的那句话：优先用他自己写过的信，其次是命题线上的原话，都没有就不引用 */
+/**
+ * 这封信引用的那句话：**取时间上最近的那一句**，信与命题线上的原话放在一起排。
+ *
+ * 为什么必须按时间排而不是"先看信、信里取最后一条"：一个人第 5 天写了封信，之后
+ * 三个月都在对话里留原话——D90 的信却还在引用第 5 天那句，"我记得你"就变成了
+ * "我停在你三个月前"。记得住的体感来自**近**，不来自**多**。
+ */
 export function pickEcho(profile: GrowthProfile): { text: string; from: 'letter' | 'thread' } | null {
-  const letters = profile.letters ?? [];
-  for (let i = letters.length - 1; i >= 0; i--) {
-    const text = (letters[i]?.content ?? '').trim();
-    if (text) return { text, from: 'letter' };
-  }
-  const quotes = Object.values(profile.threads ?? {})
+  const fromLetters = (profile.letters ?? [])
+    .filter((l) => (l.content ?? '').trim())
+    .map((l) => ({ text: l.content.trim(), from: 'letter' as const, at: Date.parse(l.createdAt) }));
+  const fromThreads = Object.values(profile.threads ?? {})
     .flatMap((t) => t?.evidence ?? [])
-    .filter((e) => (e.quote ?? '').trim());
-  const last = quotes.sort((a, b) => Date.parse(a.at) - Date.parse(b.at)).pop();
-  return last ? { text: last.quote.trim(), from: 'thread' } : null;
+    .filter((e) => (e.quote ?? '').trim())
+    .map((e) => ({ text: e.quote.trim(), from: 'thread' as const, at: Date.parse(e.at) }));
+
+  const all = [...fromLetters, ...fromThreads].filter((x) => !Number.isNaN(x.at));
+  if (!all.length) {
+    // 时间戳坏掉的也别丢：宁可引用一句"不知道什么时候说的"，也好过一句都不引用
+    const fallback = [...fromLetters, ...fromThreads].pop();
+    return fallback ? { text: fallback.text, from: fallback.from } : null;
+  }
+  const last = all.sort((a, b) => a.at - b.at).pop()!;
+  return { text: last.text, from: last.from };
 }
 
 export function unsubUrl(baseUrl: string, locale: string, token: string): string {
@@ -92,6 +118,8 @@ export interface TouchLetter {
   subject: string;
   text: string;
   html: string;
+  /** 退订地址：信里挂一份，信头（List-Unsubscribe）里再挂一份，两处同源 */
+  unsub: string;
 }
 
 /**
@@ -120,7 +148,8 @@ export function composeTouch(params: {
     ? tpl.body.replace('{echo}', clip(echo.text))
     : t.bodyNoEcho.replace('{title}', dict.nav.journey);
 
-  const back = `${baseUrl.replace(/\/$/, '')}/${locale}/journey`;
+  // 带上 from/node：他从哪封信回来的，回来的那一刻才认得出（journey 页据此记一次 touch_return）
+  const back = `${baseUrl.replace(/\/$/, '')}/${locale}/journey?from=touch&node=${node}`;
   const unsub = unsubUrl(baseUrl, locale, token);
   const text = [body, '', `${t.backLabel}: ${back}`, '', `${t.unsubLead} ${unsub}`].join('\n');
   const html = [
@@ -130,7 +159,7 @@ export function composeTouch(params: {
     `<p style="margin:30px 0 0;font-size:12px;color:#9b938c">${escapeHtml(t.unsubLead)} <a href="${escapeHtml(unsub)}" style="color:#9b938c">${escapeHtml(t.unsubLabel)}</a></p>`,
     `</div>`,
   ].join('');
-  return { subject: tpl.subject, text, html };
+  return { subject: tpl.subject, text, html, unsub };
 }
 
 function escapeHtml(s: string): string {

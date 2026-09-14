@@ -14,6 +14,8 @@ export interface ResendEmail {
   subject: string;
   text?: string;
   html?: string;
+  /** 额外信头。批量信靠它挂 List-Unsubscribe（RFC 8058），收件方才认一键退订 */
+  headers?: Record<string, string>;
 }
 
 export async function sendResendEmail(email: ResendEmail): Promise<{ id: string | null }> {
@@ -34,6 +36,7 @@ export async function sendResendEmail(email: ResendEmail): Promise<{ id: string 
       subject: email.subject,
       text: email.text,
       html: email.html,
+      headers: email.headers,
     }),
   });
   if (!res.ok) {

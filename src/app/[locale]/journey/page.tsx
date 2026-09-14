@@ -34,7 +34,13 @@ export const dynamic = 'force-dynamic';
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
 
-export default async function journeyPage({ params }: { params: Promise<{ locale: string }> }) {
+export default async function journeyPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ locale: string }>;
+  searchParams: Promise<{ from?: string; node?: string }>;
+}) {
   const { locale } = await params;
   if (!isLocale(locale) || !enabledLocales.includes(locale)) notFound();
   const dict = getDict(locale);
@@ -146,6 +152,13 @@ export default async function journeyPage({ params }: { params: Promise<{ locale
   const gapBucket = gapDays < 0 ? 'first' : gapDays === 0 ? 'same_day' : gapDays <= 3 ? '1-3' : gapDays <= 7 ? '4-7' : '8+';
   try {
     await track(identity.key, 'journey_visit', { gap: gapBucket }, locale);
+    // 从信里回来的那一次单独记一笔（链接带 ?from=touch&node=D7）。
+    // 没有这一笔，touch_sent 就只是"寄出去几封"——寄出去和有人因此回来，是两回事，
+    // 而只有后者能回答"这些信到底该不该继续写"。页面上一个字都不显示：他回来了就够了。
+    const sp = await searchParams;
+    if (sp.from === 'touch' && /^D\d+$/.test(sp.node ?? '')) {
+      await track(identity.key, 'touch_return', { node: sp.node!, gap: gapBucket }, locale);
+    }
   } catch {
     // 打点绝不阻塞页面
   }
