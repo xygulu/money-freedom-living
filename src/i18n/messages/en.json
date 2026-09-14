@@ -108,7 +108,6 @@
     "microFeelingPlaceholder": "One line is enough — lighter? tighter? hard to tell is fine",
     "microSave": "Save it",
     "microSaved": "Saved. Even the ones that didn't work count.",
-    "microChatAlt": "Just talk",
     "microDailyOnly": "Only reading today's card is fine too",
     "chatLabel": "Companion talk",
     "chatHint": "Say whatever is on your mind. I remember where you left off.",
@@ -170,7 +169,22 @@
     "stageNoFinishLine": "No finish line here, and no graduation. This stage is a way of living — a periodic review will wait for you here.",
     "microSkippable": "This step can wait — skipping it forever is fine too. Not doing it still counts.",
     "microFreeAlt": "Without spending: ",
-    "changeListLink": "My change list →"
+    "changeListLink": "My change list →",
+    "arcLabel": "Today, one stretch",
+    "arcOpen": "Open · See",
+    "arcDo": "Do · Try",
+    "arcClose": "Close · Be heard",
+    "arcCloseTitle": "Today ends here.",
+    "arcCloseNote": "Even if you only read the card, you walked this stretch.",
+    "roadLink": "The road you've walked"
+  },
+  "topics": {
+    "self-worth": "Whether I'm worth it",
+    "parents": "You and your parents",
+    "inner-turmoil": "The churn inside",
+    "boundaries": "Room in your relationships",
+    "money-safety": "Money and feeling safe",
+    "allowing": "Letting yourself"
   },
   "timeline": {
     "title": "Your trail",
@@ -189,6 +203,21 @@
     "kindPortrait": "Money portrait",
     "portraitCurrent": "Your current portrait",
     "viewPortrait": "View this version"
+  },
+  "road": {
+    "title": "The road you've walked",
+    "sub": "These are your own words. I keep them here — nothing scored, nothing judged.",
+    "empty": "The road hasn't started yet. Walk a stretch or two and it will show up here.",
+    "depthSeen": "You saw it",
+    "depthReplaced": "You actually did it once",
+    "depthMastered": "You walked it through in this book",
+    "sourceLead": "This stretch came from",
+    "quotesLead": "What you said then",
+    "aheadLabel": "Places you haven't reached",
+    "aheadHint": "They're out there. Not owed — just not yet.",
+    "inviteLead": "Another book says the same thing from a different angle.",
+    "booksLabel": "Books you've opened",
+    "backToJourney": "Back to the journey"
   },
   "stamps": {
     "stage1_story": "You told your story",
@@ -238,7 +267,10 @@
     "stageLabel": "Stage {n} · {title}",
     "livingLabel": "Living it",
     "ariaLabel": "See your journey and where you are",
-    "lampCount": "{lit}/{total} lit"
+    "lampCount": "{lit}/{total} lit",
+    "zoneWalked": "walked",
+    "zoneCurrent": "you are here",
+    "zoneAhead": "not yet"
   },
   "journal": {
     "title": "Journal",

@@ -8,6 +8,9 @@
 // ④ 【最重要】存量用户零变化：一条"DDL 回填后的存量行"（books/threads/touch
 //    全取 DEFAULT）导出后，画像/灯/足迹/信/心印/一签去重逐项与种子一致，
 //    profile 的键集只比 M10 多出 books/threads/touch 三个，别处零差异。
+// ⑤ 上手路径前置（M11-C）：问卷交完就给「我听到的是…」，同意挪到被说中之后；
+// ⑥ 日频形态（M11-D）：日常页是「开→做→合」一段且有明确收束、四段是区域不是
+//    进度条、灯图带命题维度、书只在「你走过的路」露面（出处与邀请）。
 // 运行：dev server 在 3000 + node --env-file=.env.local scripts/smoke-m11.mjs
 import { neon } from '@neondatabase/serverless';
 import * as crypto from 'crypto';
@@ -58,6 +61,7 @@ const threadsOf = (key) =>
   sql`SELECT threads FROM growth_profiles WHERE user_key = ${key}`.then((r) => r[0]?.threads ?? {});
 
 const BOOK_ID = 'money-freedom';
+const TOPICS = ['self-worth', 'parents', 'inner-turmoil', 'boundaries', 'money-safety', 'allowing'];
 
 // ───────────────────── ① 零新表：五处 DDL 都在场 ─────────────────────
 console.log('\n—— ① 数据模型：三列落行内 + book_id + consent kind（零新表）——');
@@ -392,6 +396,149 @@ const wizardHtml = await (await get('/zh-CN/onboarding', up.cookie)).text();
 check('体检页从问卷开始（同意区不在首屏）', !wizardHtml.includes('data-consent'));
 
 await post('/api/me/delete', { confirm: 'DELETE' }, up.cookie);
+
+// ⑥ 日频形态与「你走过的路」（M11-D，docs/05 §3.1/§3.2/§3.5/§8）
+// 这一段验的是形态，不是文案：日常页是「一段」不是三件事、四段是区域不是进度条、
+// 灯图带命题维度、书只在 /road 露面。全部走 data-* 锚点——dict 会被整份序列化进
+// RSC flight payload，「某句话不出现」级别的断言在这里一律不可靠。
+console.log('\n—— ⑥ 日频形态与你走过的路（M11-D）——');
+const rd = await signUp('road');
+const Q_SELF = 'M11-D 原话：我一直觉得自己不配拿这份钱。';
+const Q_PARENT = 'M11-D 原话：我妈那句话我记了二十年。';
+const RD_THREADS = {
+  'self-worth': {
+    depth: 'mastered',
+    firstSeenAt: daysAgo(30),
+    lastSeenAt: daysAgo(2),
+    evidence: [
+      { at: daysAgo(30), bookId: BOOK_ID, source: 'assessment', ref: 'stage1_script', quote: Q_SELF },
+    ],
+  },
+  parents: {
+    depth: 'seen',
+    firstSeenAt: daysAgo(20),
+    lastSeenAt: daysAgo(20),
+    evidence: [{ at: daysAgo(20), bookId: BOOK_ID, source: 'assessment', ref: 'stage1_story', quote: Q_PARENT }],
+  },
+  'inner-turmoil': {
+    depth: 'replaced',
+    firstSeenAt: daysAgo(15),
+    lastSeenAt: daysAgo(5),
+    evidence: [{ at: daysAgo(15), bookId: BOOK_ID, source: 'stamp', ref: 'stage1_color', quote: '' }],
+  },
+};
+const RD_CONFIRMED = {
+  actualStage: 2,
+  lamps: [
+    { kind: 'stage2_claim', lit: false, evidence: '' },
+    { kind: 'stage2_try', lit: false, evidence: '' },
+    { kind: 'stage2_voice', lit: false, evidence: '' },
+  ],
+  summary: 'M11-D 总结：你刚走进第二段。',
+  diagnosis: 'M11-D 诊断：还在看，还没动手。',
+  distance: 'M11-D 距离：差一次真的开口。',
+  actions: ['M11-D 行动：跟一个人说出你的价。'],
+  nextHint: '',
+  assessedAt: daysAgo(1),
+};
+await sql`
+  INSERT INTO growth_profiles (user_key, locale, portrait, concerns, stage, stage_started_at,
+    pinned, memories, experiments, letters, stamps, portrait_evolution, stage_assessment,
+    created_at, daily_seen, threads)
+  VALUES (${rd.key}, 'zh-CN', ${JSON.stringify(portrait)}::jsonb, '[]'::jsonb, 2, ${daysAgo(10)},
+    '[]'::jsonb, '[]'::jsonb, '[]'::jsonb, '[]'::jsonb, '[]'::jsonb, '{}'::jsonb,
+    ${JSON.stringify({ ...emptyState, confirmed: RD_CONFIRMED, confirmedAt: daysAgo(1) })}::jsonb,
+    ${daysAgo(30)}, '[]'::jsonb, ${JSON.stringify(RD_THREADS)}::jsonb)`;
+
+const jHtml = await get('/zh-CN/journey', rd.cookie).then((r) => r.text());
+const arcSteps = (jHtml.match(/data-arc-step="(open|do|close)"/g) ?? []).map((m) => m.slice(15, -1));
+check(
+  '日常页是「一段」不是三件事：开 → 做 → 合 一个容器里走完',
+  (jHtml.match(/data-day-arc/g) ?? []).length >= 1 && arcSteps.join(',') === 'open,do,close',
+  arcSteps.join(',') || '(无)'
+);
+check('这一段有明确收束：「今天到这里」在场（不留悬着的尾巴）', jHtml.includes('data-day-close'));
+// 书名只出现在 /road；日常页连书名都不该有（docs/05 §3.5 唯一露出点）
+const BOOK_TITLE_ZH = '一生不为钱发愁的活法';
+check(
+  '日常页不出现书：整页一次书名都没有（书只在「你走过的路」露面）',
+  !jHtml.includes(BOOK_TITLE_ZH)
+);
+check('日常页给出了去「你走过的路」的入口', jHtml.includes(`href="/zh-CN/road"`));
+
+// 区域视图：走过的区域整段亮、当前区域按评估亮、还没走到的不计数
+const rdZone = (n) => {
+  const i = jHtml.indexOf(`data-segment="${n}"`);
+  if (i < 0) return '';
+  const next = jHtml.indexOf('data-segment=', i + 1); // 切到下一段为止，别把隔壁的灯数进来
+  return jHtml.slice(i, next === -1 ? i + 2000 : next);
+};
+const rdLamps = (n) => (rdZone(n).match(/data-zone-lamp="(\d)"/g) ?? []).map((m) => m.slice(-2, -1)).join('');
+check(
+  '四段是四个区域：走过 / 当前 / 还没走到 三种状态各就各位',
+  rdZone(1).includes('data-zone-state="walked"') &&
+    rdZone(2).includes('data-zone-state="current"') &&
+    rdZone(3).includes('data-zone-state="ahead"') &&
+    rdZone(4).includes('data-zone-state="ahead"'),
+  [1, 2, 3, 4].map((n) => (rdZone(n).match(/data-zone-state="(\w+)"/) ?? [, '?'])[1]).join('/')
+);
+check(
+  '区域不是百分比进度条：灯只有亮/不亮，没有填充宽度',
+  rdLamps(1) === '111' && rdLamps(2) === '000' && !/data-segment="\d"[^>]*width:/.test(jHtml),
+  `z1=${rdLamps(1)} z2=${rdLamps(2)}`
+);
+
+// 命题灯图：每盏灯挂在哪条命题线上 + 这条线跨书走到哪了
+const lampTopics = (jHtml.match(/data-lamp-topic="([a-z-]+)"/g) ?? []).map((m) => m.slice(17, -1));
+check(
+  '灯图带命题维度：当前阶段每盏灯都标出它落在哪条命题线上',
+  lampTopics.length === 3 && lampTopics.every((t) => TOPICS.includes(t)),
+  lampTopics.join(',')
+);
+check(
+  '灯没亮，但这条命题线上跨书攒下的程度照样标出来（换书不退）',
+  jHtml.includes('data-thread-depth="mastered"'),
+  (jHtml.match(/data-thread-depth="(\w+)"/) ?? [, '(无)'])[1]
+);
+
+// 「你走过的路」：书唯一露出点，且只当出处与邀请
+const rHtml = await get('/zh-CN/road', rd.cookie).then((r) => r.text());
+const roadLines = (rHtml.match(/data-road-line="([a-z-]+)"/g) ?? []).map((m) => m.slice(16, -1));
+const roadAhead = (rHtml.match(/data-road-ahead="([a-z-]+)"/g) ?? []).map((m) => m.slice(17, -1));
+check(
+  '走过的路 = 被点到过的命题线，按最近走到的排前面',
+  roadLines.join(',') === 'self-worth,inner-turmoil,parents',
+  roadLines.join(',')
+);
+check(
+  '还没走到的命题单列一区，不混进「走过的路」当欠账',
+  roadAhead.length === 3 && roadAhead.every((t) => TOPICS.includes(t) && !roadLines.includes(t)),
+  roadAhead.join(',')
+);
+check(
+  '陈列的是他自己的原话，不是结论（空原话不占位）',
+  rHtml.includes(Q_SELF) && rHtml.includes(Q_PARENT),
+  `self=${rHtml.includes(Q_SELF)} parents=${rHtml.includes(Q_PARENT)}`
+);
+check(
+  '书在这里只当出处：命题线标了它是在哪本书里被点到的',
+  rHtml.includes('data-road-source') && rHtml.includes(BOOK_TITLE_ZH)
+);
+check(
+  '打开过的书列在这里（书唯一的露出点）',
+  rHtml.includes(`data-road-book="${BOOK_ID}"`)
+);
+check(
+  '只有一本书时不推销：走完的命题线上也不冒出「下一本」邀请',
+  !rHtml.includes('data-road-invite')
+);
+const rdDepth = (rHtml.match(/data-road-depth="(\w+)"/g) ?? []).map((m) => m.slice(17, -1));
+check(
+  '程度是程度，不是分数：seen / replaced / mastered 原样标出',
+  rdDepth.join(',') === 'mastered,replaced,seen',
+  rdDepth.join(',')
+);
+
 
 console.log(failures === 0 ? '\n全部通过 ✅' : `\n${failures} 处失败 ❌`);
 process.exit(failures === 0 ? 0 : 1);

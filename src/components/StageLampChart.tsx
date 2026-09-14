@@ -1,12 +1,17 @@
 'use client';
 
-// 阶段灯图（呈现层「以图为中心」）：当前阶段的灯画在一张雷达式图上——外圈
+// 命题灯图（M11-D，docs/05 §3.2）：当前阶段的灯画在一张雷达式图上——外圈
 // （虚线）= 这个阶段应达的程度（标准），点亮顶点的连线范围 = 用户现在的位置，
 // 差距一眼可见（哪几面亮了、哪几面还空着）。不画数值刻度：灯只有亮/不亮 +
-// 依据（程度制），「差距」由图形表达，不由百分比表达。图下每盏灯一行：
-// 未亮的展开点亮标准 + 真实记录入口（RecordForm：行为/事件/场景 + 感受）；
-// 已亮的展开评估依据。评估的行动列表（ActionRecordList）挂在图下方——按钮
-// 不跳通用聊天，就地展开同一张记录表单。走过的段不用这张图（陈列用文字灯
+// 依据（程度制），「差距」由图形表达，不由百分比表达。
+//
+// 每盏灯同时标出**它是哪条命题线**——书的阶段只是这本书的路线图（可换、可弃），
+// 命题才是他自己的东西（跨书累加、永不重置）。所以已经在这条线上走过的程度
+// （threadDepth）单独标一行：换书之后灯位会变，这一行不会退。
+//
+// 图下每盏灯一行：未亮的展开点亮标准 + 真实记录入口（RecordForm：行为/事件/场景
+// + 感受）；已亮的展开评估依据。评估的行动列表（ActionRecordList）挂在图下方——
+// 按钮不跳通用聊天，就地展开同一张记录表单。走过的段不用这张图（陈列用文字灯
 // 即可），阶段 4 无灯不画图（行动列表在页内单独给）。
 import { useState } from 'react';
 import type { Dict } from '@/i18n/get-dict';
@@ -37,6 +42,9 @@ export default function StageLampChart({
 }) {
   const t = dict.journey;
   const lampName = (labelKey: string) => (dict.journey as unknown as Record<string, string>)[labelKey] ?? labelKey;
+  const topicName = (topic: string) => (dict.topics as unknown as Record<string, string>)[topic] ?? topic;
+  const depthName = (depth: string) =>
+    depth === 'mastered' ? dict.road.depthMastered : depth === 'replaced' ? dict.road.depthReplaced : dict.road.depthSeen;
   const litCount = checks.filter((c) => c.done).length;
   // 默认展开第一盏未亮的灯——引导从「还差的那面」开始；全亮则不展开
   const [open, setOpen] = useState<number | null>(() => {
@@ -90,15 +98,25 @@ export default function StageLampChart({
               <button
                 type="button"
                 onClick={() => setOpen(open === i ? null : i)}
-                className="w-full py-1.5 text-left text-sm leading-relaxed"
+                className="flex w-full items-baseline gap-2 py-1.5 text-left text-sm leading-relaxed"
                 aria-expanded={open === i}
               >
                 <span className={c.done ? 'text-accent' : 'text-ink-soft'}>
                   {c.done ? '●' : '○'} {lampName(c.labelKey)}
                 </span>
+                {/* 命题才是他的心智锚点（书只是入口）——所以这一行常显，不藏在展开里 */}
+                <span data-lamp-topic={c.topic} className="shrink-0 text-[11px] text-ink-soft/60">
+                  {topicName(c.topic)}
+                </span>
               </button>
               {open === i && (
                 <div className="pb-2 pl-5">
+                  {/* 这条命题线上已经走到的程度：跨书累加，换书不退（灯位会变，这一行不变） */}
+                  {c.threadDepth && (
+                    <p data-thread-depth={c.threadDepth} className="mb-1.5 text-xs leading-relaxed text-ink-soft/70">
+                      {topicName(c.topic)} · {depthName(c.threadDepth)}
+                    </p>
+                  )}
                   {c.done ? (
                     evidence[c.kind] && (
                       <p className="text-xs leading-relaxed text-ink-soft/80">

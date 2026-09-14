@@ -128,7 +128,9 @@ async function signUp() {
   const journey = await page('/zh-CN/journey', session);
   check('journey 页锚点卡出现', journey.html.includes('周期锚点'));
   check('今天恰是锚点日 → 锚点日文案出现', journey.html.includes('>今天是发薪日'));
-  check('归来问候此时不出现（刚活跃过）', !journey.html.includes('>欢迎回来。它还在'));
+  // 断言走 data-welcome-back 锚点，不钉文案——这句话改过一次口径（陪伴者自称「我」），
+  // 钉死原句只会在下次改文案时假红
+  check('归来问候此时不出现（刚活跃过）', !journey.html.includes('data-welcome-back'));
 
   const clear = await fetch(BASE + '/api/journey/anchor', {
     method: 'POST',
@@ -145,12 +147,12 @@ async function signUp() {
   const uKey = `u:${userId}`;
   await sql`UPDATE growth_profiles SET last_active_date = (now() - interval '5 days')::date WHERE user_key = ${uKey}`;
   const away = await page('/zh-CN/journey', session);
-  check('隔 5 天回来 → 「欢迎回来。它还在」', away.html.includes('>欢迎回来。它还在'));
+  check('隔 5 天回来 → 归来问候出现', away.html.includes('data-welcome-back'));
   check('不显示中断天数（不追责）', !away.html.includes('5 天'));
 
   await sql`UPDATE growth_profiles SET last_active_date = now()::date WHERE user_key = ${uKey}`;
   const today = await page('/zh-CN/journey', session);
-  check('同天再访 → 不打扰', !today.html.includes('>欢迎回来。它还在'));
+  check('同天再访 → 不打扰', !today.html.includes('data-welcome-back'));
 }
 
 // ───────────────────── ⑤ 恢复码：生成 → 错码 → 对码 → 限速 ─────────────────────

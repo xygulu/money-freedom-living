@@ -276,19 +276,34 @@ check(
 const advanceAgain = await post('/api/journey/assess', { locale: 'en', action: 'advance' }, main.cookie);
 check('无 pending 的 advance → 404', advanceAgain.status === 404, `status=${advanceAgain.status}`);
 
-// 进度条（数据驱动锚点）：stage=2，确认评估是推进时的那份阶段 1 评估（2 亮 1 未亮）。
-// 评估结论语义：seg1 走过的段整段填充（width:100%）；seg2 当前段按确认评估 =
-// 0/3（width:0%）。全阶段可见布局（用户指令）：四段各占一列 = 段名 + 该段进度
-// + 该段灯数，不再只标当前位置
+// 区域视图（M11-D，docs/05 §3.1）：stage=2，确认评估是推进时的那份阶段 1 评估
+// （2 亮 1 未亮）。四段不再是百分比进度条，是四个区域：走过的区域三盏灯全亮
+// （推进本身就是评估结论「程度已达成」），当前区域按确认评估 = 0/3 全灭。
+// 改这条断言是因为产品形态变了（进度条 → 区域），不是因为口径松了：
+// 走过段整段点亮、当前段按评估点亮、未至段全空，三条语义一个没动。
 const seg = (html, id) => {
   const start = html.indexOf(`data-segment="${id}"`);
   if (start === -1) return '';
   const next = html.indexOf('data-segment=', start + 1);
   return html.slice(start, next === -1 ? start + 2000 : next);
 };
+const zoneLamps = (html, id) => (seg(html, id).match(/data-zone-lamp="(\d)"/g) ?? []).map((m) => m.slice(-2, -1));
 const barHtml = await (await get('/en/journey', main.cookie)).text();
-check('进度条 seg1 走过的段整段填充（width:100%）', seg(barHtml, 1).includes('width:100%'), seg(barHtml, 1).match(/width:\d+%/) ?? 'no width');
-check('进度条 seg2 尚未点亮（width:0%）', seg(barHtml, 2).includes('width:0%'));
+check(
+  '区域 1 走过：三盏灯全亮',
+  seg(barHtml, 1).includes('data-zone-state="walked"') && zoneLamps(barHtml, 1).join('') === '111',
+  `state=${seg(barHtml, 1).match(/data-zone-state="\w+"/) ?? 'none'} lamps=${zoneLamps(barHtml, 1).join('')}`
+);
+check(
+  '区域 2 是当前位置：一盏都还没亮',
+  seg(barHtml, 2).includes('data-zone-state="current"') && zoneLamps(barHtml, 2).join('') === '000',
+  `state=${seg(barHtml, 2).match(/data-zone-state="\w+"/) ?? 'none'} lamps=${zoneLamps(barHtml, 2).join('')}`
+);
+check(
+  '区域 3 还没走到：不催不计数（ahead）',
+  seg(barHtml, 3).includes('data-zone-state="ahead"'),
+  seg(barHtml, 3).match(/data-zone-state="\w+"/) ?? 'none'
+);
 check(
   '进度栏全阶段可见：四段格子 + 段名（Stage 1..4 · 各段标题）都在',
   (barHtml.match(/data-stage-cell="\d"/g) ?? []).length === 4 &&

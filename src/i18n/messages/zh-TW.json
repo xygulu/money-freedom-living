@@ -108,7 +108,6 @@
     "microFeelingPlaceholder": "一句話就好——鬆了？緊了？說不清也行",
     "microSave": "記下",
     "microSaved": "記下了。做砸的也算數。",
-    "microChatAlt": "隨便聊聊",
     "microDailyOnly": "今天只看看籤，也很好",
     "chatLabel": "陪伴對話",
     "chatHint": "想說什麼就說。我記得你上次說到哪了。",
@@ -170,7 +169,22 @@
     "stageNoFinishLine": "這裡沒有終點線，也沒有畢業。活法是把日子過下去——週期回顧會在這裡等你。",
     "microSkippable": "這一步可以永遠跳過——不做也算數。",
     "microFreeAlt": "不花這錢也可以：",
-    "changeListLink": "我的變化清單 →"
+    "changeListLink": "我的變化清單 →",
+    "arcLabel": "今天這一段",
+    "arcOpen": "開 · 看見",
+    "arcDo": "做 · 動手",
+    "arcClose": "合 · 被接住",
+    "arcCloseTitle": "今天到這裡。",
+    "arcCloseNote": "只看了那一眼，這一段也算走完了。",
+    "roadLink": "你走過的路"
+  },
+  "topics": {
+    "self-worth": "我配不配",
+    "parents": "和父母之間",
+    "inner-turmoil": "心裡的翻騰",
+    "boundaries": "關係裡的分寸",
+    "money-safety": "錢與安全感",
+    "allowing": "允許自己"
   },
   "timeline": {
     "title": "成長足跡",
@@ -189,6 +203,21 @@
     "kindPortrait": "金錢畫像",
     "portraitCurrent": "你現在的畫像",
     "viewPortrait": "看這一版"
+  },
+  "road": {
+    "title": "你走過的路",
+    "sub": "這些都是你自己說過的話。我原樣放在這兒，不作數、不評分。",
+    "empty": "路還沒開始記。等你走過幾段，這裡就會有東西。",
+    "depthSeen": "看見了",
+    "depthReplaced": "真的做過一次",
+    "depthMastered": "在這本書裡走完了",
+    "sourceLead": "這段路來自",
+    "quotesLead": "你當時說的",
+    "aheadLabel": "還沒走到的地方",
+    "aheadHint": "它們在那兒。不是欠你的，是還沒去。",
+    "inviteLead": "同一件事，還有一本書從另一個角度說過。",
+    "booksLabel": "你打開過的書",
+    "backToJourney": "回到旅程"
   },
   "stamps": {
     "stage1_story": "你講出了自己的故事",
@@ -238,7 +267,10 @@
     "stageLabel": "階段 {n} · {title}",
     "livingLabel": "活法中",
     "ariaLabel": "查看我的旅程進度與位置",
-    "lampCount": "已點亮 {lit}/{total} 盞"
+    "lampCount": "已點亮 {lit}/{total} 盞",
+    "zoneWalked": "走過",
+    "zoneCurrent": "你在這裡",
+    "zoneAhead": "還沒走到"
   },
   "journal": {
     "title": "心事",

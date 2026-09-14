@@ -14,6 +14,13 @@ export interface StageCheck {
   done: boolean;
   /** 这盏灯要真实行为记录才点得亮（见 LampRule.needsAction）——未亮时据此提示去记录 */
   needsAction: boolean;
+  /**
+   * 这盏灯落在哪条命题线上（M11-D 命题灯图）。呈现层据此告诉用户「这盏灯是哪件事」——
+   * 灯的形状属于这本书，命题属于他自己；换书时灯位会变，这条线上的程度不会退（docs/05 §3.2）。
+   */
+  topic: TopicId;
+  /** 他在这条命题线上已经走到的程度（跨书累加，与本书灯亮不亮各说各的；无记录为 null） */
+  threadDepth: ThreadDepth | null;
 }
 
 export interface StageProgress {
@@ -161,7 +168,8 @@ export function actionEvidenceKinds(stage: number): string[] {
 export const MAX_STAGE = 4;
 
 /** 灯的点亮判定 = 最近一次确认的评估里这盏灯亮不亮（评估结论，不是动作记录）。
- *  评估没说亮的灯，即使 stamps 里有历史存档印也不亮。阶段 4 无灯。 */
+ *  评估没说亮的灯，即使 stamps 里有历史存档印也不亮。阶段 4 无灯。
+ *  每盏灯同时带出它所在的命题线与该线上的跨书程度——灯属书、命题属人（docs/05 §3.2）。 */
 export function computeStageProgress(stage: number, profile: GrowthProfile): StageProgress {
   const verdict = new Map((profile.assessment.confirmed?.lamps ?? []).map((l) => [l.kind, l.lit]));
   const checks: StageCheck[] = (STAGE_LAMPS[stage] ?? []).map((r) => ({
@@ -169,6 +177,8 @@ export function computeStageProgress(stage: number, profile: GrowthProfile): Sta
     labelKey: r.labelKey,
     done: verdict.get(r.kind) === true,
     needsAction: r.needsAction,
+    topic: r.topic,
+    threadDepth: profile.threads[r.topic]?.depth ?? null,
   }));
   return { checks, litCount: checks.filter((c) => c.done).length };
 }

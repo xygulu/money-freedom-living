@@ -1,10 +1,12 @@
 // /[locale]/journey：旅程主页（docs/02 §5 每日节奏）。
-// 今日三件事——全部可跳过，跳过不打断足迹，无未完成红点：
-//   ① 今日一签（按当前阶段抽取；同一用户 90 天不重复，看过的记入档案 daily_seen）
-//   ② 今日微行动（按当前阶段练习确定性抽取；"完成 + 一句感受"写入 experiments）
-//   ③ 陪伴对话（进入 /chat，消耗会话配额）
+// 今天这一段（M11-D，docs/05 §8）——开（看见）→ 做（动手）→ 合（被接住）：
+//   开：今日一签（按当前阶段抽取；同一用户 90 天不重复，看过的记入档案 daily_seen）
+//   做：今日微行动（按当前阶段练习确定性抽取；"完成 + 一句感受"写入 experiments）
+//   合：陪伴对话（进入 /chat，消耗会话配额）+「今天到这里」的明确收束
+// 全部可跳过，跳过不打断足迹，无未完成红点；只看那一眼也算走完这一段。
 // 阶段路标 + 当前位置 + 信件入口（阶段仪式：给现在的自己 / 写给钱的一封信）。
 // 归来问候与发薪日锚点属 M7，这里不掺。
+// 书不在这一页露面（docs/05 §3.5）——「你走过的路」/road 是书唯一的露出点。
 import { headers, cookies } from 'next/headers';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -151,7 +153,10 @@ export default async function journeyPage({ params }: { params: Promise<{ locale
       <p className="mt-3 text-sm leading-relaxed text-ink-soft">{dict.journey.sub}</p>
 
       {welcomeBack && (
-        <p className="mt-6 border border-dashed border-line bg-white/60 p-5 text-sm leading-relaxed">
+        <p
+          data-welcome-back
+          className="mt-6 border border-dashed border-line bg-white/60 p-5 text-sm leading-relaxed"
+        >
           {dict.journey.welcomeBack}
         </p>
       )}
@@ -179,47 +184,63 @@ export default async function journeyPage({ params }: { params: Promise<{ locale
         />
       )}
 
-      {daily && (
-        <section className="mt-10 border border-line bg-white/60 p-6">
-          <p className="text-xs tracking-widest text-ink-soft">{dict.journey.dailyLabel}</p>
-          <p className="mt-4 text-lg leading-relaxed">{daily.text}</p>
-          <p className="mt-4 text-sm text-ink-soft">
-            {dict.journey.dailyReflect}：{daily.reflection}
-          </p>
-        </section>
-      )}
+      {/* 今天这一段（M11-D，docs/05 §8）：从「三件事」改成**一段有形状的路**——
+          开（看见）→ 做（动手）→ 合（被接住）。三张并排的卡片＝三个未完成项＝
+          天然欠账感；一段路只有一个出口，走到尾就是走完了。
+          硬规则：只看那一眼也算走完；结尾是「今天到这里」，不是「明天还有」；
+          全部可跳过、跳过不断足迹、无红点（既有口径原样保留）。 */}
+      <section data-day-arc className="mt-10 border border-line bg-white/60">
+        <p className="border-b border-line px-6 py-3 text-xs tracking-widest text-ink-soft">
+          {dict.journey.arcLabel}
+        </p>
 
-      <section id="micro-action" className="mt-8 border border-line p-6">
-        <p className="text-xs tracking-widest text-ink-soft">{dict.journey.microLabel}</p>
-        {exercise ? (
-          <>
-            <p className="mt-4 text-base leading-relaxed">{exercise}</p>
-            {stageContent?.skippable && (
-              <p className="mt-2 text-sm text-ink-soft/80">{dict.journey.microSkippable}</p>
-            )}
-            <MicroActionCard locale={locale} action={exercise} freeAlt={stageContent?.free_alt} skippable={stageContent?.skippable} dict={dict} />
-          </>
-        ) : (
-          <p className="mt-4 text-sm text-ink-soft">{dict.journey.microNone}</p>
+        {daily && (
+          <div data-arc-step="open" className="px-6 py-6">
+            <p className="text-xs tracking-widest text-ink-soft">
+              {dict.journey.arcOpen} · {dict.journey.dailyLabel}
+            </p>
+            <p className="mt-4 text-lg leading-relaxed">{daily.text}</p>
+            <p className="mt-4 text-sm text-ink-soft">
+              {dict.journey.dailyReflect}：{daily.reflection}
+            </p>
+          </div>
         )}
-        <div className="mt-5 flex flex-wrap gap-3 text-sm">
-          <Link href={`/${locale}/chat?start=1`} className="text-accent underline underline-offset-4">
-            {dict.journey.microChatAlt}
-          </Link>
-          <span aria-hidden className="text-line">·</span>
-          <span className="text-ink-soft">{dict.journey.microDailyOnly}</span>
-        </div>
-      </section>
 
-      <section className="mt-8 border border-line p-6">
-        <p className="text-xs tracking-widest text-ink-soft">{dict.journey.chatLabel}</p>
-        <p className="mt-4 text-sm leading-relaxed text-ink-soft">{dict.journey.chatHint}</p>
-        <Link
-          href={`/${locale}/chat?start=1`}
-          className="mt-5 inline-block border border-ink px-5 py-2.5 text-sm transition-colors hover:bg-ink hover:text-paper"
-        >
-          {dict.journey.chatCta}
-        </Link>
+        <div id="micro-action" data-arc-step="do" className="border-t border-line px-6 py-6">
+          <p className="text-xs tracking-widest text-ink-soft">
+            {dict.journey.arcDo} · {dict.journey.microLabel}
+          </p>
+          {exercise ? (
+            <>
+              <p className="mt-4 text-base leading-relaxed">{exercise}</p>
+              {stageContent?.skippable && (
+                <p className="mt-2 text-sm text-ink-soft/80">{dict.journey.microSkippable}</p>
+              )}
+              <MicroActionCard locale={locale} action={exercise} freeAlt={stageContent?.free_alt} skippable={stageContent?.skippable} dict={dict} />
+            </>
+          ) : (
+            <p className="mt-4 text-sm text-ink-soft">{dict.journey.microNone}</p>
+          )}
+          <p className="mt-5 text-sm text-ink-soft">{dict.journey.microDailyOnly}</p>
+        </div>
+
+        <div data-arc-step="close" className="border-t border-line px-6 py-6">
+          <p className="text-xs tracking-widest text-ink-soft">
+            {dict.journey.arcClose} · {dict.journey.chatLabel}
+          </p>
+          <p className="mt-4 text-sm leading-relaxed text-ink-soft">{dict.journey.chatHint}</p>
+          <Link
+            href={`/${locale}/chat?start=1`}
+            className="mt-5 inline-block border border-ink px-5 py-2.5 text-sm transition-colors hover:bg-ink hover:text-paper"
+          >
+            {dict.journey.chatCta}
+          </Link>
+          {/* 明确收束：一段路走到这儿就合上了，不留「明天还有」的尾巴 */}
+          <div data-day-close className="mt-6 border-t border-dashed border-line pt-5">
+            <p className="text-sm leading-relaxed">{dict.journey.arcCloseTitle}</p>
+            <p className="mt-1.5 text-xs leading-relaxed text-ink-soft/70">{dict.journey.arcCloseNote}</p>
+          </div>
+        </div>
       </section>
 
       <section className="mt-8 border border-dashed border-line p-6">
@@ -243,6 +264,10 @@ export default async function journeyPage({ params }: { params: Promise<{ locale
             )}
             <Link href={`/${locale}/timeline`} className="text-accent underline underline-offset-4">
               {dict.journey.growthTrailLink}
+            </Link>
+            {/* 「你走过的路」入口：这里只放一个链接，书本身不在这一页露面 */}
+            <Link href={`/${locale}/road`} className="text-accent underline underline-offset-4">
+              {dict.journey.roadLink}
             </Link>
           </div>
           {growthPreview.length > 0 ? (

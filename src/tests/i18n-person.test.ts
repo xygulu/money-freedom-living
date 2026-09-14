@@ -33,6 +33,7 @@ const COMPANION_VOICE = [
   'journal.replyLabel',
   'letters.sub',
   'letters.replyLabel',
+  'road.sub',
   'onboarding.talk.hint',
   'onboarding.echo.loading',
   'onboarding.echo.hint',

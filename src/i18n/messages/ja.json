@@ -108,7 +108,6 @@
     "microFeelingPlaceholder": "ひとことで——軽い？ 重い？ わからなくてもいい",
     "microSave": "記録する",
     "microSaved": "記録しました。うまくいかなかったことも、立派なデータです。",
-    "microChatAlt": "雑談する",
     "microDailyOnly": "今日はカードを見るだけでもいい",
     "chatLabel": "おしゃべり",
     "chatHint": "言いたいことを言ってください。続きの場所を覚えています。",
@@ -170,7 +169,22 @@
     "stageNoFinishLine": "ここにゴールラインも卒業もありません。暮らし方とは、日々を生きること——定期的なふりかえりが、ここで待っています。",
     "microSkippable": "このステップは、ずっと飛ばしても大丈夫。やらなくても、かぞえます。",
     "microFreeAlt": "お金をかけずに：",
-    "changeListLink": "わたしの変化リスト →"
+    "changeListLink": "わたしの変化リスト →",
+    "arcLabel": "今日のひと区切り",
+    "arcOpen": "開 · 見る",
+    "arcDo": "行 · やってみる",
+    "arcClose": "結 · 受けとめられる",
+    "arcCloseTitle": "今日はここまで。",
+    "arcCloseNote": "カードを見ただけでも、このひと区切りは歩けています。",
+    "roadLink": "あなたが歩いてきた道"
+  },
+  "topics": {
+    "self-worth": "自分にその値打ちがあるか",
+    "parents": "親とのあいだ",
+    "inner-turmoil": "胸のざわつき",
+    "boundaries": "人との距離",
+    "money-safety": "お金と安心",
+    "allowing": "自分に許す"
   },
   "timeline": {
     "title": "成長の足あと",
@@ -189,6 +203,21 @@
     "kindPortrait": "お金の肖像",
     "portraitCurrent": "いまのあなたの肖像",
     "viewPortrait": "この版を見る"
+  },
+  "road": {
+    "title": "あなたが歩いてきた道",
+    "sub": "どれもあなた自身の言葉です。わたしはここに置いておくだけで、点数もつけないし、評価もしません。",
+    "empty": "まだ道は始まっていません。いくつか歩いたら、ここに残ります。",
+    "depthSeen": "見えた",
+    "depthReplaced": "実際に一度やってみた",
+    "depthMastered": "この本のなかでは歩き切った",
+    "sourceLead": "この区間の出どころ",
+    "quotesLead": "そのとき言っていたこと",
+    "aheadLabel": "まだ行っていない場所",
+    "aheadHint": "そこにあります。借りではなく、まだ行っていないだけ。",
+    "inviteLead": "同じことを、別の角度から語る本もあります。",
+    "booksLabel": "開いた本",
+    "backToJourney": "旅路にもどる"
   },
   "stamps": {
     "stage1_story": "自分の物語を語りました",
@@ -238,7 +267,10 @@
     "stageLabel": "段階 {n} · {title}",
     "livingLabel": "暮らし方のなか",
     "ariaLabel": "旅路といまの位置を見る",
-    "lampCount": "{lit}/{total} 灯り"
+    "lampCount": "{lit}/{total} 灯り",
+    "zoneWalked": "歩いた",
+    "zoneCurrent": "いまここ",
+    "zoneAhead": "まだ先"
   },
   "journal": {
     "title": "おもい",

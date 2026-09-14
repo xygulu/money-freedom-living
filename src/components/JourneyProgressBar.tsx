@@ -1,11 +1,14 @@
-// 全局进度条（用户指令：所有阶段与各段进度全部可见——像阶梯一样一段不藏）：
-// 挂在底部导航上方同一个 sticky 容器里，整体是去 /journey 的 Link。四段各占
-// 一列，每列 = 段名（阶段 n·标题 / 活法中）+ 该段进度 + 该段灯数——走过的段
-// 整段淡色填充（阶段推进只发生在评估确认仪式里，「走过」就是评估结论），当前
-// 段按最近一次确认评估点亮的灯比例，未到的段空。阶段 4 没有灯、没有终点线：
-// 段名常显、当前时整条淡色，只表示「活法中」，无计数。不做百分比/「还差多少」
-// 文案——数字只是灯数（lit/total），与旅程页灯图同源（stageLampScales）。
-// 纯静态填充，无动画（尊重 prefers-reduced-motion）。
+// 区域视图（M11-D，docs/05 §3.1）：四段不是「进度条」，是**四个区域**。
+//
+// 为什么改：进度条建模的是「我完成了百分之多少」——接第二本书时，用户会觉得
+// 进度清零、前面白做了。区域建模的是「地图变大了」：走过的区域永远在地图上，
+// 新书只是把地图铺得更远。所以这里**不再画百分比填充条**，改成每个区域一串灯
+// 点（● 亮 / ○ 未亮）——灯只有亮不亮，没有半盏（程度制），条形填充本来就在
+// 谎报精度。阶段 4 无灯，只标「活法中」。
+//
+// 还没走到的区域是**远处那座塔**，不是欠账（docs/05 §8.1）：虚线、淡色、不计数、
+// 不催。挂在底部导航上方同一个 sticky 容器里，整体是去 /journey 的 Link。
+// 纯静态，无动画（尊重 prefers-reduced-motion）。
 import Link from 'next/link';
 import type { Dict } from '@/i18n/get-dict';
 import type { Locale } from '@/i18n/config';
@@ -38,10 +41,10 @@ export default function JourneyProgressBar({
           const isStage4 = id >= MAX_STAGE;
           const isCurrent = id === stage;
           const isWalked = id < stage;
+          const state = isCurrent ? 'current' : isWalked ? 'walked' : 'ahead';
           // 四段统一「阶段 n·标题」——阶段 4 的标题就是「活法」，不再用状态词特例
           const title = getJourneyStage(locale, id)?.title ?? '';
           const name = dict.progress.stageLabel.replace('{n}', String(id)).replace('{title}', title);
-          const pct = total > 0 ? Math.round((lit / total) * 100) : 0;
           return (
             <span key={id} data-stage-cell={id} className="flex min-w-0 flex-1 flex-col gap-1">
               <span
@@ -51,24 +54,40 @@ export default function JourneyProgressBar({
               >
                 {name}
               </span>
-              <span className="flex items-center gap-1">
-                <span data-segment={id} className="relative h-1.5 flex-1 overflow-hidden rounded bg-line">
-                  {isStage4 ? (
-                    isCurrent && <span className="absolute inset-0 rounded bg-accent/40" />
-                  ) : (
-                    <span
-                      className={`absolute inset-y-0 left-0 rounded ${isCurrent ? 'bg-accent' : 'bg-accent/50'}`}
-                      style={{ width: `${pct}%` }}
-                    />
-                  )}
-                </span>
-                {!isStage4 && (
-                  <span
-                    className="shrink-0 text-[10px] leading-none tabular-nums text-ink-soft"
-                    data-lamp-count={isCurrent ? `${lit}/${total}` : undefined}
-                  >
-                    {`${lit}/${total}`}
+              <span
+                data-segment={id}
+                data-zone-state={state}
+                className={`flex h-4 items-center gap-1 rounded px-1.5 ${
+                  isCurrent
+                    ? 'bg-accent/10 ring-1 ring-accent/40'
+                    : isWalked
+                      ? 'bg-accent/5'
+                      : 'border border-dashed border-line'
+                }`}
+              >
+                {isStage4 ? (
+                  // 阶段 4 没有灯、没有终点线：只标一句「活法中」，不计数
+                  <span className="truncate text-[9px] leading-none text-ink-soft/70">
+                    {isCurrent ? dict.progress.livingLabel : dict.progress.zoneAhead}
                   </span>
+                ) : (
+                  <>
+                    {Array.from({ length: total }, (_, i) => (
+                      <span
+                        key={i}
+                        data-zone-lamp={i < lit ? '1' : '0'}
+                        className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                          i < lit ? (isCurrent ? 'bg-accent' : 'bg-accent/50') : 'bg-line'
+                        }`}
+                      />
+                    ))}
+                    <span
+                      className="ml-auto shrink-0 text-[10px] leading-none tabular-nums text-ink-soft"
+                      data-lamp-count={isCurrent ? `${lit}/${total}` : undefined}
+                    >
+                      {`${lit}/${total}`}
+                    </span>
+                  </>
                 )}
               </span>
             </span>

@@ -108,7 +108,6 @@
     "microFeelingPlaceholder": "一句话就好——松了？紧了？说不清也行",
     "microSave": "记下",
     "microSaved": "记下了。做砸的也算数。",
-    "microChatAlt": "随便聊聊",
     "microDailyOnly": "今天只看看签，也挺好",
     "chatLabel": "陪伴对话",
     "chatHint": "想说什么就说。我记得你上次说到哪了。",
@@ -170,7 +169,22 @@
     "stageNoFinishLine": "这里没有终点线，也没有毕业。活法是把日子过下去——周期回顾会在这里等你。",
     "microSkippable": "这一步可以永远跳过——不做也算数。",
     "microFreeAlt": "不花这钱也可以：",
-    "changeListLink": "我的变化清单 →"
+    "changeListLink": "我的变化清单 →",
+    "arcLabel": "今天这一段",
+    "arcOpen": "开 · 看见",
+    "arcDo": "做 · 动手",
+    "arcClose": "合 · 被接住",
+    "arcCloseTitle": "今天到这里。",
+    "arcCloseNote": "只看了那一眼，这一段也算走完了。",
+    "roadLink": "你走过的路"
+  },
+  "topics": {
+    "self-worth": "我配不配",
+    "parents": "和父母之间",
+    "inner-turmoil": "心里的翻腾",
+    "boundaries": "关系里的分寸",
+    "money-safety": "钱与安全感",
+    "allowing": "允许自己"
   },
   "timeline": {
     "title": "成长足迹",
@@ -189,6 +203,21 @@
     "kindPortrait": "金钱画像",
     "portraitCurrent": "你现在的画像",
     "viewPortrait": "看这一版"
+  },
+  "road": {
+    "title": "你走过的路",
+    "sub": "这些都是你自己说过的话。我原样放在这儿，不作数、不评分。",
+    "empty": "路还没开始记。等你走过几段，这里就会有东西。",
+    "depthSeen": "看见了",
+    "depthReplaced": "真的做过一次",
+    "depthMastered": "在这本书里走完了",
+    "sourceLead": "这段路来自",
+    "quotesLead": "你当时说的",
+    "aheadLabel": "还没走到的地方",
+    "aheadHint": "它们在那儿。不是欠你的，是还没去。",
+    "inviteLead": "同一件事，还有一本书从另一个角度说过。",
+    "booksLabel": "你打开过的书",
+    "backToJourney": "回到旅程"
   },
   "stamps": {
     "stage1_story": "你讲出了自己的故事",
@@ -238,7 +267,10 @@
     "stageLabel": "阶段 {n} · {title}",
     "livingLabel": "活法中",
     "ariaLabel": "查看我的旅程进度与位置",
-    "lampCount": "已点亮 {lit}/{total} 盏"
+    "lampCount": "已点亮 {lit}/{total} 盏",
+    "zoneWalked": "走过",
+    "zoneCurrent": "你在这里",
+    "zoneAhead": "还没走到"
   },
   "journal": {
     "title": "心事",
