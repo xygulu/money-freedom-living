@@ -306,6 +306,34 @@ async function doMigrate(): Promise<void> {
     )
   `;
   await sql`CREATE INDEX IF NOT EXISTS idx_recovery_attempts_scope ON recovery_attempts(scope, subject, created_at DESC)`;
+
+  // 陪伴者 nudge 事件追踪（前台改造 §6）：用户看到一次 nudge 落一条，源 + 红线命中 + 是否 30s 内 dismiss。
+  // 不存文案本身（nudge 是基于历史动态生成的，不应留痕变成"画像"的一部分）。
+  await sql`
+    CREATE TABLE IF NOT EXISTS companion_nudge_events (
+      id BIGSERIAL PRIMARY KEY,
+      user_key TEXT NOT NULL,
+      ts TIMESTAMPTZ NOT NULL DEFAULT now(),
+      source TEXT NOT NULL,         -- 'template-memory' | 'template-goal' | 'template-promise' | 'llm' | 'fallback'
+      stage INT,
+      hit_red_line BOOLEAN NOT NULL DEFAULT false,
+      dismissed_within_30s BOOLEAN NOT NULL DEFAULT false,
+      led_to_chat_open BOOLEAN NOT NULL DEFAULT false
+    )
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS idx_companion_nudge_user_ts ON companion_nudge_events(user_key, ts DESC)`;
+
+  // ui_version 视图追踪：每次用户访问 journey 页落一条，废除旧版时统计切换率。
+  await sql`
+    CREATE TABLE IF NOT EXISTS ui_version_view_events (
+      id BIGSERIAL PRIMARY KEY,
+      user_key TEXT NOT NULL,
+      ts TIMESTAMPTZ NOT NULL DEFAULT now(),
+      version TEXT NOT NULL,        -- 'new' | 'classic'
+      page TEXT NOT NULL            -- 入口页面（'journey' | 'journey-new' | 'archive' | ...）
+    )
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS idx_ui_version_view_user_ts ON ui_version_view_events(user_key, ts DESC)`;
 }
 
 /**

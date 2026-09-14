@@ -1,0 +1,77 @@
+.wrap {
+  position: fixed;
+  /* 一幕宽度 420-580，居中后 right = (vw - 容器宽)/2 + 20 */
+  right: calc(50% - min(290px, 50vw - 20px));
+  bottom: 24px;
+  z-index: 45;
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  pointer-events: none;
+}
+
+@media (max-width: 420px) {
+  .wrap {
+    right: 20px;
+  }
+}
+
+.bubble {
+  pointer-events: auto;
+  max-width: 220px;
+  background: var(--scene-surface);
+  color: var(--scene-ink);
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 9px 13px;
+  border-radius: 12px;
+  border: 1px solid var(--scene-line);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+  white-space: pre-wrap;
+}
+
+.ball {
+  pointer-events: auto;
+  width: 54px;
+  height: 54px;
+  appearance: none;
+  border: none;
+  border-radius: 50%;
+  background: var(--scene-surface);
+  color: var(--scene-ink);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.06),
+    0 12px 28px rgba(0, 0, 0, 0.07),
+    0 0 0 6px var(--scene-glow);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.ball:hover {
+  transform: scale(1.04);
+}
+
+.ball:active {
+  transform: scale(0.96);
+}
+
+@keyframes nudge {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25% { transform: translateY(-3px) rotate(-3deg); }
+  50% { transform: translateY(0) rotate(0deg); }
+  75% { transform: translateY(-3px) rotate(3deg); }
+}
+
+.wrap[data-nudge-state='nudge'] .ball {
+  animation: nudge 1.2s ease-in-out 2;
+}
+
+.wrap[data-nudge-state='open'] .ball {
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.06),
+    0 12px 28px rgba(0, 0, 0, 0.07),
+    0 0 0 6px var(--scene-glow),
+    inset 0 0 0 2px var(--scene-accent);
+}

@@ -2,6 +2,11 @@
 // 进旅程：回访者要的是「今天」，不是再读一遍招牌（用户反馈：做过体检进来
 // 还是体检首页）。体检与否的判定是 portrait 存在（仅有档案行不算——如只在
 // 旅程页记过一条真实记录但没体检的访客，仍应看到体检入口）。
+//
+// 前台改造（70-2 A1）：已体检回访者按 ui_version 重定向：
+//   - new      → /journey-new（一幕）
+//   - classic  → /journey  （经典版）
+// 落地页本体仅在没体检时渲染。
 import { headers, cookies } from 'next/headers';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
@@ -9,6 +14,7 @@ import { visibleLocales } from '@/i18n/config';
 import { getDict } from '@/i18n/get-dict';
 import { resolveIdentity } from '@/lib/identity';
 import { getProfile } from '@/lib/profile';
+import { getUiVersion } from '@/lib/ui-version';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,13 +22,17 @@ export default async function LandingPage({ params }: { params: Promise<{ locale
   const { locale } = await params;
   const dict = getDict(locale);
 
-  // 已体检 → 旅程（redirect 抛出即终止渲染，落地页不再输出）
+  // 已体检 → 旅程（按 ui_version 选新版或经典版）。
   try {
     const headersList = await headers();
     const cookieList = await cookies();
     const identity = await resolveIdentity({ headers: headersList, cookies: cookieList });
     const profile = await getProfile(identity.key);
-    if (profile?.portrait) redirect(`/${locale}/journey`);
+    if (profile?.portrait) {
+      const v = await getUiVersion();
+      const target = v === 'classic' ? `/${locale}/journey` : `/${locale}/journey-new`;
+      redirect(target);
+    }
   } catch (error) {
     // redirect() 以特殊错误对象向外抛，必须放行；身份/档案解析失败 = 当作访客
     if (

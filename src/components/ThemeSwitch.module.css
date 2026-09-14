@@ -1,0 +1,29 @@
+.seg {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: auto;
+  max-width: 100%;
+  margin-top: 12px;
+}
+
+.btn {
+  appearance: none;
+  border: 1px solid var(--scene-line);
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  padding: 9px 15px;
+  border-radius: 999px;
+  cursor: pointer;
+  color: var(--scene-soft);
+  white-space: nowrap;
+  max-width: 100%;
+  transition: 0.18s;
+}
+
+.btn.on {
+  background: var(--scene-ink);
+  border-color: var(--scene-ink);
+  color: var(--scene-bg);
+}

@@ -1,0 +1,98 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 18px 0;
+  border-top: 1px solid var(--scene-line);
+}
+
+.eyebrow {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--scene-soft);
+  margin: 0;
+}
+
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.blockLabel {
+  margin: 0;
+  font-size: 12px;
+  color: var(--scene-faint);
+  letter-spacing: 0.04em;
+}
+
+.quote {
+  margin: 0;
+  padding: 10px 14px;
+  background: var(--scene-surface);
+  border: 1px solid var(--scene-line);
+  border-radius: 10px;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--scene-ink);
+}
+
+.skipped {
+  margin: 0;
+  font-size: 14px;
+  color: var(--scene-soft);
+  font-style: italic;
+}
+
+.echo {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--scene-ink);
+  font-family: var(--scene-serif, var(--scene-font));
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.door {
+  color: var(--scene-accent);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  font-size: 13px;
+  transition: color 0.18s;
+}
+
+.door:hover {
+  color: var(--scene-ink);
+}
+
+.edit {
+  appearance: none;
+  background: none;
+  border: none;
+  color: var(--scene-soft);
+  font: inherit;
+  font-size: 12px;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  cursor: pointer;
+  padding: 4px 6px;
+}
+
+.edit:hover {
+  color: var(--scene-ink);
+}
+
+.doneSub {
+  margin: 0;
+  font-size: 12px;
+  color: var(--scene-faint);
+  line-height: 1.6;
+}

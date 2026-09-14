@@ -1,0 +1,101 @@
+.bar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 0;
+  border-top: 1px dashed var(--scene-line);
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--scene-soft);
+}
+
+.row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.dot_lit {
+  background: var(--scene-ink);
+}
+
+.dot_breathing {
+  background: var(--scene-accent);
+  opacity: 0.55;
+  animation: pulse 2.4s ease-in-out infinite;
+}
+
+.dot_empty {
+  border: 1px dashed var(--scene-line);
+  background: transparent;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.4; transform: scale(0.95); }
+  50% { opacity: 0.8; transform: scale(1.05); }
+}
+
+.stages {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 4px;
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--scene-soft);
+  text-decoration: none;
+  transition: 0.18s;
+}
+
+.stage:hover {
+  background: var(--scene-surface);
+  color: var(--scene-ink);
+}
+
+.stageOn {
+  color: var(--scene-ink);
+}
+
+.stageDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  background: transparent;
+}
+
+.stageOn .stageDot {
+  background: var(--scene-accent);
+  border-color: var(--scene-accent);
+}
+
+.stageName {
+  letter-spacing: 0.04em;
+}
+
+.hint {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: var(--scene-faint);
+}

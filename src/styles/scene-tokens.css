@@ -1,0 +1,62 @@
+/*
+ * 前台改造（70-2）· 一幕 · 一人 · 一存档 — 设计 token
+ *
+ * 来源：docs/prototypes/原型v1_一幕一人一存档(6).html §样式表 1:8-23 与 docs/prototypes/70-2 §5。
+ * 默认主题 = 「极简留白」；另两套留作 /archive → 设置 里的可选主题，
+ * 视觉与现有的 Tailwind `--color-*` 同源共存（CSS Modules 用 `var(--*)`，零侵入）。
+ */
+
+:root {
+  --scene-bg: #fbfbf9;
+  --scene-surface: #ffffff;
+  --scene-ink: #1c1c1a;
+  --scene-soft: #8c8c85;
+  --scene-faint: #bcbcb4;
+  --scene-line: #ebebe6;
+  --scene-accent: #a8674a;
+  --scene-lit: #7fa391;
+  --scene-glow: rgba(168, 103, 74, 0.1);
+  --scene-font:
+    -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', sans-serif;
+  --scene-serif:
+    'Songti SC', 'STSong', 'Source Han Serif SC', Georgia, serif;
+  --scene-display: var(--scene-font);
+  --scene-lh: 1.75;
+  --scene-r: 14px;
+}
+
+[data-scene-theme='paper'] {
+  --scene-bg: #faf5ec;
+  --scene-surface: #fffdf8;
+  --scene-ink: #3b3227;
+  --scene-soft: #8c7f6d;
+  --scene-faint: #c3b7a2;
+  --scene-line: #ede3d2;
+  --scene-accent: #b5793f;
+  --scene-lit: #9c8a5c;
+  --scene-glow: rgba(181, 121, 63, 0.1);
+  --scene-display: var(--scene-serif);
+  --scene-r: 6px;
+}
+
+[data-scene-theme='night'] {
+  --scene-bg: #141416;
+  --scene-surface: #1c1c20;
+  --scene-ink: #edede9;
+  --scene-soft: #8f8f96;
+  --scene-faint: #5a5a62;
+  --scene-line: #2a2a30;
+  --scene-accent: #c99a76;
+  --scene-lit: #84a392;
+  --scene-glow: rgba(201, 154, 118, 0.12);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

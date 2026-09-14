@@ -1,0 +1,124 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.eyebrow {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--scene-soft);
+  margin: 0;
+}
+
+.exercise {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.65;
+  color: var(--scene-ink);
+  font-family: var(--scene-serif, var(--scene-font));
+}
+
+.exerciseMuted {
+  margin: 0;
+  font-size: 14px;
+  color: var(--scene-soft);
+  font-style: italic;
+}
+
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 0;
+  padding: 0;
+  border: none;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+.choice {
+  appearance: none;
+  border: 1px solid var(--scene-line);
+  background: var(--scene-surface);
+  color: var(--scene-ink);
+  font: inherit;
+  font-size: 14px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: 0.18s;
+}
+
+.choice:hover {
+  border-color: var(--scene-ink);
+}
+
+.choiceOn {
+  background: var(--scene-ink);
+  color: var(--scene-bg);
+  border-color: var(--scene-ink);
+}
+
+.thoughtLabel {
+  font-size: 12px;
+  color: var(--scene-soft);
+  margin-top: 6px;
+}
+
+.thoughtInput {
+  appearance: none;
+  border: 1px solid var(--scene-line);
+  background: var(--scene-surface);
+  color: var(--scene-ink);
+  font: inherit;
+  font-size: 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  outline-offset: 2px;
+}
+
+.thoughtInput:focus {
+  outline: 2px solid var(--scene-accent);
+}
+
+.submit {
+  appearance: none;
+  border: 1px solid var(--scene-ink);
+  background: var(--scene-ink);
+  color: var(--scene-bg);
+  font: inherit;
+  font-size: 14px;
+  padding: 10px 22px;
+  border-radius: 999px;
+  cursor: pointer;
+  align-self: flex-start;
+  margin-top: 4px;
+  transition: 0.18s;
+}
+
+.submit:hover:not(:disabled) {
+  background: var(--scene-accent);
+  border-color: var(--scene-accent);
+}
+
+.submit:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.error {
+  margin: 0;
+  font-size: 12px;
+  color: var(--scene-accent);
+}

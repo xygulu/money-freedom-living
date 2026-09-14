@@ -539,5 +539,64 @@
     "busy": "あなたの言葉と行動を集めています……",
     "failed": "今回は書ききれませんでした。上のリストはあなたのものです——また試せます。",
     "back": "← 旅にもどる"
+  },
+  "oneScreen": {
+    "archive": "アーカイブ",
+    "openArchive": "アーカイブをひらく"
+  },
+  "companion": {
+    "aria": "コンパニオン",
+    "exitHint": "今日は話さない日でも大丈夫。",
+    "openChat": "コンパニオンをひらく",
+    "chatTitle": "わたしは、ここにいます。",
+    "chatPlaceholder": "なんでも……",
+    "chatSend": "送る",
+    "doorLink": "もう少し話したくなったら",
+    "doorFallback": "今日はここまで。何でも言ってください——ここにいます。",
+    "chatEmpty": "コンパニオンが開きました。急がなくていい——何か言う必要はありません。",
+    "nudgeSeenToday": "今日はもう、見えました。"
+  },
+  "newJourney": {
+    "dailyEyebrow": "今日",
+    "actEyebrow": "今日の一歩",
+    "actChoices": {
+      "done": "できた",
+      "partial": "半分だけ",
+      "missed": "今日は手が回らなかった"
+    },
+    "doneEyebrow": "今日、ここまで",
+    "done": "今日、ここまで。",
+    "doneSub": "ちらっと見ただけでも、立派に歩いたことになります。いつでもどうぞ。",
+    "mirrorQuote": "あなたが書いたこと",
+    "mirrorEcho": "コンパニオンが受け取ったこと",
+    "mirrorEchoFallback": "届きました。今日のところは、それで十分です。",
+    "pathEyebrow": "あなたの道",
+    "stageNames": ["看见", "松动", "练习", "活法"],
+    "pathHint": "節點をタップして根拠を見る",
+    "noMirror": "今日、手が回らなくても、大丈夫。",
+    "echoPreparing": "コンパニオンが考えています……",
+    "echoFailed": "今回はお返しができませんでした。あなたが書いたことは、あなたのまま。",
+    "actDoneCta": "この一歩を記す"
+  },
+  "archivePage": {
+    "title": "アーカイブ",
+    "sub": "ふりかえり、この部屋を調える。",
+    "rows": {
+      "trail": "歩いてきた道",
+      "said": "あなたが言ったこと",
+      "mirror": "あなたの鏡",
+      "letter": "書いてきた手紙",
+      "write": "未来の自分に手紙を書く",
+      "setting": "設定とアカウント"
+    },
+    "settingsGroup": {
+      "versionLabel": "インターフェース",
+      "themeLabel": "トーン"
+    },
+    "versions": { "new": "新しい版", "classic": "クラシック" },
+    "themes": { "plain": "プレーン", "paper": "紙", "night": "ナイト" }
+  },
+  "nudge": {
+    "fallback": "わたしは、ここにいます。"
   }
 }

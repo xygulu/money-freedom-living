@@ -1,0 +1,46 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.eyebrow {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--scene-soft);
+  margin: 0;
+}
+
+.text {
+  margin: 0;
+  font-size: clamp(19px, 5vh, 25px);
+  line-height: 1.55;
+  color: var(--scene-ink);
+  font-family: var(--scene-serif, var(--scene-font));
+  font-weight: 400;
+}
+
+.reflect {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--scene-soft);
+  line-height: 1.7;
+}
+
+.reflectLabel {
+  color: var(--scene-faint);
+  margin-right: 2px;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.emptyHint {
+  font-size: 14px;
+  color: var(--scene-soft);
+  margin: 0;
+}

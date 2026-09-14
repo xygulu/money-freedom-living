@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>读书落地 · 原型 v1（一幕 · 一人 · 一存档）</title>
+<style>
+/* ============ 调性：多套，默认极简留白 ============ */
+:root{
+  --bg:#FBFBF9; --surface:#FFFFFF; --ink:#1C1C1A; --soft:#8C8C85; --faint:#BCBCB4;
+  --line:#EBEBE6; --accent:#A8674A; --lit:#7FA391; --glow:rgba(168,103,74,.10);
+  --font:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --serif:"Songti SC","STSong","Source Han Serif SC",Georgia,serif;
+  --display:var(--font); --lh:1.75; --r:14px;
+}
+[data-theme="paper"]{
+  --bg:#FAF5EC; --surface:#FFFDF8; --ink:#3B3227; --soft:#8C7F6D; --faint:#C3B7A2;
+  --line:#EDE3D2; --accent:#B5793F; --lit:#9C8A5C; --glow:rgba(181,121,63,.10);
+  --display:var(--serif); --r:6px;
+}
+[data-theme="night"]{
+  --bg:#141416; --surface:#1C1C20; --ink:#EDEDE9; --soft:#8F8F96; --faint:#5A5A62;
+  --line:#2A2A30; --accent:#C99A76; --lit:#84A392; --glow:rgba(201,154,118,.12);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--ink); font-family:var(--font);
+  font-size:15px; line-height:var(--lh); letter-spacing:.01em;
+  transition:background .35s ease,color .35s ease;
+}
+[data-theme="paper"] body{background:var(--bg)}
+.phone{max-width:390px;margin:0 auto;min-height:100vh;background:var(--bg);position:relative;overflow-x:hidden}
+[data-view="classic"] .phone{padding-bottom:74px}
+
+/* ============ 顶栏：只有日期 + 存档 ============ */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 22px 2px}
+.topbar .date{font-size:12px;letter-spacing:.14em;color:var(--faint)}
+.arch{appearance:none;border:0;background:none;padding:6px;cursor:pointer;color:var(--soft)}
+.arch svg{display:block}
+
+/* ============ 一幕 · 场景 ============ */
+.scene{padding:16px 22px 0}
+.eyebrow{font-size:11px;letter-spacing:.22em;color:var(--faint);margin:0}
+.daily{
+  font-family:var(--display); font-size:clamp(19px,5vh,25px); line-height:1.5; letter-spacing:.005em;
+  margin:13px 0 0; font-weight:400;
+}
+.daily-reflect{margin:11px 0 0;font-size:13px;color:var(--soft)}
+.daily-reflect b{font-weight:400;color:var(--ink);opacity:.75}
+
+/* 今天这一步 */
+.act{margin:20px 22px 0;padding:17px 20px;background:var(--surface);border-radius:var(--r);
+     box-shadow:0 1px 2px rgba(0,0,0,.03), 0 8px 24px -18px rgba(0,0,0,.16);border:1px solid var(--line)}
+.act-text{font-size:15.5px;margin:10px 0 0;line-height:1.7}
+.act-note{font-size:12px;color:var(--faint);margin:9px 0 0}
+.choices{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.choices button{
+  appearance:none;cursor:pointer;font:inherit;font-size:14px;padding:10px 18px;border-radius:999px;
+  border:1px solid var(--line);background:var(--surface);color:var(--ink);transition:.18s}
+.choices button.primary{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.choices button:active{transform:scale(.97)}
+
+/* 提交后：镜面回应 */
+.mirror{margin:16px 22px 0;padding:18px;border-radius:var(--r);background:var(--glow);border:1px solid var(--line)}
+.mirror .lab{font-size:11px;letter-spacing:.2em;color:var(--faint);margin:0}
+.mirror .quote{font-family:var(--display);font-size:17px;line-height:1.6;margin:10px 0 0}
+.mirror .echo{font-size:13px;color:var(--soft);margin:12px 0 0;padding-top:12px;border-top:1px solid var(--line)}
+.closed{margin:20px 22px 0;text-align:center}
+.closed .big{font-family:var(--display);font-size:17px;margin:0}
+.closed .sm{font-size:12px;color:var(--faint);margin:10px 0 0}
+.closed a{color:var(--soft);font-size:12px;text-decoration:underline;text-underline-offset:4px;display:inline-block;margin-top:16px}
+
+/* ============ 路：形状说话，无百分比 ============ */
+.path{margin:20px 22px 0}
+.path .lab{font-size:11px;letter-spacing:.22em;color:var(--faint);margin:0 0 12px}
+.rail{position:relative;height:36px}
+.rail .track{position:absolute;left:5px;right:5px;top:17px;height:1px;background:var(--line)}
+.cells{position:relative;display:flex;justify-content:space-between;align-items:center;height:36px}
+.cell{width:11px;height:11px;border-radius:3px;background:transparent;border:1px solid var(--faint);flex:0 0 auto}
+.cell.walked{background:var(--lit);border-color:var(--lit)}
+.cell.now{background:var(--accent);border-color:var(--accent);animation:breathe 2.6s ease-in-out infinite}
+@keyframes breathe{0%,100%{box-shadow:0 0 0 0 var(--glow)}50%{box-shadow:0 0 0 8px transparent}}
+.cell.node{width:13px;height:13px;border-radius:50%}
+.cell.node.future{border-style:dashed}
+.stages{display:grid;grid-template-columns:repeat(4,1fr);margin:10px 0 0}
+.stages span{font-size:11px;color:var(--faint);letter-spacing:.06em;text-align:center}
+.stages span.on{color:var(--accent)}
+.stages span:first-child{text-align:left}
+.stages span:last-child{text-align:right}
+.path .hint{font-size:12px;color:var(--faint);margin:13px 0 0}
+
+/* 一幕为整屏：路贴底，避免内容结束后留下一大片空白 */
+#v-new{display:flex;flex-direction:column;min-height:100vh;min-height:100dvh;padding-bottom:82px}
+#v-new .path{margin-top:auto;padding-top:14px}
+#v-new .act, #v-new .mirror{margin-top:auto}   /* 剩余空白平分，不堆在一处 */
+
+/* ============ 陪伴者：在场，不是 Tab ============ */
+.companion{position:fixed;right:calc(50% - 195px + 20px);bottom:24px;z-index:45;
+  width:54px;height:54px;border-radius:50%;border:1px solid var(--line);background:var(--surface);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  box-shadow:0 2px 6px rgba(0,0,0,.05), 0 12px 28px -14px rgba(0,0,0,.28), 0 0 0 6px var(--glow);
+  transition:.2s}
+@media (max-width:420px){ .companion{right:20px} }
+.companion:active{transform:scale(.95)}
+/* 有话要说时：轻轻晃一下（1.2s × 2 次，不重复、不发光刺眼、无红点无计数） */
+@keyframes nudge{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-4px) scale(1.07)}}
+.companion.hint{animation:nudge 1.2s ease-in-out 2;
+  box-shadow:0 0 0 11px var(--glow), 0 14px 30px -14px rgba(0,0,0,.3)}
+.companion.hint-static{transform:translateY(-4px) scale(1.07);
+  box-shadow:0 0 0 11px var(--glow), 0 14px 30px -14px rgba(0,0,0,.3)}
+.companion .pulse{position:absolute;inset:-6px;border-radius:50%;border:1px solid var(--accent);opacity:0;animation:breathe 3.4s ease-in-out infinite}
+.sheet{position:fixed;inset:0;z-index:60;display:none}
+.sheet.open{display:block}
+.sheet .scrim{position:absolute;inset:0;background:rgba(20,18,16,.28)}
+.sheet .body{position:absolute;left:50%;transform:translateX(-50%);bottom:0;width:100%;max-width:390px;
+  background:var(--surface);border-radius:var(--r) var(--r) 0 0;padding:24px 24px 30px;max-height:82vh;overflow:auto;
+  animation:up .28s cubic-bezier(.2,.8,.2,1)}
+@keyframes up{from{transform:translate(-50%,14px);opacity:.4}to{transform:translate(-50%,0);opacity:1}}
+.sheet .grab{width:38px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 20px}
+.sheet h3{font-size:14px;font-weight:500;margin:0 0 4px}
+.sheet .sub{font-size:12px;color:var(--faint);margin:0 0 20px}
+.bubble{font-size:14px;line-height:1.8;margin:0 0 14px;max-width:86%}
+.bubble.me{margin-left:auto;color:var(--ink);background:var(--glow);border-radius:var(--r);padding:10px 14px}
+.bubble.ai{color:var(--soft)}
+.composer{margin-top:18px;border-top:1px solid var(--line);padding-top:16px}
+.composer textarea{width:100%;border:0;background:none;font:inherit;font-size:14px;color:var(--ink);resize:none;outline:none;min-height:52px}
+.composer .row{display:flex;justify-content:space-between;align-items:center}
+.composer .row span{font-size:11px;color:var(--faint)}
+.composer button{appearance:none;border:0;background:var(--ink);color:var(--bg);font:inherit;font-size:13px;padding:8px 16px;border-radius:999px;cursor:pointer}
+
+/* ============ 一存档 ============ */
+.archive{padding:8px 26px 150px}
+.archive h2{font-family:var(--display);font-size:21px;font-weight:400;margin:16px 0 6px}
+.archive .lead{font-size:13px;color:var(--soft);margin:0 0 30px}
+.arow{padding:20px 0;border-top:1px solid var(--line);cursor:pointer}
+.arow .t{font-size:15px;margin:0}
+.arow .d{font-size:12.5px;color:var(--soft);margin:7px 0 0}
+.arow .k{float:right;font-size:12px;color:var(--faint)}
+.setgroup{margin-top:34px}
+.setgroup .lab{font-size:11px;letter-spacing:.2em;color:var(--faint);margin:0 0 6px}
+/* 分段控件：窄屏会自动换行，绝不把整页撑破 */
+.seg{display:flex;flex-wrap:wrap;gap:8px;width:auto;max-width:100%;margin-top:12px}
+.seg button{appearance:none;border:1px solid var(--line);background:none;font:inherit;font-size:13px;
+  padding:9px 15px;border-radius:999px;cursor:pointer;color:var(--soft);white-space:nowrap;max-width:100%}
+.seg button.on{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.mini{font-size:12px;color:var(--faint);margin:12px 0 0}
+.backlink{font-size:12px;color:var(--soft);text-decoration:underline;text-underline-offset:4px;background:none;border:0;font-family:inherit;cursor:pointer;padding:0}
+
+/* ============ 经典版（现状复刻，用于对比） ============ */
+.classic{padding:16px 26px 0;font-size:14px}
+.classic h1{font-size:22px;font-weight:500;margin:0}
+.classic .sub{font-size:13px;color:var(--soft);margin:10px 0 0}
+.card{margin-top:18px;border:1px solid var(--line);background:var(--surface);padding:18px;border-radius:4px}
+.card.dashed{border-style:dashed}
+.card .lab{font-size:11px;letter-spacing:.2em;color:var(--faint);margin:0}
+.card .body{font-size:14px;margin:14px 0 0}
+.card .note{font-size:12.5px;color:var(--soft);margin:12px 0 0}
+.linkline{font-size:13px;color:var(--accent);text-decoration:underline;text-underline-offset:4px;display:inline-block;margin-top:14px}
+h2.sect{font-size:13px;letter-spacing:.2em;color:var(--soft);margin:46px 0 0;font-weight:400}
+.stageli{border-top:1px solid var(--line);padding:22px 0}
+.stageli .hd{display:flex;justify-content:space-between;align-items:baseline;gap:14px}
+.stageli h3{font-size:15px;font-weight:500;margin:0}
+.stageli .wk{font-size:11.5px;color:var(--soft);white-space:nowrap}
+.stageli .goal{font-size:13.5px;color:var(--soft);margin:9px 0 0}
+.lamprow{font-size:13.5px;margin:8px 0 0}
+.lamprow .ev{display:block;font-size:12px;color:var(--faint);margin-top:5px}
+.report{margin-top:22px;border-left:2px solid var(--accent);padding-left:16px}
+.report .lab{font-size:11px;letter-spacing:.2em;color:var(--faint);margin:0}
+.report p{font-size:13px;color:var(--soft);margin:8px 0 0}
+.stamps{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.stamps span{border:1px solid var(--line);font-size:11px;color:var(--soft);padding:4px 10px;border-radius:3px}
+.tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:390px;
+  background:var(--surface);border-top:1px solid var(--line);display:flex;justify-content:space-around;padding:12px 0 20px}
+.tabbar a{font-size:11.5px;color:var(--soft);text-decoration:none;flex:1;text-align:center}
+.tabbar a.on{color:var(--ink)}
+
+/* 小屏压缩：可视高度不够时再紧一档，保证"一屏放下、不用下拉" */
+@media (max-height:760px){
+  .topbar{padding:9px 20px 0}
+  .scene{padding:10px 20px 0}
+  .daily{font-size:19px;line-height:1.45;margin:9px 0 0}
+  .daily-reflect{margin:8px 0 0;font-size:12.5px}
+  .act{margin:13px 20px 0;padding:13px 16px}
+  .act-text{font-size:14.5px;margin:8px 0 0;line-height:1.6}
+  .act-note{margin:6px 0 0;font-size:11.5px}
+  .choices{margin-top:10px}
+  .choices button{padding:8px 15px;font-size:13.5px}
+  #v-new{padding-bottom:66px}
+  #v-new .path{padding-top:8px}
+  .path{margin:12px 20px 0}
+  .path .lab{margin:0 0 8px}
+  .rail{height:30px} .rail .track{top:14px} .cells{height:30px}
+  .cell{width:9px;height:9px} .cell.node{width:11px;height:11px}
+  .stages{margin:7px 0 0} .stages span{font-size:10.5px}
+  .path .hint{margin:9px 0 0;font-size:11.5px}
+  .companion{width:46px;height:46px}
+  .mirror{margin:10px 20px 0;padding:14px}
+  .closed{margin:12px 20px 0}
+}
+
+/* 极短屏（可视 <600）：再让一步，仍然一屏 */
+@media (max-height:600px){
+  #v-new{padding-bottom:56px}
+  .path .hint{display:none}
+  .daily{font-size:17.5px}
+}
+
+/* 原型工具条（仅原型用，不属于产品） */
+.ptools{position:fixed;left:calc(50% - 195px + 16px);bottom:26px;z-index:50;display:flex;gap:6px;align-items:center}
+@media (max-width:420px){ .ptools{left:16px} }
+.ptools .pill{appearance:none;border:1px dashed var(--faint);background:var(--bg);color:var(--soft);
+  font:inherit;font-size:11px;padding:7px 12px;border-radius:999px;cursor:pointer;opacity:.72}
+</style>
+</head>
+<body data-view="now" data-theme="plain" data-step="action">
+
+<div class="phone" id="root">
+
+  <!-- ================= 新版：一幕 · 一人 · 一存档 ================= -->
+  <div id="v-new">
+    <header class="topbar">
+      <span class="date">9 月 14 日 · 周一</span>
+      <button class="arch" id="toArchive" aria-label="存档">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.2">
+          <rect x="3" y="3.5" width="14" height="13" rx="2"/><path d="M3 8h14M8 8v8.5"/>
+        </svg>
+      </button>
+    </header>
+
+    <!-- 一幕 -->
+    <section class="scene">
+      <p class="eyebrow">今天</p>
+      <p class="daily">你不是不会花钱。<br>你只是从来没被允许过。</p>
+      <p class="daily-reflect">想一想：<b>这句话让你想起谁？</b></p>
+    </section>
+
+    <section class="act" id="actBlock">
+      <p class="eyebrow">今天这一步</p>
+      <p class="act-text">做一件「不配」的小事——为自己花一小笔钱，或者白拿半天的休息。</p>
+      <p class="act-note">这一步永远可以跳过。不做也算数。</p>
+      <div class="choices" id="choices">
+        <button class="primary" data-a="did">做了</button>
+        <button data-a="swap">换一个</button>
+        <button data-a="skip">今天跳过</button>
+      </div>
+    </section>
+
+    <!-- 提交后的镜面回应 -->
+    <section class="mirror" id="mirrorBlock" hidden>
+      <p class="lab">你写下的</p>
+      <p class="quote" id="mQuote">—</p>
+      <p class="echo" id="mEcho"></p>
+    </section>
+
+    <section class="closed" id="closedBlock" hidden>
+      <p class="big">今天到这里。</p>
+      <p class="sm">只看了那一眼，这一段也算走完了。</p>
+      <a href="#" id="moreTalk">想多说两句 →</a>
+    </section>
+
+    <!-- 路：形状说话 -->
+    <section class="path">
+      <p class="lab">你的路</p>
+      <div class="rail">
+        <div class="track"></div>
+        <div class="cells" id="cells"></div>
+      </div>
+      <div class="stages" id="stageLabels">
+        <span class="on">看见</span><span>松动</span><span>练习</span><span>活法</span>
+      </div>
+      <p class="hint" id="pathHint">5 格亮着。这里不显示百分比，也不显示"还差几天"。</p>
+    </section>
+  </div>
+
+  <!-- ================= 一存档 ================= -->
+  <div id="v-archive" hidden class="archive">
+    <h2>存档</h2>
+    <p class="lead">这里放"回看"的东西。平时它不出现——你想起来的时候再进来。</p>
+
+    <div class="arow" id="arowRoad"><span class="k">→</span><p class="t">我走过的路</p><p class="d">整条回看：走过的段、机关时刻、当时的原话</p></div>
+    <div class="arow"><span class="k">6 句</span><p class="t">我说过的话</p><p class="d">"发薪日我居然没先还花呗" · "我妈那句『咱家不配』还在" …</p></div>
+    <div class="arow"><span class="k">v2</span><p class="t">我的镜子</p><p class="d">金钱画像（最近一次）· 六条命题上我走到哪</p></div>
+    <div class="arow"><span class="k">1 封</span><p class="t">我写过的信</p><p class="d">给现在的自己 / 写给钱的那一封</p></div>
+
+    <div class="setgroup">
+      <p class="lab">界面版本</p>
+      <div class="seg" id="segVersion">
+        <button data-v="new" class="on">新：一幕 · 一人 · 一存档</button>
+        <button data-v="classic">经典版（原旅程）</button>
+      </div>
+      <p class="mini">经典版的 旅程 / 聊聊 / 心事 / 我的 全部保留，随时切回来。</p>
+    </div>
+
+    <div class="setgroup">
+      <p class="lab">视觉调性</p>
+      <div class="seg" id="segTheme">
+        <button data-t="plain" class="on">极简留白</button>
+        <button data-t="paper">温暖纸感</button>
+        <button data-t="night">夜间</button>
+      </div>
+      <p class="mini">换调性不动内容，只换皮。</p>
+    </div>
+
+    <div class="setgroup">
+      <p class="lab">设置与账号</p>
+      <div class="arow"><p class="t">邮件与通知偏好</p><p class="d">只在"你自己的时刻"发——发薪日、月末、你说过想试的那件事</p></div>
+      <div class="arow"><p class="t">导出 / 删除我的记录</p></div>
+      <div class="arow"><p class="t">语言 · 恢复码 · 会员</p></div>
+    </div>
+
+    <p style="margin-top:36px"><button class="backlink" id="fromArchive">← 回到今天这一步</button></p>
+  </div>
+
+  <!-- ================= 经典版（现状复刻） ================= -->
+  <div id="v-classic" hidden class="classic">
+    <h1>旅程</h1>
+    <p class="sub">四个阶段，不设期限。走到哪一步，由你说了算。</p>
+
+    <div class="card dashed">
+      <p class="lab">周期锚点</p>
+      <p class="note">设一个属于你的周期锚点（比如发薪日），锚点日这里会轻轻提一句。不设也完全没关系。</p>
+      <span class="linkline">设一个</span>
+    </div>
+
+    <div class="card">
+      <p class="lab">今天这一段</p>
+      <p class="lab" style="margin-top:16px">开 · 看见 &nbsp;今日一签</p>
+      <p class="body" style="font-size:17px">你不是不会花钱。你只是从来没被允许过。</p>
+      <p class="note">想一想：这句话让你想起谁？</p>
+      <p class="lab" style="margin-top:22px">做 · 动手 &nbsp;今日微行动</p>
+      <p class="body">做一件「不配」的小事——为自己花一小笔钱，或者白拿半天的休息。</p>
+      <p class="note">这一步可以永远跳过——不做也算数。</p>
+      <p class="note">不花这钱也可以：把一直舍不得用的一件东西用起来，或给自己放半天假。</p>
+      <span class="linkline">做了吗？记一句感受（可不写）</span>
+      <p class="note" style="margin-top:10px">今天只看看签，也挺好</p>
+      <p class="lab" style="margin-top:22px">合 · 被接住</p>
+      <p class="note">想说什么就说。我记得你上次说到哪了。</p>
+      <span class="linkline">想多说两句</span>
+      <p class="note" style="margin-top:14px">我做了吗？／我想到什么？／脑子里的第一句话（想留空就留空）</p>
+      <span class="linkline" style="color:var(--ink);font-weight:500">今天到这里</span>
+      <p class="note">今天到这里。只看了那一眼，这一段也算走完了。</p>
+    </div>
+
+    <div class="card dashed">
+      <p class="lab">写一封信</p>
+      <p class="note">给现在的自己，或者给钱。我会把信好好收着，回一张温柔的收条。</p>
+      <span class="linkline">写信（1）</span>
+    </div>
+
+    <div class="card dashed">
+      <p class="lab">旅程中的我</p>
+      <p class="note" style="margin-top:12px">
+        <span class="linkline" style="margin:0">金钱画像 v2</span> &nbsp;
+        <span class="linkline" style="margin:0">成长足迹</span> &nbsp;
+        <span class="linkline" style="margin:0">你走过的路</span>
+      </p>
+      <p class="note">9月12日 · 认领了旧脚本<br>9月11日 · 买了一杯没算过价钱的咖啡<br>9月10日 · 写下一条"必须"</p>
+      <span class="linkline">看完整足迹 →</span>
+    </div>
+
+    <h2 class="sect">四个阶段</h2>
+    <ol style="list-style:none;padding:0;margin:0">
+      <li class="stageli">
+        <div class="hd"><h3>1 · 看见</h3><span class="wk">参考节奏约 3 周</span></div>
+        <p class="goal">看见自己和钱之间真实发生的事——不看对错，只看事实</p>
+        <p style="font-size:12px;color:var(--accent);margin:9px 0 0">● 你在这里。不赶时间。</p>
+        <p class="lab" style="margin-top:20px;letter-spacing:.2em">这个阶段的灯 · 3/3</p>
+        <p class="lamprow">● 看得见来历<span class="ev">标准：今天的钱模式在你身上有来历——你认出早期场景至今还在运行，不是「记得一件事」，而是「原来它一直在影响我」</span></p>
+        <p class="lamprow">● 听得见那个声音<span class="ev">标准：那个常年在你耳边说话的旧声音，你听得见它、知道它怎么拦你，并且对它有了自己的态度——认下它的分量，或说出它哪里不对</span></p>
+        <p class="lamprow">● 认得出自己的底色<span class="ev">标准：面对钱时反复泛起的底色感受（怕、愧、不配……），你能认出并承认「这是我的」——只是看见，不评判</span></p>
+        <p class="lab" style="margin-top:22px;letter-spacing:.2em">最近一次确认的评估 · 当时在第 1 段</p>
+        <div class="report">
+          <p class="lab">我看你现在的样子</p>
+          <p>你在"看见"这一段走得比多数人稳：你已经能说出具体场景，而不是停在"我就是焦虑"。</p>
+          <p class="lab" style="margin-top:14px">为什么是这里</p>
+          <p>你开始把感受接到来处，但还没到"这条规矩是我写的"这一步——那属于下一段。</p>
+          <p class="lab" style="margin-top:14px">离活法还有多远</p>
+          <p>不算远近，只算次数：再有三四次"认出旧声音"的真实发生，这一段就自然过去了。</p>
+          <span class="linkline">我的变化清单 →</span>
+        </div>
+        <p class="lab" style="margin-top:22px;letter-spacing:.2em">攒下的心印</p>
+        <div class="stamps"><span>第一次说出那句话</span><span>认领旧脚本</span></div>
+      </li>
+      <li class="stageli">
+        <div class="hd"><h3 style="color:var(--soft)">2 · 松动</h3><span class="wk">约 4 周</span></div>
+        <p class="goal" style="color:var(--soft)">松动那些看起来理所当然的旧规矩——从"必须这样"变成"原来我可以选"</p>
+      </li>
+      <li class="stageli">
+        <div class="hd"><h3 style="color:var(--soft)">3 · 练习</h3><span class="wk">约 4 周</span></div>
+        <p class="goal" style="color:var(--soft)">把新的说法用进真实的日子——不靠提醒，靠发生</p>
+      </li>
+      <li class="stageli">
+        <div class="hd"><h3 style="color:var(--soft)">4 · 活法</h3><span class="wk">敬请期待</span></div>
+        <p class="goal" style="color:var(--soft)">这里没有终点线，也没有毕业。活法是把日子过下去——周期回顾会在这里等你。</p>
+      </li>
+    </ol>
+
+    <p style="margin:30px 0 0;font-size:12px;color:var(--faint)">每个阶段毕业时，可以生成一份属于你的深度报告。 <span style="color:var(--accent)">会员</span></p>
+
+    <nav class="tabbar">
+      <a class="on">旅程</a><a>聊聊</a><a>心事</a><a>我的</a>
+    </nav>
+  </div>
+
+  <!-- 陪伴者：在场（图标已定稿，用户 2026-09-14 选定这个形状，不要再改）-->
+  <button class="companion" id="companion" aria-label="陪伴者">
+    <span class="pulse"></span>
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.3" stroke-linecap="round">
+      <path d="M12 4.6c-2.6 0-4.6 2-4.6 4.6 0 3.6 3 5.1 3 7.9 0 1.4-.7 2.3-.7 2.3h4.6s-.7-.9-.7-2.3c0-2.8 3-4.3 3-7.9 0-2.6-2-4.6-4.6-4.6z"/>
+      <path d="M9.6 4.2c.6-.9 1.5-1.4 2.4-1.4s1.8.5 2.4 1.4"/>
+    </svg>
+  </button>
+
+  <!-- 对话层：两个入口，同一个人。门＝他先开口；球＝他沉默等着 -->
+  <div class="sheet" id="chatSheet">
+    <div class="scrim" data-close></div>
+    <div class="body">
+      <div class="grab"></div>
+      <h3 id="chatTitle">我在这儿。</h3>
+      <p class="sub" id="chatSub">不着急。你说了我就接。</p>
+      <div id="chatLog"></div>
+      <div class="composer">
+        <textarea placeholder="想说什么就说……"></textarea>
+        <div class="row"><span id="chatFoot">不回应也完全没关系</span><button data-close>说完了</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 一格提交：一屏三行 -->
+  <div class="sheet" id="commitSheet">
+    <div class="scrim" data-close></div>
+    <div class="body">
+      <div class="grab"></div>
+      <p class="lab" style="font-size:11px;letter-spacing:.2em;color:var(--faint);margin:0">今天这一格</p>
+      <div style="margin-top:22px">
+        <p class="lab" style="font-size:12px;color:var(--soft);margin:0">① 我做了</p>
+        <div class="choices" style="margin-top:10px">
+          <button class="primary" data-did>做了</button><button>没做完</button><button>今天没顾上</button>
+        </div>
+      </div>
+      <div style="margin-top:26px">
+        <p class="lab" style="font-size:12px;color:var(--soft);margin:0">② 我想到</p>
+        <textarea id="in2" placeholder="一句话、一件事，都行" style="width:100%;border:0;border-bottom:1px solid var(--line);background:none;font:inherit;font-size:15px;padding:10px 0;outline:none;resize:none;min-height:46px"></textarea>
+      </div>
+      <div style="margin-top:26px">
+        <p class="lab" style="font-size:12px;color:var(--soft);margin:0">③ 脑子里的第一句话</p>
+        <textarea id="in3" placeholder="想不起来也行" style="width:100%;border:0;border-bottom:1px solid var(--line);background:none;font:inherit;font-size:15px;padding:10px 0;outline:none;resize:none;min-height:46px"></textarea>
+        <p class="mini" style="margin-top:8px">这句只给你自己看。留空不算没做。</p>
+      </div>
+      <button id="submitCommit" style="width:100%;margin-top:34px;appearance:none;border:0;background:var(--ink);color:var(--bg);font:inherit;font-size:15px;padding:15px;border-radius:999px;cursor:pointer">今天到这里</button>
+      <p class="mini" style="text-align:center">全部都可以留空</p>
+    </div>
+  </div>
+
+  <!-- 原型工具条（不属于产品） -->
+  <div class="ptools">
+    <button class="pill" id="tglVersion">切到经典版</button>
+    <button class="pill" id="demoNudge">演示：小人晃一下</button>
+  </div>
+</div>
+
+<script>
+const root = document.getElementById('root');
+const $ = (s,c=document)=>c.querySelector(s);
+const $$ = (s,c=document)=>[...c.querySelectorAll(s)];
+
+/* ---------- 路：14 格 + 4 个阶段节点 ---------- */
+const walked = 5, nodeAt = [3, 7, 10, 13];
+function renderPath(n){
+  const cells = $('#cells'); cells.innerHTML='';
+  for(let i=0;i<14;i++){
+    const d=document.createElement('div');
+    const isNode = nodeAt.includes(i);
+    let cls='cell'+(isNode?' node':'');
+    if(i < n) cls += isNode ? ' walked node' : ' walked';
+    else if(i===n) cls += ' now';
+    else cls += isNode ? ' future node' : ' future';
+    if(!isNode && i>=n) d.style.borderStyle='dashed';
+    d.className=cls; cells.appendChild(d);
+  }
+  $('#pathHint').textContent = n+' 格亮着。这里不显示百分比，也不显示"还差几天"。';
+  const labels=$$('#stageLabels span');
+  const idx = n<4?0:n<8?1:n<11?2:3;
+  labels.forEach((s,i)=>s.classList.toggle('on', i===idx));
+}
+
+/* ---------- 视图 ---------- */
+function view(v){
+  document.body.dataset.view=v;
+  $('#v-new').hidden = v!=='new';
+  $('#v-archive').hidden = v!=='archive';
+  $('#v-classic').hidden = v!=='classic';
+  $('#companion').style.display = v==='classic' ? 'none' : 'flex';
+  $('#tglVersion').textContent = v==='classic' ? '切到新版' : '切到经典版';
+  window.scrollTo(0,0);
+}
+function theme(t){
+  document.body.dataset.theme=t;
+  $$('#segTheme button').forEach(b=>b.classList.toggle('on', b.dataset.t===t));
+}
+function sheet(id,open){
+  const el=document.getElementById(id);
+  el.classList.toggle('open',open);
+  if(open) el.querySelector('.body').scrollTop=0;
+}
+
+/* ---------- 一格提交 ---------- */
+function openCommit(){ sheet('commitSheet', true); }
+function closeCommit(){ sheet('commitSheet', false); }
+
+$('#choices').addEventListener('click', e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  const a=b.dataset.a;
+  if(a==='did') openCommit();
+  else if(a==='swap'){
+    $('.act-text').textContent='换一个：回想一次你花钱之后心里发紧的时刻——那天发生了什么？';
+    $('.act-note').textContent='不用写下来。想起来就算发生了。';
+  } else if(a==='skip'){
+    $('#actBlock').innerHTML='<p class="eyebrow">今天这一步</p><p class="act-note" style="margin-top:14px">跳过了。这也算数——这一段照样算走完。</p>';
+  }
+});
+
+$('#submitCommit').addEventListener('click', ()=>{
+  const t2=($('#in2').value||'').trim();
+  const t3=($('#in3').value||'').trim();
+  const line = t3 || t2 || '（今天没留下话）';
+  closeCommit();
+  window.__lastLine = line;
+  $('#mirrorBlock').hidden=false;
+  $('#mQuote').textContent = line;
+  $('#mEcho').textContent = t3
+    ? '这句话和你以前说的不太一样。我把它放在你路上这一格了——不急着解释，先留着。'
+    : '记下了。你今天走到这里，路不会因为哪一天空着就断。';
+  $('#closedBlock').hidden=false;
+  $('#actBlock').hidden=true;
+  renderPath(walked+1);
+  setTimeout(()=>$('#mirrorBlock').scrollIntoView({behavior:'smooth',block:'center'}),120);
+});
+
+/* ---------- 陪伴者 / 导航 ---------- */
+// 两个入口，同一个人：
+//   门（“想多说两句”）＝带着今天这一格进去，他先开口
+//   球（陪伴者）    ＝他沉默在场，等你先说
+function openChat(mode){
+  const log=document.getElementById('chatLog');
+  log.innerHTML='';
+  if(mode==='hintToday'){
+    // 「有话要说」之一：关于今天这一格（不指责、给出口）
+    $('#chatTitle').textContent='今天这一步你还没做';
+    $('#chatSub').textContent='不着急。什么时候都行。';
+    const p=document.createElement('p'); p.className='bubble ai';
+    p.textContent='想做的时候说一声；今天想跳过去也可以——都算数。';
+    log.appendChild(p);
+    $('#chatFoot').textContent='今天不聊也行';
+    sheet('chatSheet',true); return;
+  }
+  if(mode==='hint'){
+    // 他主动开口的唯一情形：内容只来自用户自己说过的话 / 他自己的日历
+    $('#chatTitle').textContent='有件事想问你';
+    $('#chatSub').textContent='是你自己说过的，我记着。';
+    const p=document.createElement('p'); p.className='bubble ai';
+    p.textContent='你上周说过想试试「不先还花呗」。今天还愿意碰一下吗？';
+    log.appendChild(p);
+    $('#chatFoot').textContent='今天不聊也行';
+    sheet('chatSheet',true); return;
+  }
+  if(mode==='door'){
+    const line=(window.__lastLine||'').trim();
+    $('#chatTitle').textContent='想多说两句';
+    $('#chatSub').textContent='今天这一段到这儿了。';
+    const p=document.createElement('p'); p.className='bubble ai';
+    p.textContent = line ? ('你刚才说「'+line+'」——想多说哪一部分？')
+                         : '今天到这里了。想说什么就说，我在。';
+    log.appendChild(p);
+  }else{
+    $('#chatTitle').textContent='我在这儿。';
+    $('#chatSub').textContent='不用现在就说。我记得你上次说到哪了。';
+    const p=document.createElement('p'); p.className='bubble ai';
+    p.style.cssText='letter-spacing:.34em;color:var(--faint)'; p.textContent='· · ·';
+    log.appendChild(p);
+  }
+  $('#chatFoot').textContent='不回应也完全没关系';
+  sheet('chatSheet',true);
+}
+$('#companion').addEventListener('click',()=>{
+  const c=document.getElementById('companion');
+  if(c.classList.contains('hint')||c.classList.contains('hint-static')){
+    c.classList.remove('hint'); c.classList.remove('hint-static');
+    openChat('hint');
+  } else { openChat('presence'); }
+});
+$('#moreTalk').addEventListener('click',e=>{e.preventDefault();openChat('door');});
+$$('[data-close]').forEach(el=>el.addEventListener('click',()=>{
+  sheet('chatSheet',false); sheet('commitSheet',false);
+}));
+$('#toArchive').addEventListener('click',()=>view('archive'));
+$('#fromArchive').addEventListener('click',()=>view('new'));
+
+/* ---------- 版本 / 调性切换 ---------- */
+$('#segVersion').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  $$('#segVersion button').forEach(x=>x.classList.toggle('on',x===b));
+  view(b.dataset.v==='classic'?'classic':'new');
+});
+$('#demoNudge').addEventListener('click',()=>{
+  const c=document.getElementById('companion');
+  c.classList.remove('hint'); void c.offsetWidth; c.classList.add('hint');   // 重启动画
+  setTimeout(()=>c.classList.remove('hint'), 2600);
+});
+$('#tglVersion').addEventListener('click',()=>{
+  const to = document.body.dataset.view==='classic' ? 'new':'classic';
+  $$('#segVersion button').forEach(x=>x.classList.toggle('on', x.dataset.v.toUpperCase()===(to==='new'?'NEW':'CLASSIC')));
+  view(to);
+});
+$('#segTheme').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return; theme(b.dataset.t);
+});
+
+/* ---------- 原型直达：URL hash（截图/演示用） ---------- */
+renderPath(walked);
+(function init(){
+  const h=location.hash.replace('#','');
+  if(!h) return;
+  if(h==='commit'){ openCommit(); }
+  else if(h==='done'){
+    $('#mirrorBlock').hidden=false;
+    $('#mQuote').textContent='我怎么又在算这个月还剩多少';
+    $('#mEcho').textContent='这句话和你以前说的不太一样。我把它放在你路上这一格了——不急着解释，先留着。';
+    $('#closedBlock').hidden=false; $('#actBlock').hidden=true; renderPath(walked+1);
+  }
+  else if(h==='archive') view('archive');
+  else if(h==='classic') view('classic');
+  else if(h==='chat') openChat('presence');
+  else if(h==='door'){ window.__lastLine='我怎么又在算这个月还剩多少'; openChat('door'); }
+  else if(h==='hint'){ document.getElementById('companion').classList.add('hint-static'); }
+  else if(h==='hintsay'){ openChat('hint'); }
+  else if(h==='hint2'){ document.getElementById('companion').classList.add('hint-static'); openChat('hintToday'); }
+  else if(h==='paper') theme('paper');
+  else if(h==='night') theme('night');
+})();
+</script>
+</body>
+</html>

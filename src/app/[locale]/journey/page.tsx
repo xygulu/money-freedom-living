@@ -8,9 +8,14 @@
 // 阶段路标 + 当前位置 + 信件入口（阶段仪式：给现在的自己 / 写给钱的一封信）。
 // 归来问候与发薪日锚点属 M7，这里不掺。
 // 书不在这一页露面（docs/05 §3.5）——「你走过的路」/road 是书唯一的露出点。
+//
+// 前台改造（70-2 A2）· 经典版守卫：
+// - ui_version === 'classic' 时：保留全部 11 块 + StageLampChart + 4 Tab nav（layout 旧有逻辑）
+// - 否则：重定向到 /journey-new（一幕）—— 因为新版自带主界面，不需要经典版
+// 用户授权"新版好后续废除旧版"——废除时只删此守卫 4 行。
 import { headers, cookies } from 'next/headers';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { getDict } from '@/i18n/get-dict';
 import { enabledLocales, isLocale } from '@/i18n/config';
 import { DEFAULT_BOOK_ID, getJourneyStages, pickDaily, pickExercise } from '@/lib/content';
@@ -25,6 +30,7 @@ import { isVerdictNode } from '@/lib/cognition';
 import { nodeQuestion } from '@/lib/touch';
 import { baselineFor, countMaterialSince, shouldPropose, saveEvolution, listPortraitVersions } from '@/lib/evolution';
 import { shouldOfferAssess, saveAssessmentState, ASSESS_PENDING_TTL_DAYS } from '@/lib/assess';
+import { getUiVersion } from '@/lib/ui-version';
 import MicroActionCard from '@/components/MicroActionCard';
 import DayCloseCard from '@/components/DayCloseCard';
 import StageLampChart from '@/components/StageLampChart';
@@ -48,6 +54,11 @@ export default async function journeyPage({
   const { locale } = await params;
   if (!isLocale(locale) || !enabledLocales.includes(locale)) notFound();
   const dict = getDict(locale);
+
+  // 前台改造（70-2 A2）· 经典版守卫。非 classic 直接重定向到一幕。
+  if ((await getUiVersion()) !== 'classic') {
+    redirect(`/${locale}/journey-new`);
+  }
 
   const headersList = await headers();
   const cookieList = await cookies();

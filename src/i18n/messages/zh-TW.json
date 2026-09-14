@@ -539,5 +539,64 @@
     "busy": "正在把你說過的話、做過的事放在一起……",
     "failed": "我這次沒寫完。上面的清單還是你的——可以再試一次。",
     "back": "← 回到我的旅程"
+  },
+  "oneScreen": {
+    "archive": "存檔",
+    "openArchive": "看回看"
+  },
+  "companion": {
+    "aria": "陪伴者",
+    "exitHint": "今天不聊也行。",
+    "openChat": "點開陪伴者",
+    "chatTitle": "我在这儿。",
+    "chatPlaceholder": "想說就說……",
+    "chatSend": "送出",
+    "doorLink": "想多說兩句",
+    "doorFallback": "今天到這裡了。想說什麼就說，我在。",
+    "chatEmpty": "陪伴者打開了。慢慢來，不一定非得說什麼。",
+    "nudgeSeenToday": "今天已經被看見了。"
+  },
+  "newJourney": {
+    "dailyEyebrow": "今天",
+    "actEyebrow": "今天這一步",
+    "actChoices": {
+      "done": "做完了",
+      "partial": "做了一半",
+      "missed": "今天沒顧上"
+    },
+    "doneEyebrow": "今天到這裡",
+    "done": "今天，到這裡。",
+    "doneSub": "只看那一眼也算走完。隨時回來。",
+    "mirrorQuote": "你寫的是",
+    "mirrorEcho": "陪伴者聽到的是",
+    "mirrorEchoFallback": "我聽見了。今天這樣就夠了。",
+    "pathEyebrow": "你的路",
+    "stageNames": ["看見", "鬆動", "練習", "活法"],
+    "pathHint": "點開節點看依據",
+    "noMirror": "今天沒顧上也沒關係。",
+    "echoPreparing": "陪伴者在想……",
+    "echoFailed": "陪伴者這次沒回上。你寫的話還是你的。",
+    "actDoneCta": "記下這一步"
+  },
+  "archivePage": {
+    "title": "存檔",
+    "sub": "回看，調一下這個房間。",
+    "rows": {
+      "trail": "我走過的路",
+      "said": "我說過的話",
+      "mirror": "我的鏡子",
+      "letter": "我寫過的信",
+      "write": "寫信給以後的我",
+      "setting": "設置與帳號"
+    },
+    "settingsGroup": {
+      "versionLabel": "介面",
+      "themeLabel": "調性"
+    },
+    "versions": { "new": "新版", "classic": "經典版" },
+    "themes": { "plain": "極簡留白", "paper": "溫暖紙感", "night": "夜間" }
+  },
+  "nudge": {
+    "fallback": "我在这儿。"
   }
 }

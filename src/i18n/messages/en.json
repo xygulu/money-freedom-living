@@ -539,5 +539,64 @@
     "busy": "Gathering what you said and did…",
     "failed": "I couldn't finish writing just now. The list above is still yours — you can try again.",
     "back": "← Back to my journey"
+  },
+  "oneScreen": {
+    "archive": "Archive",
+    "openArchive": "Open the archive"
+  },
+  "companion": {
+    "aria": "Companion",
+    "exitHint": "Today can also be a no-talk day.",
+    "openChat": "Open the companion",
+    "chatTitle": "I am here.",
+    "chatPlaceholder": "Say whatever is on your mind…",
+    "chatSend": "Send",
+    "doorLink": "Want to say a little more",
+    "doorFallback": "Today has come to a close. Say whatever you want — I am here.",
+    "chatEmpty": "The companion opens. Take your time — nothing needs to be said.",
+    "nudgeSeenToday": "Today has been seen."
+  },
+  "newJourney": {
+    "dailyEyebrow": "Today",
+    "actEyebrow": "This step today",
+    "actChoices": {
+      "done": "Did it",
+      "partial": "Halfway",
+      "missed": "Not today"
+    },
+    "doneEyebrow": "Today's end",
+    "done": "Today, here.",
+    "doneSub": "One glance counts too. Come back whenever.",
+    "mirrorQuote": "What you wrote",
+    "mirrorEcho": "What the companion heard",
+    "mirrorEchoFallback": "I heard it. That's enough for today.",
+    "pathEyebrow": "Your path",
+    "stageNames": ["Seeing", "Loosening", "Practicing", "Living"],
+    "pathHint": "Tap a node to see what makes it count",
+    "noMirror": "Skipped for today — that also counts.",
+    "echoPreparing": "Companion is thinking…",
+    "echoFailed": "The companion could not echo back just now. What you wrote is still yours.",
+    "actDoneCta": "Mark this step"
+  },
+  "archivePage": {
+    "title": "Archive",
+    "sub": "Look back. Tweak the room.",
+    "rows": {
+      "trail": "The path you've walked",
+      "said": "What you've said",
+      "mirror": "Your mirror",
+      "letter": "Letters you've written",
+      "write": "Write a letter to your future self",
+      "setting": "Settings and account"
+    },
+    "settingsGroup": {
+      "versionLabel": "Interface",
+      "themeLabel": "Tone"
+    },
+    "versions": { "new": "New", "classic": "Classic" },
+    "themes": { "plain": "Plain", "paper": "Paper", "night": "Night" }
+  },
+  "nudge": {
+    "fallback": "I am here."
   }
 }
