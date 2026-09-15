@@ -8,6 +8,7 @@ import { notFound } from 'next/navigation';
 import { getDict } from '@/i18n/get-dict';
 import { enabledLocales, isLocale } from '@/i18n/config';
 import { auth } from '@/lib/auth';
+import { requireSignedIn } from '@/lib/identity';
 import { getEntitlement } from '@/lib/entitlements';
 import { getDefaultProvider } from '@/lib/payments/registry';
 import VipView from '@/components/VipView';
@@ -25,6 +26,9 @@ export default async function vipPage({
   if (!isLocale(locale) || !enabledLocales.includes(locale)) notFound();
   const dict = getDict(locale);
 
+  // 访客闸（用户 2026-09-14 拍板：访客 = 只能做金钱关系测试）
+  await requireSignedIn(locale, `/${locale}/vip`);
+
   const session = await auth.api.getSession({ headers: await headers() });
   const user = session?.user as { id: string } | undefined;
   const entitlement = user ? await getEntitlement(user.id) : null;
@@ -41,7 +45,6 @@ export default async function vipPage({
       <div className="mt-8">
         <VipView
           locale={locale}
-          loggedIn={Boolean(user)}
           isVip={isVip}
           vipUntil={entitlement?.vipUntil ?? null}
           providerConfigured={providerConfigured}

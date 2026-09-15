@@ -4,7 +4,7 @@
 // → validateChangeListText → 落缓存。LLM 失败清锁 502——页面结构化部分仍在，
 // 只缺叙述段，不阻塞任何东西。全免费（评估确认后的回望不设付费墙）。
 import { NextRequest } from 'next/server';
-import { resolveIdentity } from '@/lib/identity';
+import { requireApiUser } from '@/lib/api-auth';
 import { getProfile } from '@/lib/profile';
 import {
   buildChangeListMessages,
@@ -24,10 +24,13 @@ export const maxDuration = 120;
 
 export async function POST(request: NextRequest) {
   try {
+    // 访客闸（用户 2026-09-14 拍板：访客 = 只能做金钱关系测试）
+    const auth = await requireApiUser();
+    if (!auth.ok) return auth.response;
+    const identity = auth.identity;
+
     const body = (await request.json().catch(() => ({}))) as { locale?: string };
     const locale = isLocale(body.locale) && enabledLocales.includes(body.locale) ? body.locale : 'en';
-
-    const identity = await resolveIdentity(request);
     const profile = await getProfile(identity.key);
     if (!profile?.portrait) return jsonError('profile_not_found', 404);
 

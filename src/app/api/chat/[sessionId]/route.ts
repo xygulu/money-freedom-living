@@ -5,7 +5,7 @@
 //   P§6 上下文组装（画像/pinned/memories）、危机命中转稳定陪伴模式
 // DELETE：主动结束对话 → 摘要入 memories + 关会话（"今天先到这里"）。
 import { NextRequest } from 'next/server';
-import { resolveIdentity } from '@/lib/identity';
+import { requireApiUser } from '@/lib/api-auth';
 import {
   getSession,
   getSessionMessages,
@@ -40,12 +40,15 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ sessio
   let sessionId: string | undefined;
   try {
     ({ sessionId } = await ctx.params);
+    // 访客闸（用户 2026-09-14 拍板：访客 = 只能做金钱关系测试）
+    const auth = await requireApiUser();
+    if (!auth.ok) return auth.response;
+    const identity = auth.identity;
+
     const body = (await request.json().catch(() => ({}))) as { message?: string; silent?: boolean; opener?: boolean };
     const message = typeof body.message === 'string' ? body.message.trim().slice(0, MESSAGE_MAX) : '';
     // opener：会话第一条 AI 主动开场（归来问候），不带用户消息
     if (!message && !body.opener) return jsonError('empty_message', 400);
-
-    const identity = await resolveIdentity(request);
     const session = await getSession(sessionId);
     if (!session || session.userKey !== identity.key) return jsonError('session_not_found', 404);
     if (session.status !== 'open') return jsonError('session_closed', 409);
@@ -279,7 +282,10 @@ async function respondToMessage(params: ReplyParams): Promise<Response> {
 export async function DELETE(request: NextRequest, ctx: { params: Promise<{ sessionId: string }> }) {
   try {
     const { sessionId } = await ctx.params;
-    const identity = await resolveIdentity(request);
+    // 访客闸
+    const auth = await requireApiUser();
+    if (!auth.ok) return auth.response;
+    const identity = auth.identity;
     const session = await getSession(sessionId);
     if (!session || session.userKey !== identity.key) return jsonError('session_not_found', 404);
     if (session.kind === 'chat') {

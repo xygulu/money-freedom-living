@@ -11,18 +11,32 @@ import { getProfile, type Portrait } from '@/lib/profile';
 import { getPortraitVersion, listPortraitVersions } from '@/lib/evolution';
 import { getUiVersion, withJourneyHref } from '@/lib/ui-version';
 import PortraitCalibrate from '@/components/PortraitCalibrate';
+import PortraitLockedCard from '@/components/PortraitLockedCard';
 
 export const dynamic = 'force-dynamic';
 
-/** 五段画像（你说过/底色/瞬间/脚本/给未来）。calibrate=false 时只读（历史版快照） */
-function PortraitSections({ portrait, dict, calibrate }: { portrait: Portrait; dict: Dict; calibrate: boolean }) {
+/** 五段画像（你说过/底色/瞬间/脚本/给未来）。calibrate=false 时只读（历史版快照）。
+ *  preview=true 时 ④⑤ 替换为 PortraitLockedCard（访客态）；校准入口/版本对比也隐藏。*/
+function PortraitSections({
+  portrait,
+  dict,
+  calibrate,
+  preview,
+  lockedHref,
+}: {
+  portrait: Portrait;
+  dict: Dict;
+  calibrate: boolean;
+  preview: boolean;
+  lockedHref: string;
+}) {
   const p = dict.portrait;
   const latestScriptVerdict = [...portrait.calibrations].reverse().find((cal) => cal.section === 'script')?.verdict;
 
   return (
     <>
       {portrait.spoken.length > 0 && (
-        <section className="mt-10">
+        <section className="mt-10" data-portrait-section="spoken">
           <h2 className="text-sm tracking-widest text-ink-soft">{p.spokenTitle}</h2>
           <ul className="mt-3 flex flex-col gap-2">
             {portrait.spoken.map((line, i) => (
@@ -36,7 +50,7 @@ function PortraitSections({ portrait, dict, calibrate }: { portrait: Portrait; d
       )}
 
       {portrait.baseColor && (
-        <section className="mt-10">
+        <section className="mt-10" data-portrait-section="baseColor">
           <h2 className="text-sm tracking-widest text-ink-soft">{p.baseColorTitle}</h2>
           <p className="mt-3 text-sm leading-relaxed">{portrait.baseColor}</p>
           {calibrate && <PortraitCalibrate section="baseColor" dict={dict} />}
@@ -44,7 +58,7 @@ function PortraitSections({ portrait, dict, calibrate }: { portrait: Portrait; d
       )}
 
       {portrait.moments.length > 0 && (
-        <section className="mt-10">
+        <section className="mt-10" data-portrait-section="moments">
           <h2 className="text-sm tracking-widest text-ink-soft">{p.momentsTitle}</h2>
           <ul className="mt-3 flex flex-col gap-3">
             {portrait.moments.map((moment, i) => (
@@ -58,22 +72,34 @@ function PortraitSections({ portrait, dict, calibrate }: { portrait: Portrait; d
         </section>
       )}
 
-      <section className="mt-10 border border-line bg-white/60 p-5">
-        <h2 className="text-sm tracking-widest text-ink-soft">{p.scriptTitle}</h2>
-        <p className="mt-3 text-sm leading-relaxed">{portrait.script}</p>
-        {calibrate && portrait.scriptStatus === 'pending' && !latestScriptVerdict && (
-          <PortraitCalibrate section="script" dict={dict} />
-        )}
-        {portrait.scriptStatus === 'confirmed' && <p className="mt-3 text-xs text-ink-soft">{p.scriptConfirmed}</p>}
-        {portrait.scriptStatus === 'rejected' && <p className="mt-3 text-xs text-ink-soft">{p.scriptRejected}</p>}
-      </section>
-
-      {portrait.toFuture && (
-        <section className="mt-10">
-          <h2 className="text-sm tracking-widest text-ink-soft">{p.toFutureTitle}</h2>
-          <p className="mt-3 text-sm leading-relaxed">{portrait.toFuture}</p>
-          {calibrate && <PortraitCalibrate section="toFuture" dict={dict} />}
+      {preview ? (
+        <div className="mt-10">
+          <PortraitLockedCard dict={dict} section="script" lockedHref={lockedHref} />
+        </div>
+      ) : (
+        <section className="mt-10 border border-line bg-white/60 p-5" data-portrait-section="script">
+          <h2 className="text-sm tracking-widest text-ink-soft">{p.scriptTitle}</h2>
+          <p className="mt-3 text-sm leading-relaxed">{portrait.script}</p>
+          {calibrate && portrait.scriptStatus === 'pending' && !latestScriptVerdict && (
+            <PortraitCalibrate section="script" dict={dict} />
+          )}
+          {portrait.scriptStatus === 'confirmed' && <p className="mt-3 text-xs text-ink-soft">{p.scriptConfirmed}</p>}
+          {portrait.scriptStatus === 'rejected' && <p className="mt-3 text-xs text-ink-soft">{p.scriptRejected}</p>}
         </section>
+      )}
+
+      {preview ? (
+        <div className="mt-10">
+          <PortraitLockedCard dict={dict} section="toFuture" lockedHref={lockedHref} />
+        </div>
+      ) : (
+        portrait.toFuture && (
+          <section className="mt-10" data-portrait-section="toFuture">
+            <h2 className="text-sm tracking-widest text-ink-soft">{p.toFutureTitle}</h2>
+            <p className="mt-3 text-sm leading-relaxed">{portrait.toFuture}</p>
+            {calibrate && <PortraitCalibrate section="toFuture" dict={dict} />}
+          </section>
+        )
       )}
     </>
   );
@@ -95,6 +121,7 @@ export default async function portraitPage({
   const versionParam = typeof sp.version === 'string' ? Number(sp.version) : NaN;
 
   const identity = await resolveIdentity({ headers: await headers(), cookies: await cookies() });
+  const isGuest = !identity.userId;
   const profile = await getProfile(identity.key);
   const current = profile?.portrait;
   const hasPortrait = Boolean(current?.baseColor && current.script);
@@ -120,9 +147,25 @@ export default async function portraitPage({
   // 过往版本列表：多于 1 版才有「演进」可看
   const pastVersions = versions.filter((v) => v.version !== current.version).sort((a, b) => b.version - a.version);
 
+  // preview = 访客模式：④⑤ 上锁 + 隐藏对比/校准入口 + 顶部引导条
+  const preview = isGuest && !historical;
+  const lockedHref = `/${locale}/login?next=${encodeURIComponent(`/${locale}/portrait`)}`;
+
   return (
     <div className="flex flex-col pt-12">
       <h1 className="text-2xl font-medium tracking-tight">{p.title}</h1>
+
+      {preview && (
+        <p
+          data-guest-banner
+          className="mt-4 text-sm leading-relaxed text-ink-soft"
+        >
+          {p.guestBanner}{' '}
+          <Link href={lockedHref} className="text-accent underline underline-offset-4">
+            {p.cta}
+          </Link>
+        </p>
+      )}
 
       {historical && requested && (
         <div className="mt-6 border border-dashed border-line bg-white/60 p-5">
@@ -135,7 +178,7 @@ export default async function portraitPage({
         </div>
       )}
 
-      {!historical && pastVersions.length > 0 && (
+      {!historical && !preview && pastVersions.length > 0 && (
         <div className="mt-6">
           <Link href={`/${locale}/portrait/compare`} className="text-accent underline underline-offset-4">
             {p.compareLink}
@@ -143,10 +186,16 @@ export default async function portraitPage({
         </div>
       )}
 
-      <PortraitSections portrait={shown} dict={dict} calibrate={!historical} />
+      <PortraitSections
+        portrait={shown}
+        dict={dict}
+        calibrate={!historical && !preview}
+        preview={preview}
+        lockedHref={lockedHref}
+      />
 
-      {/* 一路走来的画像（多于 1 版才显）：演进过程可以随时回看 */}
-      {versions.length > 1 && (
+      {/* 一路走来的画像（多于 1 版才显）：演进过程可以随时回看——访客隐藏 */}
+      {!preview && versions.length > 1 && (
         <section className="mt-12 border-t border-line pt-6">
           <p className="text-xs tracking-widest text-ink-soft">{p.versionsLabel}</p>
           <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm">

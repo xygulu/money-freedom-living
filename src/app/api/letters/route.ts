@@ -3,7 +3,7 @@
 //        存入档案 letters[]（state='kept' 留着）→ 计活跃足迹。回信对所有档位免费。
 // PATCH = 状态流转（kept 封存→sealed，sealed 开启→opened；仅允许这两个方向）。
 import { NextRequest } from 'next/server';
-import { resolveIdentity } from '@/lib/identity';
+import { requireApiUser } from '@/lib/api-auth';
 import { appendLetter, bumpActiveDay, ensureProfile, getProfile, setLetterState, type LetterEntry } from '@/lib/profile';
 import { buildLetterReplySystem } from '@/lib/letters';
 import { checkSafety, recordSafetyEvent, referralMessage } from '@/lib/safety';
@@ -19,12 +19,15 @@ const CONTENT_MAX = 3000;
 
 export async function POST(request: NextRequest) {
   try {
+    // 访客闸（用户 2026-09-14 拍板：访客 = 只能做金钱关系测试）
+    const auth = await requireApiUser();
+    if (!auth.ok) return auth.response;
+    const identity = auth.identity;
+
     const body = (await request.json().catch(() => ({}))) as { content?: string; locale?: string };
     const content = typeof body.content === 'string' ? body.content.trim().slice(0, CONTENT_MAX) : '';
     if (!content) return jsonError('empty_content', 400);
     const locale: Locale = isLocale(body.locale) && enabledLocales.includes(body.locale) ? body.locale : 'en';
-
-    const identity = await resolveIdentity(request);
     const profile = await ensureProfile(identity.key, locale);
 
     const verdict = await checkSafety(locale, content);
@@ -73,14 +76,16 @@ export async function POST(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
+    const auth = await requireApiUser();
+    if (!auth.ok) return auth.response;
+    const identity = auth.identity;
+
     const body = (await request.json().catch(() => ({}))) as { createdAt?: string; action?: string };
     if (!body.createdAt) return jsonError('missing_letter', 400);
     // 简版只允许两个方向：封存（kept→sealed）、开启（sealed→opened）
     const next: LetterEntry['state'] | null =
       body.action === 'seal' ? 'sealed' : body.action === 'open' ? 'opened' : null;
     if (!next) return jsonError('invalid_action', 400);
-
-    const identity = await resolveIdentity(request);
     const profile = await getProfile(identity.key);
     const letter = profile?.letters.find((l) => l.createdAt === body.createdAt);
     if (!letter) return jsonError('letter_not_found', 404);

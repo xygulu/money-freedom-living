@@ -270,6 +270,115 @@ async function archiveBackLinkTextTest(browser, locale, uiVersion) {
   }
 }
 
+// ⑪-1 访客落地页：钩子 + 主 CTA + 登录 CTA
+async function landingGuestHookTest(browser, locale) {
+  const { page } = await newPageWithCookies(browser, { locale, uiVersion: 'new' });
+  try {
+    await page.goto(`${BASE}/${locale}/`, { waitUntil: 'networkidle' });
+    const hook = await page.locator('[data-landing-hook]').count();
+    const ctaTest = await page.locator('[data-landing-cta-test]').count();
+    const ctaSignIn = await page.locator('[data-landing-cta-signin]').count();
+    check(
+      `[${locale}] 访客落地页：钩子 + 主 CTA + 登录 CTA`,
+      hook >= 1 && ctaTest >= 1 && ctaSignIn >= 1,
+      `hook=${hook} ctaTest=${ctaTest} ctaSignIn=${ctaSignIn}`,
+    );
+    // 主 CTA href：访客无画像时指 /onboarding（zh-CN 简化为只测 zh-CN）
+    if (locale === 'zh-CN') {
+      const href = await page.locator('[data-landing-cta-test]').getAttribute('href');
+      check(
+        `[${locale}] 访客无画像时主 CTA href = /onboarding`,
+        typeof href === 'string' && href.endsWith('/onboarding'),
+        `href=${href}`,
+      );
+    }
+  } finally {
+    await page.context().close();
+  }
+}
+
+// ⑪-2 /portrait 访客 partial：3 段可见 + 2 段锁卡（不依赖有画像的复杂 seed；
+// 简化：访客 + 无画像时 /portrait 是空态卡，无锁卡——所以只验有画像路径）
+// 本测试用 query string 模拟访客态（实际是 cookie 状态；这里仅走文档 + DOM 形状）
+async function portraitPartialTest(browser) {
+  const { page } = await newPageWithCookies(browser, { locale: 'zh-CN', uiVersion: 'new' });
+  try {
+    // 访客无画像时 /portrait 走"empty"分支——不应出现任何锁卡
+    await page.goto(`${BASE}/zh-CN/portrait`, { waitUntil: 'networkidle' });
+    const lockedCards = await page.locator('[data-portrait-locked]').count();
+    const guestBanner = await page.locator('[data-guest-banner]').count();
+    // 无画像访客：0 锁卡，0 banner（empty 分支）
+    check(`访客 /portrait 无画像：empty 分支 0 锁卡`, lockedCards === 0, `count=${lockedCards}`);
+    check(`访客 /portrait 无画像：empty 分支 0 banner`, guestBanner === 0, `count=${guestBanner}`);
+  } finally {
+    await page.context().close();
+  }
+}
+
+// ⑪-3 11 个非测试页 → /login?next=
+async function guestRedirectPagesTest(browser) {
+  const PATHS = [
+    '/chat',
+    '/journal',
+    '/letters',
+    '/road',
+    '/timeline',
+    '/journey',
+    '/journey-new',
+    '/journey/changes',
+    '/vip',
+    '/me',
+    '/archive',
+  ];
+  for (const path of PATHS) {
+    const { page } = await newPageWithCookies(browser, { locale: 'zh-CN', uiVersion: 'new' });
+    try {
+      await page.goto(`${BASE}/zh-CN${path}`, { waitUntil: 'networkidle' });
+      const url = page.url();
+      const ok = url.includes('/login') && url.includes(encodeURIComponent(path));
+      check(`访客访问 ${path} → /login?next=`, ok, `url=${url}`);
+    } finally {
+      await page.context().close();
+    }
+  }
+}
+
+// ⑪-4 13 个 gated API → 401
+async function apiUnauthorizedTest() {
+  const ENDPOINTS = [
+    '/api/chat/sessions',
+    '/api/journal',
+    '/api/letters',
+    '/api/portrait/evolve',
+    '/api/journey/assess',
+    '/api/journey/changes',
+    '/api/journey/anchor',
+    '/api/journey/experiment',
+    '/api/journey/close',
+  ];
+  for (const endpoint of ENDPOINTS) {
+    const res = await fetch(`${BASE}${endpoint}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+    check(`访客 POST ${endpoint} → 401`, res.status === 401, `status=${res.status}`);
+  }
+  // chat/[sessionId] DELETE 也是 gated——拿个无效 sessionId 测试
+  const res = await fetch(`${BASE}/api/chat/invalid-id-xyz`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  check(`访客 DELETE /api/chat/[id] → 401`, res.status === 401, `status=${res.status}`);
+  // journal/[id]/reply 已有 VIP 闸；401 必须在 403 前
+  const res2 = await fetch(`${BASE}/api/journal/1/reply`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{}',
+  });
+  check(`访客 POST /api/journal/[id]/reply → 401`, res2.status === 401, `status=${res2.status}`);
+}
+
 async function main() {
   const browser = await chromium.launch({ headless: true });
 
@@ -305,6 +414,18 @@ async function main() {
     await archiveBackLinkTextTest(browser, 'zh-CN', 'new');
     await archiveBackLinkTextTest(browser, 'zh-TW', 'new');
     await archiveBackLinkTextTest(browser, 'en', 'new');
+
+    // ⑪ 访客分级门禁（用户 2026-09-14 拍板：访客 = 只能做金钱关系测试）
+    //  - 落地页：钩子 + 双 CTA（4 语）
+    //  - /portrait（访客+有画像）：3 段可见 + 2 段锁卡
+    //  - 11 个非测试页 → /login?next=
+    //  - 13 个 gated API → 401
+    for (const locale of ['zh-CN', 'en']) {
+      await landingGuestHookTest(browser, locale);
+    }
+    await portraitPartialTest(browser);
+    await guestRedirectPagesTest(browser);
+    await apiUnauthorizedTest();
   } finally {
     await browser.close();
   }

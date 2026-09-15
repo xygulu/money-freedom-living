@@ -3,7 +3,7 @@
 // 发生在 /api/chat/[id] 首条 AI 回复成功后（失败不扣、会话内重试不扣）。
 // 进入时惰性结算上次未收尾的会话（摘要入 memories），这是"第二天它还记得你"的兜底。
 import { NextRequest } from 'next/server';
-import { resolveIdentity } from '@/lib/identity';
+import { requireApiUser } from '@/lib/api-auth';
 import { createSession, findOpenChatSession } from '@/lib/chat';
 import { settleSession } from '@/lib/memory';
 import { getQuotaStatus, clientIpFromHeaders, guestKeyForRequest, guestCookieHeader, GUEST_ID_COOKIE } from '@/lib/quota';
@@ -16,10 +16,13 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
+    // 访客闸（用户 2026-09-14 拍板：访客 = 只能做金钱关系测试）
+    const auth = await requireApiUser();
+    if (!auth.ok) return auth.response;
+    const identity = auth.identity;
+
     const body = (await request.json().catch(() => ({}))) as { locale?: string };
     const locale = isLocale(body.locale) && enabledLocales.includes(body.locale) ? body.locale : 'en';
-
-    const identity = await resolveIdentity(request);
 
     // 惰性结算：上次对话若没走"结束"流程（直接关页面/轮数未到），在此补摘要并关闭。
     // settleSession 内部 best-effort，LLM 失败也会关会话，不阻塞新会话。

@@ -3,7 +3,7 @@
 // 安全层（P§8 全入口覆盖）：写入时筛查，命中 → 落事件 + 条目标记 safety_hit
 // （回应时直接转介文案，不再走 LLM）；日记本身照常保存——它记录的是用户的真实处境。
 import { NextRequest } from 'next/server';
-import { resolveIdentity } from '@/lib/identity';
+import { requireApiUser } from '@/lib/api-auth';
 import { bumpActiveDay, ensureProfile } from '@/lib/profile';
 import { checkSafety, recordSafetyEvent } from '@/lib/safety';
 import { track } from '@/lib/analytics';
@@ -18,12 +18,15 @@ const CONTENT_MAX = 5000;
 
 export async function POST(request: NextRequest) {
   try {
+    // 访客闸（用户 2026-09-14 拍板：访客 = 只能做金钱关系测试）
+    const auth = await requireApiUser();
+    if (!auth.ok) return auth.response;
+    const identity = auth.identity;
+
     const body = (await request.json().catch(() => ({}))) as { content?: string; locale?: string };
     const content = typeof body.content === 'string' ? body.content.trim().slice(0, CONTENT_MAX) : '';
     if (!content) return jsonError('empty_content', 400);
     const locale: Locale = isLocale(body.locale) && enabledLocales.includes(body.locale) ? body.locale : 'en';
-
-    const identity = await resolveIdentity(request);
 
     const verdict = await checkSafety(locale, content);
     if (verdict.hit) await recordSafetyEvent(identity.key, 'journal', verdict.category ?? 'crisis');
@@ -64,7 +67,9 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const identity = await resolveIdentity(request);
+    const auth = await requireApiUser();
+    if (!auth.ok) return auth.response;
+    const identity = auth.identity;
     const entries = await getJournalEntries(identity.key);
     const headers: Record<string, string> = { 'Cache-Control': 'no-store' };
     if (identity.newGuestCookie) headers['Set-Cookie'] = identity.newGuestCookie;

@@ -9,7 +9,7 @@
 // - **事件**（`events`）只放枚举与指针（topic + at），**绝不放用户文本原文**（P§9 日志
 //   纪律，docs/10 建议的 `basis=原话` 在这条纪律面前让路：指针一样能回溯到那句话）。
 import { NextRequest } from 'next/server';
-import { resolveIdentity } from '@/lib/identity';
+import { requireApiUser } from '@/lib/api-auth';
 import {
   activeBookId,
   bumpActiveDay,
@@ -56,7 +56,10 @@ export async function POST(request: NextRequest) {
     const skipped = body.firstLineSkipped === true;
     const locale: Locale = isLocale(body.locale) && enabledLocales.includes(body.locale) ? body.locale : 'en';
 
-    const identity = await resolveIdentity(request);
+    // 访客闸（用户 2026-09-14 拍板：访客 = 只能做金钱关系测试）
+    const auth = await requireApiUser();
+    if (!auth.ok) return auth.response;
+    const identity = auth.identity;
 
     // 用户文本入口一律过安全层（P§8）：命中照常写入（用户的话就是用户的话），只是回应换成转介
     let safetyHit = false;

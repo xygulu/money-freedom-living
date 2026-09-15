@@ -4,7 +4,7 @@
 // claimEvolution 原子抢锁防双击双生成；LLM 失败重试一次，仍失败清锁 502，
 // 现画像不动、提议不消失。不消耗聊天配额（对齐体检；频率由素材闸控制）。
 import { NextRequest } from 'next/server';
-import { resolveIdentity } from '@/lib/identity';
+import { requireApiUser } from '@/lib/api-auth';
 import { getProfile, savePortrait, bumpActiveDay, type Portrait } from '@/lib/profile';
 import {
   baselineFor,
@@ -33,7 +33,10 @@ export async function POST(request: NextRequest) {
     const locale = isLocale(body.locale) && enabledLocales.includes(body.locale) ? body.locale : 'en';
     if (body.action !== 'generate' && body.action !== 'dismiss') return jsonError('invalid_action', 400);
 
-    const identity = await resolveIdentity(request);
+    // 访客闸（用户 2026-09-14 拍板：访客 = 只能做金钱关系测试）
+    const auth = await requireApiUser();
+    if (!auth.ok) return auth.response;
+    const identity = auth.identity;
     const profile = await getProfile(identity.key);
     if (!profile?.portrait) return jsonError('profile_not_found', 404);
 

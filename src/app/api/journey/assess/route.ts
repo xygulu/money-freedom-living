@@ -8,7 +8,7 @@
 //   推进即仪式（stage{n}_entered）。
 // action=dismiss：「不是这样的/先不用」→ 14 天冷却，无惩罚；有待确认评估则一并清掉。
 import { NextRequest } from 'next/server';
-import { resolveIdentity } from '@/lib/identity';
+import { requireApiUser } from '@/lib/api-auth';
 import { getProfile, appendStamps, saveStage, bumpActiveDay, activeBookId, type StageAssessment } from '@/lib/profile';
 import {
   gatherAssessMaterial,
@@ -35,11 +35,14 @@ const ACTIONS = ['generate', 'confirm', 'advance', 'dismiss'];
 
 export async function POST(request: NextRequest) {
   try {
+    // 访客闸（用户 2026-09-14 拍板：访客 = 只能做金钱关系测试）
+    const auth = await requireApiUser();
+    if (!auth.ok) return auth.response;
+    const identity = auth.identity;
+
     const body = (await request.json().catch(() => ({}))) as { locale?: string; action?: string };
     const locale = isLocale(body.locale) && enabledLocales.includes(body.locale) ? body.locale : 'en';
     if (!body.action || !ACTIONS.includes(body.action)) return jsonError('invalid_action', 400);
-
-    const identity = await resolveIdentity(request);
     const profile = await getProfile(identity.key);
     if (!profile?.portrait) return jsonError('profile_not_found', 404);
 

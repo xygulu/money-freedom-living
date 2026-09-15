@@ -19,7 +19,7 @@ import { notFound, redirect } from 'next/navigation';
 import { getDict } from '@/i18n/get-dict';
 import { enabledLocales, isLocale } from '@/i18n/config';
 import { DEFAULT_BOOK_ID, getJourneyStages, pickDaily, pickExercise } from '@/lib/content';
-import { resolveIdentity } from '@/lib/identity';
+import { requireSignedIn } from '@/lib/identity';
 import { activeBookId, getProfile, recordDailySeen, type StageAssessment } from '@/lib/profile';
 import { isAnchorDay } from '@/lib/anchor';
 import { timeZoneFrom } from '@/lib/time';
@@ -55,6 +55,10 @@ export default async function journeyPage({
   if (!isLocale(locale) || !enabledLocales.includes(locale)) notFound();
   const dict = getDict(locale);
 
+  // 访客闸（用户 2026-09-14 拍板：访客 = 只能做金钱关系测试）
+  // **必须在 uiVersion guard 之前**——访客既不该看到 classic 也不该看到 new，两边都跳 /login
+  const identity = await requireSignedIn(locale, `/${locale}/journey`);
+
   // 前台改造（70-2 A2）· 经典版守卫。非 classic 直接重定向到一幕。
   if ((await getUiVersion()) !== 'classic') {
     redirect(`/${locale}/journey-new`);
@@ -62,7 +66,6 @@ export default async function journeyPage({
 
   const headersList = await headers();
   const cookieList = await cookies();
-  const identity = await resolveIdentity({ headers: headersList, cookies: cookieList });
   const profile = await getProfile(identity.key);
 
   const stage = profile?.stage ?? 1;

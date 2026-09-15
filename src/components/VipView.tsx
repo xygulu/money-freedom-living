@@ -8,7 +8,6 @@ import type { Dict } from '@/i18n/get-dict';
 
 interface Props {
   locale: string;
-  loggedIn: boolean;
   isVip: boolean;
   vipUntil: string | null;
   providerConfigured: boolean;
@@ -19,7 +18,6 @@ interface Props {
 
 export default function VipView({
   locale,
-  loggedIn,
   isVip,
   vipUntil,
   providerConfigured,
@@ -35,7 +33,7 @@ export default function VipView({
 
   // Creem 回跳：有 checkout_id 就回查一次权益（granted 后刷新服务端状态）
   useEffect(() => {
-    if (!checkoutId || !loggedIn || verifyStarted.current) return;
+    if (!checkoutId || verifyStarted.current) return;
     verifyStarted.current = true;
     setVerifyState('pending');
     const params = new URLSearchParams({ checkout_id: checkoutId });
@@ -53,7 +51,7 @@ export default function VipView({
         }
       })
       .catch(() => setVerifyState('failed'));
-  }, [checkoutId, loggedIn, providerParam, router]);
+  }, [checkoutId, providerParam, router]);
 
   async function go(path: 'checkout' | 'portal') {
     if (busy) return;
@@ -79,21 +77,6 @@ export default function VipView({
       <div className="border border-line bg-white/60 p-6">
         <p className="text-base">{t.verifyGranted}</p>
         <p className="mt-2 text-sm text-ink-soft">{t.verifyGrantedSub}</p>
-      </div>
-    );
-  }
-
-  // 未登录：订阅需要账号（跨设备保留 VIP 权益）
-  if (!loggedIn) {
-    return (
-      <div className="border border-line p-6">
-        <p className="text-sm leading-relaxed text-ink-soft">{t.loginRequired}</p>
-        <a
-          href={`/${locale}/login?next=/${locale}/vip`}
-          className="mt-5 inline-block border border-ink px-5 py-2.5 text-sm transition-colors hover:bg-ink hover:text-paper"
-        >
-          {t.loginCta}
-        </a>
       </div>
     );
   }

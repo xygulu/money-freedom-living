@@ -18,8 +18,7 @@ import Link from 'next/link';
 import { enabledLocales, isLocale } from '@/i18n/config';
 import { getDict } from '@/i18n/get-dict';
 import { getUiVersion, journeyHrefFor, withJourneyHref } from '@/lib/ui-version';
-import { auth } from '@/lib/auth';
-import { headers } from 'next/headers';
+import { requireSignedIn } from '@/lib/identity';
 import ArchiveList from '@/components/ArchiveList';
 import VersionSwitch from '@/components/VersionSwitch';
 import ThemeSwitch from '@/components/ThemeSwitch';
@@ -32,6 +31,9 @@ export default async function ArchivePage({ params }: { params: Promise<{ locale
   const { locale } = await params;
   if (!isLocale(locale) || !enabledLocales.includes(locale)) notFound();
 
+  // 访客闸（用户 2026-09-14 拍板：访客 = 只能做金钱关系测试）
+  await requireSignedIn(locale, `/${locale}/archive`);
+
   const uiVersion = await getUiVersion();
   // 注入按当前 ui_version 分流的 journeyHref
   const dict = withJourneyHref(getDict(locale), locale, uiVersion);
@@ -40,10 +42,6 @@ export default async function ArchivePage({ params }: { params: Promise<{ locale
     new: journeyHrefFor(locale, 'new'),
     classic: journeyHrefFor(locale, 'classic'),
   } as const;
-
-  // 登录态：第三段「设置与账号」下渲染 SignOutButton；游客态不渲染
-  const session = await auth.api.getSession({ headers: await headers() });
-  const isSignedIn = Boolean(session?.user);
 
   return (
     <div className={styles.archive}>
@@ -108,19 +106,17 @@ export default async function ArchivePage({ params }: { params: Promise<{ locale
           </li>
         </ul>
 
-        {/* 登出：登录态才挂；游客态不渲染（原型缺，按用户 2026-09-14 加固） */}
-        {isSignedIn && (
-          <div className={styles.signoutWrap}>
-            <SignOutButton
-              locale={locale}
-              labels={{
-                btn: dict.me.signOut,
-                confirm: dict.me.signOutConfirm,
-                cancel: dict.me.deleteCancel,
-              }}
-            />
-          </div>
-        )}
+        {/* 登出：硬闸后此处永远渲染（70-2 加固产物保留） */}
+        <div className={styles.signoutWrap}>
+          <SignOutButton
+            locale={locale}
+            labels={{
+              btn: dict.me.signOut,
+              confirm: dict.me.signOutConfirm,
+              cancel: dict.me.deleteCancel,
+            }}
+          />
+        </div>
       </section>
     </div>
   );

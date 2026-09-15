@@ -3,7 +3,7 @@
 // safety_hit 的日记 → 转介文案作为回应（服务端定死，不走 LLM）；
 // 已回应过 → 原样返回（幂等，不重复消耗 LLM）。
 import { NextRequest } from 'next/server';
-import { resolveIdentity } from '@/lib/identity';
+import { requireApiUser } from '@/lib/api-auth';
 import { getJournalEntry, saveJournalReply, buildJournalReplySystem } from '@/lib/journal';
 import { referralMessage } from '@/lib/safety';
 import { getQuotaStatus, clientIpFromHeaders, guestKeyForRequest, GUEST_ID_COOKIE } from '@/lib/quota';
@@ -17,11 +17,14 @@ export const maxDuration = 60;
 
 export async function POST(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {
+    // 访客闸在 VIP 闸之前：未登录 401，已登录未订阅 403
+    const auth = await requireApiUser();
+    if (!auth.ok) return auth.response;
+    const identity = auth.identity;
+
     const { id } = await ctx.params;
     const entryId = Number(id);
     if (!Number.isInteger(entryId) || entryId <= 0) return jsonError('invalid_entry', 400);
-
-    const identity = await resolveIdentity(request);
     const entry = await getJournalEntry(identity.key, entryId);
     if (!entry) return jsonError('entry_not_found', 404);
 

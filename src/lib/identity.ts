@@ -3,6 +3,8 @@
 // 与 quota.ts 游客键的区别：配额键掺了 day（跨日清零是配额语义），
 // 档案键必须跨日稳定——同一个浏览器明天回来，AI 还得记得他。
 // 所以这里直接用匿名 cookie id 本体（32 位 hex，无 PII），不掺日期、不再哈希。
+import { cookies, headers } from 'next/headers';
+import { redirect } from 'next/navigation';
 import { auth } from '@/lib/auth';
 import { GUEST_ID_COOKIE, isValidGuestId, newGuestId, guestCookieHeader } from '@/lib/quota';
 import { migrateGuestData } from '@/lib/migrate';
@@ -47,4 +49,29 @@ export async function resolveIdentity(request: {
 
   const fresh = newGuestId();
   return { key: `g:${fresh}`, userId: null, newGuestCookie: guestCookieHeader(fresh) };
+}
+
+/** 已登录 = 有 userId（用户 2026-09-14 拍板：访客 = 只能做金钱关系测试） */
+export function isSignedIn(identity: RequestIdentity): boolean {
+  return identity.userId !== null;
+}
+
+/**
+ * 页面闸（hard redirect）：访客访问非测试页 → 落 /login?next={nextPath}。
+ * - locale：当前 locale（用于 redirect 路径）
+ * - nextPath：必须以 `/` 开头的站内路径。**不要传 request.url**——避免污染。
+ * 返回已登录身份的 identity；调用方继续用它取档案即可。
+ */
+export async function requireSignedIn(
+  locale: string,
+  nextPath: string,
+): Promise<RequestIdentity> {
+  const headersList = await headers();
+  const cookieList = await cookies();
+  const identity = await resolveIdentity({ headers: headersList, cookies: cookieList });
+  if (!isSignedIn(identity)) {
+    const safeNext = nextPath.startsWith('/') ? nextPath : `/${locale}`;
+    redirect(`/${locale}/login?next=${encodeURIComponent(safeNext)}`);
+  }
+  return identity;
 }

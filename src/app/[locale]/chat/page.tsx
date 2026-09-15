@@ -1,12 +1,12 @@
 // /[locale]/chat：陪伴对话（M4）。
 // 服务端取身份/档案/打开中的会话/配额状态 → 无会话时展示开始卡片
 // （配额用完即付费墙触发点①文案），有会话时直接进入对话间。
-import { headers, cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getDict } from '@/i18n/get-dict';
 import { enabledLocales, isLocale } from '@/i18n/config';
-import { resolveIdentity } from '@/lib/identity';
+import { requireSignedIn } from '@/lib/identity';
 import { findOpenChatSession, getSessionMessages } from '@/lib/chat';
 import { getQuotaStatus, clientIpFromHeaders, guestKeyForRequest, GUEST_ID_COOKIE } from '@/lib/quota';
 import { timeZoneFrom, todayIn } from '@/lib/time';
@@ -29,9 +29,10 @@ export default async function chatPage({
   // 不再要求第二次点击，落地即建会话（建会话不扣配额，落账仍在首条 AI 回复）。
   const autoStart = (await searchParams).start === '1';
 
+  // 访客闸（用户 2026-09-14 拍板：访客 = 只能做金钱关系测试）
+  const identity = await requireSignedIn(locale, `/${locale}/chat`);
   const headersList = await headers();
   const cookieList = await cookies();
-  const identity = await resolveIdentity({ headers: headersList, cookies: cookieList });
 
   const open = await findOpenChatSession(identity.key);
   const messages = open ? await getSessionMessages(open.id) : [];

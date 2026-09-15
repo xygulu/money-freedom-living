@@ -6,7 +6,7 @@ import { notFound } from 'next/navigation';
 import { getDict } from '@/i18n/get-dict';
 import { enabledLocales, isLocale } from '@/i18n/config';
 import { auth } from '@/lib/auth';
-import { resolveIdentity } from '@/lib/identity';
+import { requireSignedIn } from '@/lib/identity';
 import { getEntitlement } from '@/lib/entitlements';
 import { getProfile } from '@/lib/profile';
 import MeAccount from '@/components/MeAccount';
@@ -19,13 +19,13 @@ export default async function mePage({ params }: { params: Promise<{ locale: str
   if (!isLocale(locale) || !enabledLocales.includes(locale)) notFound();
   const dict = getDict(locale);
 
+  // 访客闸（用户 2026-09-14 拍板：访客 = 只能做金钱关系测试）
+  const identity = await requireSignedIn(locale, `/${locale}/me`);
   const headersList = await headers();
   const session = await auth.api.getSession({ headers: headersList });
   const user = session?.user as { id: string; email?: string } | undefined;
   const entitlement = user ? await getEntitlement(user.id) : null;
   const isVip = Boolean(entitlement?.vipUntil && new Date(entitlement.vipUntil) > new Date());
-  // 游客也有档案（g: key）——画像入口对所有人可用
-  const identity = await resolveIdentity({ headers: headersList, cookies: await cookies() });
   const profile = await getProfile(identity.key);
   const hasPortrait = Boolean(profile?.portrait);
 
@@ -46,14 +46,6 @@ export default async function mePage({ params }: { params: Promise<{ locale: str
     <div className="flex flex-col pt-16">
       <h1 className="text-2xl font-medium tracking-tight">{dict.me.title}</h1>
       {user?.email && <p className="mt-2 text-sm text-ink-soft">{user.email}</p>}
-      {!user && (
-        <p className="mt-2 text-sm leading-relaxed text-ink-soft">
-          {dict.me.guestNote}{' '}
-          <Link href={`/${locale}/login`} className="text-accent underline underline-offset-4">
-            {dict.me.loginLink}
-          </Link>
-        </p>
-      )}
 
       <ul className="mt-8 flex flex-col">
         {rows.map((row) => (
@@ -66,19 +58,10 @@ export default async function mePage({ params }: { params: Promise<{ locale: str
         ))}
       </ul>
 
-      {/* 节点来信的开关只对登录用户有意义——游客没有邮箱，发不了也不该问 */}
-      {user && <TouchOptIn dict={dict} initialOptIn={profile?.touch?.emailOptIn === true} />}
+      {/* 节点来信的开关只对登录用户有意义——访客硬闸后此处永远渲染 */}
+      <TouchOptIn dict={dict} initialOptIn={profile?.touch?.emailOptIn === true} />
 
-      {user ? (
-        <MeAccount locale={locale} dict={dict} />
-      ) : (
-        <p className="mt-10 text-xs leading-relaxed text-ink-soft/70">
-          {dict.me.recoveryNote}{' '}
-          <a href={`/${locale}/privacy`} className="underline underline-offset-4">
-            {dict.me.privacyLink}
-          </a>
-        </p>
-      )}
+      <MeAccount locale={locale} dict={dict} />
     </div>
   );
 }

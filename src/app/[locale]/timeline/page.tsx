@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getDict } from '@/i18n/get-dict';
 import { enabledLocales, isLocale } from '@/i18n/config';
-import { resolveIdentity } from '@/lib/identity';
+import { requireSignedIn } from '@/lib/identity';
 import { buildTimeline, formatTimelineDay, type TimelineItem } from '@/lib/timeline';
 import { getUiVersion, withJourneyHref } from '@/lib/ui-version';
 import TimelineItemView from '@/components/TimelineItemView';
@@ -20,9 +20,10 @@ export default async function timelinePage({ params }: { params: Promise<{ local
   if (!isLocale(locale) || !enabledLocales.includes(locale)) notFound();
   const dict = withJourneyHref(getDict(locale), locale, await getUiVersion());
 
+  // 访客闸（用户 2026-09-14 拍板：访客 = 只能做金钱关系测试）
+  const identity = await requireSignedIn(locale, `/${locale}/timeline`);
   const headersList = await headers();
   const cookieList = await cookies();
-  const identity = await resolveIdentity({ headers: headersList, cookies: cookieList });
   const items = await buildTimeline(identity.key);
 
   // 按日期分组（同日连续归一组），今天给一个「今天」的抬头

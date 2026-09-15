@@ -15,6 +15,11 @@
     "hero": "Way of living without money worry",
     "sub": "A room of your own, for everything money makes you feel.Not budgeting. Not investing tips. A quiet companion that helps you see — and slowly soften — your relationship with money.",
     "cta": "See your money portrait",
+    "hook": "You don't have to retell your money story every time.",
+    "hookSub": "30 minutes. 6 questions. See what an AI quietly hears in what you say — and notice it shifts the next time you read it.",
+    "ctaTest": "See how you relate to money",
+    "ctaPortrait": "See your portrait",
+    "ctaSignIn": "Sign in / Sign up",
     "privacy": "Private by design. Your words stay yours."
   },
   "placeholder": {
@@ -504,7 +509,21 @@
     "compareColPast": "That time",
     "compareColNow": "This time",
     "compareEmpty": "There is no earlier portrait to compare yet. When the next one is drawn, they will meet here.",
-    "compareTrailLink": "What happened between the two → the trail"
+    "compareTrailLink": "What happened between the two → the trail",
+    "guestBanner": "This is part of your portrait — the AI's reading needs an account.",
+    "locked": {
+      "script": {
+        "eyebrow": "What I might be hearing",
+        "title": "The AI's reading is waiting",
+        "body": "What you said, your color underneath, those three moments — they're already here.\nOne step left: let me say it back to you."
+      },
+      "toFuture": {
+        "eyebrow": "To the future you",
+        "title": "Leaving a space here for now",
+        "body": "When you're ready — I'll write what the you-of-now wants to say to the you-of-a-year-later, right here."
+      },
+      "cta": "Sign in / Sign up to see the full reading"
+    }
   },
   "chat": {
     "title": "Conversation",

@@ -2,7 +2,7 @@
 // 做砸的实验也是数据——记成功或记没做都算；感受可空；完成即计活跃足迹。
 // 感受文本是用户文本入口：过安全层（P§8），命中落事件、照常写入（用户的话就是用户的话）。
 import { NextRequest } from 'next/server';
-import { resolveIdentity } from '@/lib/identity';
+import { requireApiUser } from '@/lib/api-auth';
 import { appendExperiment, bumpActiveDay, ensureProfile } from '@/lib/profile';
 import { checkSafety, recordSafetyEvent, referralMessage } from '@/lib/safety';
 import { track } from '@/lib/analytics';
@@ -28,7 +28,10 @@ export async function POST(request: NextRequest) {
     const feeling = typeof body.feeling === 'string' ? body.feeling.trim().slice(0, FEELING_MAX) : '';
     const locale: Locale = isLocale(body.locale) && enabledLocales.includes(body.locale) ? body.locale : 'en';
 
-    const identity = await resolveIdentity(request);
+    // 访客闸（用户 2026-09-14 拍板：访客 = 只能做金钱关系测试）
+    const auth = await requireApiUser();
+    if (!auth.ok) return auth.response;
+    const identity = auth.identity;
 
     let safetyHit = false;
     if (feeling) {

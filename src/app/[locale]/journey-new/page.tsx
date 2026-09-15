@@ -18,7 +18,7 @@ import { notFound, redirect } from 'next/navigation';
 import { getDict } from '@/i18n/get-dict';
 import { enabledLocales, isLocale } from '@/i18n/config';
 import { DEFAULT_BOOK_ID, pickDaily, pickExercise } from '@/lib/content';
-import { resolveIdentity } from '@/lib/identity';
+import { requireSignedIn } from '@/lib/identity';
 import { activeBookId, getProfile, recordDailySeen } from '@/lib/profile';
 import { getUiVersion } from '@/lib/ui-version';
 import { computeStageProgress } from '@/lib/stage';
@@ -37,6 +37,10 @@ export default async function journeyNewPage({
   if (!isLocale(locale) || !enabledLocales.includes(locale)) notFound();
   const dict = getDict(locale);
 
+  // 访客闸（用户 2026-09-14 拍板：访客 = 只能做金钱关系测试）
+  // 必须在 uiVersion guard 之前——经典版访客也挡掉（避免 cookie 切换路径暴露内容）
+  const identity = await requireSignedIn(locale, `/${locale}/journey-new`);
+
   // 经典版守卫（70-2 A2）。ui_version === 'classic' 时反向回到经典旅程页；
   // 经典版本身的 11 块内容保留在 /journey 一行不动。
   if ((await getUiVersion()) === 'classic') {
@@ -45,7 +49,6 @@ export default async function journeyNewPage({
 
   const headersList = await headers();
   const cookieList = await cookies();
-  const identity = await resolveIdentity({ headers: headersList, cookies: cookieList });
   const profile = await getProfile(identity.key);
 
   const stage = profile?.stage ?? 1;

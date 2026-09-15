@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getDict } from '@/i18n/get-dict';
 import { enabledLocales, isLocale } from '@/i18n/config';
-import { resolveIdentity } from '@/lib/identity';
+import { requireSignedIn } from '@/lib/identity';
 import { getProfile } from '@/lib/profile';
 import { getJourneyStages } from '@/lib/content';
 import { buildChangeListView } from '@/lib/changes';
@@ -23,9 +23,10 @@ export default async function changesPage({ params }: { params: Promise<{ locale
   if (!isLocale(locale) || !enabledLocales.includes(locale)) notFound();
   const dict = withJourneyHref(getDict(locale), locale, await getUiVersion());
 
+  // 访客闸（用户 2026-09-14 拍板：访客 = 只能做金钱关系测试）
+  const identity = await requireSignedIn(locale, `/${locale}/journey/changes`);
   const headersList = await headers();
   const cookieList = await cookies();
-  const identity = await resolveIdentity({ headers: headersList, cookies: cookieList });
   const profile = await getProfile(identity.key);
   const view = profile ? buildChangeListView(profile) : null;
 

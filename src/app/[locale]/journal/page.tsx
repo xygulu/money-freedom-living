@@ -4,7 +4,7 @@ import { headers, cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { getDict } from '@/i18n/get-dict';
 import { enabledLocales, isLocale } from '@/i18n/config';
-import { resolveIdentity } from '@/lib/identity';
+import { requireSignedIn } from '@/lib/identity';
 import { getJournalEntries } from '@/lib/journal';
 import { getQuotaStatus, clientIpFromHeaders, guestKeyForRequest, GUEST_ID_COOKIE } from '@/lib/quota';
 import { timeZoneFrom, todayIn } from '@/lib/time';
@@ -17,9 +17,10 @@ export default async function journalPage({ params }: { params: Promise<{ locale
   if (!isLocale(locale) || !enabledLocales.includes(locale)) notFound();
   const dict = getDict(locale);
 
+  // 访客闸（用户 2026-09-14 拍板：访客 = 只能做金钱关系测试）
+  const identity = await requireSignedIn(locale, `/${locale}/journal`);
   const headersList = await headers();
   const cookieList = await cookies();
-  const identity = await resolveIdentity({ headers: headersList, cookies: cookieList });
   const entries = await getJournalEntries(identity.key);
 
   // 日界线按用户所在时区，不按服务器：游客 key 与配额桶都得用同一个「今天」
