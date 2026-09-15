@@ -63,25 +63,28 @@ export default function OnboardingWizard({ locale, dict }: Props) {
     setAnswers((prev) => ({ ...prev, [id]: value }));
   }
 
-  /** 问卷收尾：一次提交已答的部分（全跳过也允许，服务端空答会拒——这里先兜住） */
-  async function submitAnswers(): Promise<boolean> {
+  /** form 步最后一题触发：提交问卷答案进档 + 进 reflect 步（commit ffd34ad P0-3 设计稿顺序）。
+   *  全跳过也允许——服务端空答会拒，这里先兜住（不调 API，直接 reflect）。 */
+  async function submitAnswersAndReflect(): Promise<void> {
     const answerable = Object.fromEntries(Object.entries(answers).filter(([, v]) => v.trim()));
-    if (Object.keys(answerable).length === 0) return false;
-    setSavingForm(true);
-    try {
-      const response = await fetch('/api/onboarding/answers', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ locale, answers: answerable }),
-      });
-      if (!response.ok) throw new Error(String(response.status));
-      return true;
-    } catch {
-      setError(true);
-      return false;
-    } finally {
-      setSavingForm(false);
+    if (Object.keys(answerable).length > 0) {
+      setSavingForm(true);
+      try {
+        const response = await fetch('/api/onboarding/answers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ locale, answers: answerable }),
+        });
+        if (!response.ok) throw new Error(String(response.status));
+      } catch {
+        setError(true);
+        return; // 失败停在 form 步，让他能再点
+      } finally {
+        setSavingForm(false);
+      }
     }
+    setStep('reflect');
+    void goReflect();
   }
 
   /** 对话里 →「我听到的是…」：素材是**他刚说的话**，不是问卷（P0-3 主素材） */
@@ -114,14 +117,9 @@ export default function OnboardingWizard({ locale, dict }: Props) {
     await loadEcho();
   }
 
-  /** 被说中之后才问的那几件小事：一次一件，跳过的照样往下走 */
+  /** 从 echo 步进 form 步（仅切状态，提交+reflect 由最后一题的 submitAnswersAndReflect 负责） */
   async function goForm() {
-    if (Object.keys(answers).some((k) => answers[k]?.trim())) {
-      const ok = await submitAnswers();
-      if (!ok && !error) return; // 提交失败停在原地，别把答案弄丢
-    }
-    setStep('reflect');
-    void goReflect();
+    setStep('form');
   }
 
   async function startTalk() {
@@ -332,7 +330,7 @@ export default function OnboardingWizard({ locale, dict }: Props) {
     const q = QUESTIONS[qi];
     const qd = (o.questions as Record<string, { text: string; options?: Record<string, string>; placeholder?: string }>)[q.id];
     const last = qi === QUESTIONS.length - 1;
-    const advance = () => (last ? void goForm() : setQi((n) => n + 1));
+    const advance = () => (last ? void submitAnswersAndReflect() : setQi((n) => n + 1));
     return (
       <div className="flex flex-col pt-12" data-step="form">
         <h2 className="text-xl font-medium">{o.form.title}</h2>
