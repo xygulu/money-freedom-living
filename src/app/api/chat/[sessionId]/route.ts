@@ -4,8 +4,12 @@
 // - chat 独有：20 轮温和收尾、首条 AI 回复成功后落账（失败不扣，P§7）、
 //   P§6 上下文组装（画像/pinned/memories）、危机命中转稳定陪伴模式
 // DELETE：主动结束对话 → 摘要入 memories + 关会话（"今天先到这里"）。
+//
+// 闸门（用户 2026-09-15 bugfix）：M3 体检初谈对访客开放，M4 正式对话需登录。
+// 先 resolveIdentity + getSession，再按 session.kind 分流：kind=chat 才 401，
+// kind=onboarding_talk 放行——避免把"金钱关系测试"误伤。
 import { NextRequest } from 'next/server';
-import { requireApiUser } from '@/lib/api-auth';
+import { resolveIdentity } from '@/lib/identity';
 import {
   getSession,
   getSessionMessages,
@@ -27,6 +31,7 @@ import { getLlmProviders, llmStream } from '@/lib/llm';
 import { getDict } from '@/i18n/get-dict';
 import { enabledLocales, isLocale, type Locale } from '@/i18n/config';
 import { jsonError, sseResponse } from '@/lib/sse';
+import { gateSessionChat } from '@/lib/chat-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,10 +45,9 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ sessio
   let sessionId: string | undefined;
   try {
     ({ sessionId } = await ctx.params);
-    // 访客闸（用户 2026-09-14 拍板：访客 = 只能做金钱关系测试）
-    const auth = await requireApiUser();
-    if (!auth.ok) return auth.response;
-    const identity = auth.identity;
+    // 先取会话身份：会话归属由 userKey 决定，不必先要求登录——
+    // 闸门在 getSession 之后按 kind 分流（kind=chat 才 401，避免误伤 onboarding_talk）
+    const identity = await resolveIdentity({ headers: request.headers, cookies: request.cookies });
 
     const body = (await request.json().catch(() => ({}))) as { message?: string; silent?: boolean; opener?: boolean };
     const message = typeof body.message === 'string' ? body.message.trim().slice(0, MESSAGE_MAX) : '';
@@ -52,6 +56,9 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ sessio
     const session = await getSession(sessionId);
     if (!session || session.userKey !== identity.key) return jsonError('session_not_found', 404);
     if (session.status !== 'open') return jsonError('session_closed', 409);
+    // 闸门：M4 正式对话要求登录；M3 体检初谈对访客放行（金钱关系测试可走完）
+    const gate = gateSessionChat({ session, identity });
+    if (!gate.ok) return gate.response;
     if (getLlmProviders().length === 0) return jsonError('llm_not_configured', 503);
     // 会话级互斥：同一会话同时只允许一个回复流（重开页面/连点会并发触发两个 LLM 流，
     // 配合全局串行锁防串写错序）。占坑必须与预检同步原子——若 DB 往返后才置位，存在
@@ -282,16 +289,17 @@ async function respondToMessage(params: ReplyParams): Promise<Response> {
 export async function DELETE(request: NextRequest, ctx: { params: Promise<{ sessionId: string }> }) {
   try {
     const { sessionId } = await ctx.params;
-    // 访客闸
-    const auth = await requireApiUser();
-    if (!auth.ok) return auth.response;
-    const identity = auth.identity;
+    // 闸门：M4 正式对话要求登录；M3 体检初谈对访客放行（与 POST 同口径）
+    const identity = await resolveIdentity({ headers: request.headers, cookies: request.cookies });
     const session = await getSession(sessionId);
     if (!session || session.userKey !== identity.key) return jsonError('session_not_found', 404);
+    const gate = gateSessionChat({ session, identity });
+    if (!gate.ok) return gate.response;
     if (session.kind === 'chat') {
       const locale: Locale = isLocale(session.locale) && enabledLocales.includes(session.locale) ? session.locale : 'en';
       await settleSession(identity.key, locale, sessionId, timeZoneFrom(request.cookies));
     } else {
+      // onboarding_talk 关闭：访客可结束；不写 memory / 不进 M4 配额
       await closeSession(sessionId);
     }
     return new Response(null, { status: 204, headers: { 'Cache-Control': 'no-store' } });
