@@ -548,7 +548,8 @@
     "historyTalk": "一次对话",
     "historyView": "回看",
     "historyBack": "全部对话",
-    "historyReplayTitle": "那天的对话"
+    "historyReplayTitle": "那天的对话",
+    "providerSwitchedHint": "（当前模型暂时不可用，已自动切换继续）"
   },
   "changes": {
     "title": "我的变化清单",

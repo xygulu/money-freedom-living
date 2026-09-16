@@ -548,7 +548,8 @@
     "historyTalk": "一次對話",
     "historyView": "回看",
     "historyBack": "全部對話",
-    "historyReplayTitle": "那天的對話"
+    "historyReplayTitle": "那天的對話",
+    "providerSwitchedHint": ""
   },
   "changes": {
     "title": "我的變化清單",

@@ -34,6 +34,8 @@ export default function ChatView({ locale, dict, openSessionId, initialMessages,
   const [left, setLeft] = useState(remaining);
   const [safetyShown, setSafetyShown] = useState(false);
   const [error, setError] = useState('');
+  // 流中途切 provider 提示（已显示文本不回收；仅在助手气泡下方灰色小字）
+  const [switchedHint, setSwitchedHint] = useState<string | null>(null);
   // 自动开聊只许一次：StrictMode 下 effect 会跑两遍，ref 同实例保留，避免建出两个会话
   const autoStarted = useRef(false);
   const openerAsked = useRef(false);
@@ -71,6 +73,7 @@ export default function ChatView({ locale, dict, openSessionId, initialMessages,
       ...(text ? ([{ role: 'user', content: text }] as Turn[]) : []),
       { role: 'assistant', content: '' },
     ]);
+    setSwitchedHint(null); // 每轮重置（切 provider 才再次点亮）
     try {
       const response = await fetch(`/api/chat/${sessionId}`, {
         method: 'POST',
@@ -94,6 +97,11 @@ export default function ChatView({ locale, dict, openSessionId, initialMessages,
         if (event.session) return;
         if (event.error) setError(dict.onboarding.error);
         if (event.safety) setSafetyShown(true);
+        if (event.providerSwitch) {
+          // 多 provider 自动切换提示（i18n: provider.switchedHint）
+          // 已显示文本不回收——前端不要清空 full；marker 在流末尾时仍生效
+          setSwitchedHint(t.providerSwitchedHint ?? '');
+        }
         if (typeof event.delta === 'string') {
           full += event.delta;
           setMessages((prev) => {
@@ -216,6 +224,10 @@ export default function ChatView({ locale, dict, openSessionId, initialMessages,
               : (
                   <span className="text-ink-soft">…</span>
                 )}
+            {/* 多 provider 自动切换：仅在末条 assistant 下显示一次灰色小字 */}
+            {i === messages.length - 1 && turn.role === 'assistant' && switchedHint && (
+              <p className="mt-1 text-xs text-ink-soft">{switchedHint}</p>
+            )}
           </div>
         ))}
       </div>

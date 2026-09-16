@@ -548,7 +548,8 @@
     "historyTalk": "対話",
     "historyView": "読み返す",
     "historyBack": "対話一覧",
-    "historyReplayTitle": "あの日の対話"
+    "historyReplayTitle": "あの日の対話",
+    "providerSwitchedHint": ""
   },
   "changes": {
     "title": "わたしの変化リスト",

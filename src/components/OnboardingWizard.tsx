@@ -49,6 +49,8 @@ export default function OnboardingWizard({ locale, dict }: Props) {
   const [touchOk, setTouchOk] = useState(false);
   const [supplement, setSupplement] = useState('');
   const [error, setError] = useState(false);
+  // 多 provider 切换提示（已显示文本不回收；每轮重置）
+  const [switchedHint, setSwitchedHint] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   // 首次"说中了"耗时的起点：进到这个页面的那一刻（指标见 docs/05 §7）。
   // 首启重排后起点仍是落地那一刻——欢迎屏、对话、问卷都算在这 3 分钟里，
@@ -124,6 +126,7 @@ export default function OnboardingWizard({ locale, dict }: Props) {
 
   async function startTalk() {
     setStreaming(true);
+    setSwitchedHint(false);
     try {
       const response = await fetch('/api/onboarding/talk', {
         method: 'POST',
@@ -143,6 +146,7 @@ export default function OnboardingWizard({ locale, dict }: Props) {
           });
           bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
         }
+        if (event.providerSwitch) setSwitchedHint(true);
         if (event.error) setError(true);
       });
       if (sid) setSessionId(sid);
@@ -170,6 +174,7 @@ export default function OnboardingWizard({ locale, dict }: Props) {
       return;
     }
     setStreaming(true);
+    setSwitchedHint(false);
     try {
       const response = await fetch(`/api/chat/${sessionId}`, {
         method: 'POST',
@@ -187,6 +192,7 @@ export default function OnboardingWizard({ locale, dict }: Props) {
           });
           bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
         }
+        if (event.providerSwitch) setSwitchedHint(true);
         if (event.error) setError(true);
       });
     } catch {
@@ -273,6 +279,13 @@ export default function OnboardingWizard({ locale, dict }: Props) {
               className={turn.role === 'user' ? 'self-end rounded-2xl rounded-br-sm bg-accent/10 px-4 py-3 text-sm leading-relaxed' : 'self-start rounded-2xl rounded-bl-sm border border-line bg-white/60 px-4 py-3 text-sm leading-relaxed'}
             >
               {turn.content}
+              {/* 多 provider 切换：仅在末条 assistant 下显示一次灰色小字 */}
+              {i === turns.length - 1 && turn.role === 'assistant' && switchedHint && (
+                <p className="mt-1 text-xs text-ink-soft">
+                  {/* on/offboarding 暂时只有 zh-CN/en，i18n key 在 ChatView 走 dict.chat；这里硬编码中文作 fallback */}
+                  （当前模型暂时不可用，已自动切换继续）
+                </p>
+              )}
             </div>
           ))}
           <div ref={bottomRef} />

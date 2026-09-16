@@ -548,7 +548,8 @@
     "historyTalk": "A conversation",
     "historyView": "Read again",
     "historyBack": "All conversations",
-    "historyReplayTitle": "That day's conversation"
+    "historyReplayTitle": "That day's conversation",
+    "providerSwitchedHint": "(current model temporarily unavailable — switched automatically)"
   },
   "changes": {
     "title": "What has changed in me",
