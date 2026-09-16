@@ -37,9 +37,27 @@ export async function POST(request: NextRequest) {
     async function* events() {
       yield { session: session.id };
       let full = '';
-      for await (const delta of llmStream({ system, messages: [{ role: 'user', content: OPENING_TRIGGER }], maxTokens: 512 })) {
-        full += delta;
-        yield { delta };
+      for await (const chunk of llmStream({
+        system,
+        messages: [{ role: 'user', content: OPENING_TRIGGER }],
+        maxTokens: 512,
+        callId: `onboarding:${session.id}`,
+        callPurpose: 'onboarding.talk',
+        userKey: identity.key,
+      })) {
+        if (typeof chunk === 'string') {
+          full += chunk;
+          yield { delta: chunk };
+        } else {
+          yield {
+            providerSwitch: {
+              from: chunk.from,
+              to: chunk.to,
+              reason: chunk.reason,
+              chunksYielded: chunk.chunksYielded,
+            },
+          };
+        }
       }
       if (full.trim()) await appendMessage(session.id, 'assistant', full.trim());
     }

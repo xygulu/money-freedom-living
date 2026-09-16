@@ -239,9 +239,21 @@ async function respondToMessage(params: ReplyParams): Promise<Response> {
       };
       const llmMessages =
         history.length > 0 ? history : [{ role: 'user' as const, content: openerPlaceholder[locale] ?? '（对话开始）' }];
-      for await (const delta of llmStream({ system, messages: llmMessages, maxTokens: 700 })) {
-        full += delta;
-        yield { delta };
+      for await (const chunk of llmStream({
+        system,
+        messages: llmMessages,
+        maxTokens: 700,
+        callId: `chat:${sessionId}`,
+        callPurpose: 'chat.stream',
+        userKey: identity.key,
+      })) {
+        if (typeof chunk === 'string') {
+          full += chunk;
+          yield { delta: chunk };
+        } else {
+          // providerSwitch marker → SSE 自定义事件，UI 灰色小字提示
+          yield { providerSwitch: { from: chunk.from, to: chunk.to, reason: chunk.reason, chunksYielded: chunk.chunksYielded } };
+        }
       }
       if (!full.trim()) return; // 失败/空流：不落账、不置位，会话可重试（失败不扣）
       await appendMessage(sessionId, 'assistant', full.trim());
