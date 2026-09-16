@@ -102,6 +102,15 @@ export default function ChatView({ locale, dict, openSessionId, initialMessages,
           // 已显示文本不回收——前端不要清空 full；marker 在流末尾时仍生效
           setSwitchedHint(t.providerSwitchedHint ?? '');
         }
+        if (event.wrap) {
+          // 20 轮温和收尾（服务端 chat.ts CHAT_MAX_MESSAGES=40 含 AI=20 轮用户+AI）。
+          // 输入框置灰 + ended 置位；不写 messages——wrap.delta 是收尾文案，
+          // 但已发过 wrap=true 本身就告诉前端"这场对话到限"，UI 端按 ended 兜底
+          // （首条 AI 回复未生成时不调 appendMessage，无文本落库；用户在 history
+          // 回看时看到的是上一次正常回复 + wrap 通知）
+          setEnded(true);
+          return;
+        }
         if (typeof event.delta === 'string') {
           full += event.delta;
           setMessages((prev) => {

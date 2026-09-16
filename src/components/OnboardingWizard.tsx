@@ -133,6 +133,12 @@ export default function OnboardingWizard({ locale, dict }: Props) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ locale }),
       });
+      // 非 2xx（LLM 未配置等）：错误兜底，避免 readSse 在非 OK 上抛错
+      // 留下半截 stream 状态
+      if (!response.ok) {
+        setError(true);
+        return;
+      }
       let sid: string | null = null;
       await readSse(response, (event) => {
         if (event.session) sid = event.session;
@@ -181,6 +187,19 @@ export default function OnboardingWizard({ locale, dict }: Props) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: text }),
       });
+      if (!response.ok) {
+        // 409 talk_limit_reached = 6 轮已满，跳 echo 步生成画像（不再阻塞）。
+        // 其它非 2xx：错误兜底，**回滚**刚才 optimistic 加进 turns 的 user 消息，
+        // 否则 UI 会留一条无 AI 回复的用户消息（"卡住了"）。
+        if (response.status === 409) {
+          setTurns((prev) => prev.slice(0, -1));
+          setStep('echo');
+        } else {
+          setTurns((prev) => prev.slice(0, -1));
+          setError(true);
+        }
+        return;
+      }
       await readSse(response, (event) => {
         if (event.delta) {
           setTurns((prev) => {

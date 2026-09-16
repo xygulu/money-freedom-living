@@ -102,13 +102,14 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ sessio
     if (session.messageCount >= CHAT_MAX_MESSAGES) {
       // 20 轮到限：不再生成，温和收尾并结算（P§7"今天先到这里，明天它还在"）
       const dict = getDict(sessionLocale);
+      // 收尾流先释放坑位再返回——否则下次会话也 429（activeStreams 不清）
+      releaseSlot();
       return sseResponse(
         (async function* () {
           try {
             yield { session: sessionId, wrap: true, delta: dict.chat.wrapUp };
-            await settleSession(identity.key, sessionLocale, sessionId, timeZoneFrom(request.cookies));
           } finally {
-            releaseSlot();
+            await settleSession(identity.key, sessionLocale, sessionId, timeZoneFrom(request.cookies));
           }
         })()
       );
