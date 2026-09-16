@@ -334,6 +334,28 @@ async function doMigrate(): Promise<void> {
     )
   `;
   await sql`CREATE INDEX IF NOT EXISTS idx_ui_version_view_user_ts ON ui_version_view_events(user_key, ts DESC)`;
+
+  // LLM provider 健康/切换事件流：每次调用 / 失败 / 切换 / 畸形 event 都入档。
+  // admin 健康面板 24h 失败率查这里；ProviderHealth.snapshot() 读内存（实时。
+  // 严禁：apiKey / baseURL / prompt / response 全文（per CLAUDE.md 凭据约束）。
+  await sql`
+    CREATE TABLE IF NOT EXISTS llm_provider_events (
+      id BIGSERIAL PRIMARY KEY,
+      ts TIMESTAMPTZ NOT NULL DEFAULT now(),
+      provider_id TEXT NOT NULL,
+      call_id TEXT NOT NULL,
+      kind TEXT NOT NULL,                     -- 'start' | 'success' | 'failure' | 'switch' | 'malformed_event' | 'admin_test'
+      error_kind TEXT,                        -- 'server_5xx' | 'stream_throw' | 'config_4xx' | 'timeout' | 'rate_limit'
+      duration_ms INT,
+      chunks_yielded INT,
+      call_purpose TEXT,                      -- 'chat.stream' | 'onboarding.talk' | 'portrait' | ...
+      user_key TEXT,                          -- u:<id> | g:<cookie>
+      metadata jsonb NOT NULL DEFAULT '{}'::jsonb
+    )
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS idx_llm_pe_provider_ts ON llm_provider_events(provider_id, ts DESC)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_llm_pe_call ON llm_provider_events(call_id)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_llm_pe_kind_ts ON llm_provider_events(kind, ts DESC)`;
 }
 
 /**
