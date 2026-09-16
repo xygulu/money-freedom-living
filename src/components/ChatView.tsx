@@ -33,7 +33,9 @@ export default function ChatView({ locale, dict, openSessionId, initialMessages,
   const [ended, setEnded] = useState(false);
   const [left, setLeft] = useState(remaining);
   const [safetyShown, setSafetyShown] = useState(false);
-  const [error, setError] = useState('');
+  // 产品口径（2026-09-16）：不向用户展示任何红字错误。softHint 留作轻提示扩展位，
+  // 当前未使用——错误只走 console.warn，避免红色错误文本出现在用户面前。
+  const [softHint, setSoftHint] = useState<string | null>(null);
   // 流中途切 provider 提示（已显示文本不回收；仅在助手气泡下方灰色小字）
   const [switchedHint, setSwitchedHint] = useState<string | null>(null);
   // 自动开聊只许一次：StrictMode 下 effect 会跑两遍，ref 同实例保留，避免建出两个会话
@@ -66,7 +68,7 @@ export default function ChatView({ locale, dict, openSessionId, initialMessages,
   async function stream(text: string | null) {
     if (!sessionId) return;
     setBusy(true);
-    setError('');
+    setSoftHint(null);
     const assistantIndex = messages.length;
     setMessages((prev) => [
       ...prev,
@@ -82,20 +84,24 @@ export default function ChatView({ locale, dict, openSessionId, initialMessages,
       });
       if (response.status === 429) {
         // 上一条回复还在生成（会话级流互斥）：不报错，草稿放回输入框，等流结束再发
-        setError(t.replyInProgress);
+        console.warn('[chat] 429 reply_in_progress');
         setMessages((prev) => prev.slice(0, assistantIndex));
         if (text) setDraft(text);
         return;
       }
       if (!response.ok || !response.body) {
-        setError(dict.onboarding.error);
+        console.warn('[chat] non-ok response:', response.status);
         setMessages((prev) => prev.slice(0, assistantIndex));
         return;
       }
       let full = '';
       await readSse(response, (event) => {
         if (event.session) return;
-        if (event.error) setError(dict.onboarding.error);
+        if (event.error) {
+          // SSE 流中服务端 emit {error:'stream_failed'}——不展示红字；
+          // 静默吞掉，让 readSse 自然走完，不污染 UI
+          console.warn('[chat] sse event.error:', event.error);
+        }
         if (event.safety) setSafetyShown(true);
         if (event.providerSwitch) {
           // 多 provider 自动切换提示（i18n: provider.switchedHint）
@@ -123,8 +129,8 @@ export default function ChatView({ locale, dict, openSessionId, initialMessages,
       if (full.trim() === '') setMessages((prev) => prev.slice(0, assistantIndex));
       // 开场即本会话首次 AI 回复成功 = 服务端已落账，前端剩余 -1（真实额度以服务端为准）
       if (full.trim() !== '' && text === null && left > 0) setLeft(left - 1);
-    } catch {
-      setError(dict.onboarding.error);
+    } catch (err) {
+      console.warn('[chat] stream failed:', err);
       setMessages((prev) => prev.slice(0, assistantIndex));
     } finally {
       setBusy(false);
@@ -133,7 +139,7 @@ export default function ChatView({ locale, dict, openSessionId, initialMessages,
 
   async function start() {
     setBusy(true);
-    setError('');
+    setSoftHint(null);
     try {
       const response = await fetch('/api/chat/sessions', {
         method: 'POST',
@@ -145,13 +151,13 @@ export default function ChatView({ locale, dict, openSessionId, initialMessages,
         return;
       }
       if (!response.ok) {
-        setError(dict.onboarding.error);
+        console.warn('[chat] start session non-ok:', response.status);
         return;
       }
       const data = (await response.json()) as { session: string };
       setSessionId(data.session);
-    } catch {
-      setError(dict.onboarding.error);
+    } catch (err) {
+      console.warn('[chat] start session failed:', err);
     } finally {
       setBusy(false);
     }
@@ -186,7 +192,7 @@ export default function ChatView({ locale, dict, openSessionId, initialMessages,
     }
     return (
       <div className="flex flex-col gap-3">
-        {autoStart && !error ? (
+        {autoStart ? (
           // 带着「我要聊」的意图进来：从首帧起就是「正在打开」，不给一颗还要再按的按钮。
           // 关键是不要等 effect 跑完才切——SSR 首帧到 hydration 之间那一小段里，
           // 旧写法（busy && autoStart）仍会画出开始按钮，用户就会以为还得点一次。
@@ -206,7 +212,8 @@ export default function ChatView({ locale, dict, openSessionId, initialMessages,
         <p className="text-xs text-ink-soft">
           {t.remaining}: {left}
         </p>
-        {error && <p className="text-xs text-red-600">{error}</p>}
+        {/* 产品口径（2026-09-16）：不向用户展示任何红字错误。softHint 留作轻提示扩展位，当前未使用。 */}
+        {softHint && <p className="text-xs text-ink-soft">{softHint}</p>}
       </div>
     );
   }
@@ -242,7 +249,8 @@ export default function ChatView({ locale, dict, openSessionId, initialMessages,
       </div>
 
       {safetyShown && <p className="mt-3 text-xs text-ink-soft">{t.safetyNote}</p>}
-      {error && <p className="mt-3 text-xs text-red-600">{error}</p>}
+      {/* 产品口径（2026-09-16）：不向用户展示任何红字错误。softHint 留作轻提示扩展位，当前未使用。 */}
+      {softHint && <p className="mt-3 text-xs text-ink-soft">{softHint}</p>}
 
       {!ended && (
         <div className="mt-4 flex items-end gap-3">
