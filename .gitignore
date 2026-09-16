@@ -18,3 +18,6 @@ next-env.d.ts
 
 # 知识库镜像（生成物，由 Hermes 每 6h 同步；权威在 Mac 的知识库）
 docs/kb/
+
+# 设计稿（plan 期间工作产物，跟 commit 不该跟；正式落地后由设计稿对应的代码 commit 取代）
+docs/design/
