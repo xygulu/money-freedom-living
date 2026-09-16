@@ -196,6 +196,9 @@ export default function OnboardingWizard({ locale, dict }: Props) {
 
   async function sendMessage(text: string, silent = false) {
     if (!sessionId || !text.trim()) return;
+    // 算这条发完是否到 6 轮——setTurns 之后本次 render 的 reachedTalkLimit 仍是旧值
+    // （React 状态更新异步），所以这里直接基于当前 userTurns + 1 预判
+    const willReachLimit = userTurns + 1 >= 6;
     setTurns((prev) => [...prev, { role: 'user', content: text }]);
     if (silent) {
       // silent 路径（echo 步"补充"消息）：**不展示红字**——静默入库即可。
@@ -223,9 +226,10 @@ export default function OnboardingWizard({ locale, dict }: Props) {
         // 409 talk_limit_reached = 6 轮已满，温和收尾（不生硬跳 echo；流没走完也会在 finally 触发 talkFinished）
         // 其它非 2xx：兜底到 echo 步——**不展示红字**，产品口径。
         // 回滚刚才 optimistic 加进 turns 的 user 消息，避免 UI 留无 AI 回复的"卡住"残影。
+        // 用 willReachLimit 不用 reachedTalkLimit——setTurns 异步更新，render 内派生量滞后
         console.warn('[onboarding/chat] non-2xx:', response.status);
         setTurns((prev) => prev.slice(0, -1));
-        if (response.status === 409 && reachedTalkLimit) {
+        if (response.status === 409 && willReachLimit) {
           setTalkFinished(true);
         } else {
           void goEcho();
