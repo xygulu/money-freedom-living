@@ -465,8 +465,9 @@
       "fallback": "I didn't catch it clearly yet. Let's talk a little first — no rush."
     },
     "reflect": {
-      "title": "Here's what I heard",
+      "title": "Is this you?",
       "confirm": "That's right",
+      "disabledHint": "Tick the two boxes above to draw your portrait",
       "supplement": "Add one thing…",
       "send": "Add",
       "next": "Draw my portrait"

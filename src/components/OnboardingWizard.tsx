@@ -499,6 +499,15 @@ export default function OnboardingWizard({ locale, dict }: Props) {
     // 顺序铁律（docs/05 §7）：同意区只在他已经被说中之后才出现——
     // echo 是前 3 分钟那一句，summary 是初谈复述，两者都没拿到就等这一步结束再放行
     const beenSeen = Boolean(echo || summary) || reflectDone;
+    // 按钮 disabled 状态的两个原因独立计算——给用户看为啥点不动
+    const consentReady = adultOk && sensitiveOk;
+    const portraitReady = consentReady && (canGenerate !== false || userTurns > 0);
+    const buttonDisabled = !portraitReady;
+    const disabledReason = !consentReady
+      ? o.reflect.disabledHint
+      : (canGenerate === false && userTurns === 0)
+        ? o.talk.hint
+        : null;
     return (
       <div className="flex flex-col pt-12" data-step="reflect">
         <h2 className="text-xl font-medium">{o.reflect.title}</h2>
@@ -525,14 +534,18 @@ export default function OnboardingWizard({ locale, dict }: Props) {
           </div>
           )}
           {beenSeen && (
-          <button
-            type="button"
-            onClick={generatePortrait}
-            disabled={!adultOk || !sensitiveOk || (canGenerate === false && userTurns === 0)}
-            className="self-start rounded-full bg-accent px-6 py-2 text-sm text-paper hover:opacity-90 disabled:opacity-40"
-          >
-            {o.reflect.confirm} · {o.reflect.next}
-          </button>
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={generatePortrait}
+                disabled={buttonDisabled}
+                className="self-start rounded-full bg-accent px-6 py-2 text-sm text-paper hover:opacity-90 disabled:opacity-40"
+              >
+                {o.reflect.confirm} · {o.reflect.next}
+              </button>
+              {/* 按钮 disabled 原因——告诉用户"为啥点不动"，避免以为按钮坏了 */}
+              {disabledReason && <p className="text-xs text-ink-soft">{disabledReason}</p>}
+            </div>
           )}
           <div className="flex gap-2">
             <input

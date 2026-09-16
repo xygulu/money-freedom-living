@@ -465,8 +465,9 @@
       "fallback": "我还没听清楚。先聊两句吧，慢慢来。"
     },
     "reflect": {
-      "title": "我听到的是",
+      "title": "确认一下",
       "confirm": "是的，就是这样",
+      "disabledHint": "勾选上面两项后生成",
       "supplement": "补充一句…",
       "send": "补充",
       "next": "生成画像"
