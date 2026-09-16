@@ -466,8 +466,11 @@
     },
     "reflect": {
       "title": "确认一下",
+      "summaryLabel": "这是我刚才听到的（不是画像）",
       "confirm": "是的，就是这样",
       "disabledHint": "勾选上面两项后生成",
+      "retryHint": "刚才没生成出来，再试一次",
+      "retry": "再试一次",
       "supplement": "补充一句…",
       "send": "补充",
       "next": "生成画像"

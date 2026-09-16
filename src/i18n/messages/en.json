@@ -466,8 +466,11 @@
     },
     "reflect": {
       "title": "Is this you?",
+      "summaryLabel": "This is what I just heard (not your portrait yet)",
       "confirm": "That's right",
       "disabledHint": "Tick the two boxes above to draw your portrait",
+      "retryHint": "Didn't come through last time — try again",
+      "retry": "Try again",
       "supplement": "Add one thing…",
       "send": "Add",
       "next": "Draw my portrait"

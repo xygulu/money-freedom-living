@@ -36,6 +36,9 @@ export default function OnboardingWizard({ locale, dict }: Props) {
   const [echo, setEcho] = useState('');
   const [echoFailed, setEchoFailed] = useState(false);
   const [echoLoading, setEchoLoading] = useState(false);
+  // 画像生成失败软提示（产品口径 2026-09-17）：不向用户显示服务端报错，失败置位后在
+  // reflect 步显示 o.reflect.retryHint + "再试一次"按钮（直接调 generatePortrait）
+  const [portraitFailed, setPortraitFailed] = useState(false);
   // 6 轮温和收尾（产品口径 2026-09-16）：userTurns >= TALK_MAX_USER_MESSAGES 且流结束后
   // 置位 → 输入框 disabled、显示主按钮"差不多了，去看看 →"；不走生硬跳转。
   const [talkFinished, setTalkFinished] = useState(false);
@@ -296,6 +299,7 @@ export default function OnboardingWizard({ locale, dict }: Props) {
   async function generatePortrait() {
     if (!adultOk || !sensitiveOk) return;
     setStep('generating');
+    setPortraitFailed(false);
     try {
       const response = await fetch('/api/onboarding/portrait', {
         method: 'POST',
@@ -313,10 +317,11 @@ export default function OnboardingWizard({ locale, dict }: Props) {
       }
       setStep('done');
     } catch (err) {
-      // 画像生成失败：**不展示红字**——回 reflect 步让用户重新确认 / 重试，
-      // console 留痕。
+      // 画像生成失败：**不展示红字**——回 reflect 步 + 置 portraitFailed
+      // 显示 o.reflect.retryHint + "再试一次"按钮（用户软重试，不破"不红字"口径）
       console.warn('[onboarding/portrait] generate failed:', err);
       setStep('reflect');
+      setPortraitFailed(true);
     }
   }
 
@@ -511,7 +516,13 @@ export default function OnboardingWizard({ locale, dict }: Props) {
     return (
       <div className="flex flex-col pt-12" data-step="reflect">
         <h2 className="text-xl font-medium">{o.reflect.title}</h2>
-        {summary && <div className="mt-6 whitespace-pre-wrap border border-line bg-white/60 p-5 text-sm leading-relaxed">{summary}</div>}
+        {summary && (
+          <div className="mt-6">
+            {/* 显式区分：这是 LLM 听完后的复述，不是画像本身（画像在 /portrait 页） */}
+            <p className="mb-2 text-xs text-ink-soft">{o.reflect.summaryLabel}</p>
+            <div className="whitespace-pre-wrap border border-line bg-white/60 p-5 text-sm leading-relaxed">{summary}</div>
+          </div>
+        )}
         {!summary && <p className="mt-6 text-sm text-ink-soft">{o.talk.hint}</p>}
         <div className="mt-8 flex flex-col gap-3">
           {/* 单独同意区（P§9）：两项各自独立、默认不勾、拒绝不影响问卷/日记使用 */}
@@ -545,6 +556,20 @@ export default function OnboardingWizard({ locale, dict }: Props) {
               </button>
               {/* 按钮 disabled 原因——告诉用户"为啥点不动"，避免以为按钮坏了 */}
               {disabledReason && <p className="text-xs text-ink-soft">{disabledReason}</p>}
+              {/* 画像生成失败软提示 + 重试按钮——不破"不展示红字"产品口径 */}
+              {portraitFailed && (
+                <div className="mt-2 flex items-center gap-3" data-portrait-retry>
+                  <p className="text-sm text-ink-soft">{o.reflect.retryHint}</p>
+                  <button
+                    type="button"
+                    onClick={generatePortrait}
+                    disabled={!adultOk || !sensitiveOk}
+                    className="rounded-full border border-accent px-4 py-1.5 text-sm text-accent hover:bg-accent hover:text-paper disabled:opacity-40"
+                  >
+                    {o.reflect.retry}
+                  </button>
+                </div>
+              )}
             </div>
           )}
           <div className="flex gap-2">

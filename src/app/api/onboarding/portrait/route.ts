@@ -49,10 +49,13 @@ export async function POST(request: NextRequest) {
 
     const { system, messages } = buildPortraitMessages(locale, questionnaire, chatText);
 
-    let draft = validatePortraitDraft(await llmCompleteJson({ system, messages, maxTokens: 2000 }));
-    if (!draft) {
-      console.warn('[api/onboarding/portrait] first draft invalid, retrying once');
+    // zhipu flash 模型偶发 JSON 输出格式异常（漏字段/截断）—— 3 次内通过率近 100%，
+    // 第 3 次仍败才 502。前端对应可点击'再试一次'软重试（per 产品口径 2026-09-17）
+    let draft: ReturnType<typeof validatePortraitDraft> = null;
+    for (let attempt = 1; attempt <= 3; attempt++) {
       draft = validatePortraitDraft(await llmCompleteJson({ system, messages, maxTokens: 2000 }));
+      if (draft) break;
+      console.warn(`[api/onboarding/portrait] draft invalid, attempt ${attempt}/3`);
     }
     if (!draft) return jsonError('portrait_generation_failed', 502);
 

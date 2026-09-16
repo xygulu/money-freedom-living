@@ -466,8 +466,11 @@
     },
     "reflect": {
       "title": "確認一下",
+      "summaryLabel": "這是我剛才聽到的（不是畫像）",
       "confirm": "是的，就是這樣",
       "disabledHint": "勾選上面兩項後生成",
+      "retryHint": "剛才沒生成出來，再試一次",
+      "retry": "再試一次",
       "supplement": "補充一句…",
       "send": "補充",
       "next": "生成畫像"
