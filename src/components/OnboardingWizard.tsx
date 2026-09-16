@@ -36,6 +36,9 @@ export default function OnboardingWizard({ locale, dict }: Props) {
   const [echo, setEcho] = useState('');
   const [echoFailed, setEchoFailed] = useState(false);
   const [echoLoading, setEchoLoading] = useState(false);
+  // 6 轮温和收尾（产品口径 2026-09-16）：userTurns >= TALK_MAX_USER_MESSAGES 且流结束后
+  // 置位 → 输入框 disabled、显示主按钮"差不多了，去看看 →"；不走生硬跳转。
+  const [talkFinished, setTalkFinished] = useState(false);
   // 问卷一次一件（P0-3：不一次给 6 题）
   const [qi, setQi] = useState(0);
   const [savingForm, setSavingForm] = useState(false);
@@ -65,6 +68,10 @@ export default function OnboardingWizard({ locale, dict }: Props) {
   const o = dict.onboarding;
   const userTurns = turns.filter((t) => t.role === 'user').length;
   const canGenerate = userTurns >= 3;
+  // 派生：userTurns 达到服务端上限即视为聊够了（不依赖服务端 wrap 事件；
+  // onboarding 路径服务端不发 wrap，前端数满即视为温和收尾时机）
+  // 6 是与 src/lib/chat.ts:22 TALK_MAX_USER_MESSAGES 镜像的 UI 上限
+  const reachedTalkLimit = userTurns >= 6;
 
   function setAnswer(id: string, value: string) {
     setAnswers((prev) => ({ ...prev, [id]: value }));
@@ -193,6 +200,7 @@ export default function OnboardingWizard({ locale, dict }: Props) {
     if (silent) {
       // silent 路径（echo 步"补充"消息）：**不展示红字**——静默入库即可。
       // 用户已经看到了 echo 内容，补充失败不影响主流程；console 留痕。
+      // onboarding_talk 会话**复用** /api/chat/[sessionId]（kind=chat 才 401 的闸门让 onboarding_talk 放行）
       await fetch(`/api/chat/${sessionId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -203,18 +211,25 @@ export default function OnboardingWizard({ locale, dict }: Props) {
     setStreaming(true);
     setSwitchedHint(false);
     try {
+      // onboarding_talk 会话**复用** /api/chat/[sessionId]：
+      // 服务端按 session.kind 分流，kind=onboarding_talk 走 respondToMessage 流程
+      // （不能用 /api/onboarding/talk——那个接口每次新建会话、只发开场）
       const response = await fetch(`/api/chat/${sessionId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: text }),
       });
       if (!response.ok) {
-        // 409 talk_limit_reached = 6 轮已满，跳 echo 步生成画像（不再阻塞）。
-        // 其它非 2xx：同样兜底到 echo 步——**不展示红字**，产品口径。
+        // 409 talk_limit_reached = 6 轮已满，温和收尾（不生硬跳 echo；流没走完也会在 finally 触发 talkFinished）
+        // 其它非 2xx：兜底到 echo 步——**不展示红字**，产品口径。
         // 回滚刚才 optimistic 加进 turns 的 user 消息，避免 UI 留无 AI 回复的"卡住"残影。
         console.warn('[onboarding/chat] non-2xx:', response.status);
         setTurns((prev) => prev.slice(0, -1));
-        setStep('echo');
+        if (response.status === 409 && reachedTalkLimit) {
+          setTalkFinished(true);
+        } else {
+          void goEcho();
+        }
         return;
       }
       await readSse(response, (event) => {
@@ -236,12 +251,20 @@ export default function OnboardingWizard({ locale, dict }: Props) {
         }
       });
     } catch (err) {
-      // readSse 抛错：**不展示红字**——跳 echo 步走画像流程。
+      // readSse 抛错：**不展示红字**——6 轮温和收尾 / 跳 echo 步走画像流程。
       console.warn('[onboarding/chat] sse catch:', err);
       setTurns((prev) => prev.slice(0, -1));
-      setStep('echo');
+      if (reachedTalkLimit) {
+        // 已聊满 6 轮但流挂了——按温和收尾（不跳 echo，避免再次触发 LLM）
+        setTalkFinished(true);
+      } else {
+        void goEcho();
+      }
     } finally {
       setStreaming(false);
+      // 6 轮温和收尾：流结束且达到上限 → 显示主按钮"差不多了，去看看"
+      // （覆盖流正常完成 + 6 轮已满两种场景；catch 路径走"未达上限则跳 echo"）
+      if (reachedTalkLimit) setTalkFinished(true);
     }
   }
 
@@ -337,15 +360,29 @@ export default function OnboardingWizard({ locale, dict }: Props) {
         </div>
         {/* 产品口径（2026-09-16）：不向用户展示任何红字错误。softHint 留作轻提示扩展位，当前未使用。 */}
         {softHint && <p className="mt-4 text-sm text-ink-soft">{softHint}</p>}
-        <TalkInput disabled={streaming} onSend={(text) => sendMessage(text)} />
-        {userTurns >= 1 && !streaming && (
-          <button
-            type="button"
-            onClick={goEcho}
-            className="mt-6 self-start rounded-full border border-accent px-6 py-2 text-sm text-accent hover:bg-accent hover:text-paper"
-          >
-            {o.echo.title} →
-          </button>
+        {/* 6 轮温和收尾：禁输入 + 主按钮"差不多了，去看看"；未达到 6 轮时输入框可用 */}
+        <TalkInput disabled={streaming || talkFinished} onSend={(text) => sendMessage(text)} />
+        {talkFinished ? (
+          <div className="mt-6 flex flex-col gap-2" data-talk-finished>
+            <p className="text-sm text-ink-soft">{o.talk.doneHint}</p>
+            <button
+              type="button"
+              onClick={goEcho}
+              className="self-start rounded-full bg-accent px-8 py-3 text-base text-paper transition-opacity hover:opacity-90"
+            >
+              {o.talk.done} →
+            </button>
+          </div>
+        ) : (
+          userTurns >= 1 && !streaming && (
+            <button
+              type="button"
+              onClick={goEcho}
+              className="mt-6 self-start rounded-full border border-accent px-6 py-2 text-sm text-accent hover:bg-accent hover:text-paper"
+            >
+              {o.echo.title} →
+            </button>
+          )
         )}
       </div>
     );

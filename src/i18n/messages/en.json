@@ -453,6 +453,7 @@
       "title": "A short talk",
       "hint": "I'll ask about one thing only, and go deeper. You can stop any time.",
       "done": "Ready to see your portrait?",
+      "doneHint": "I've heard what you said. Let's see your portrait.",
       "generate": "Draw my portrait"
     },
     "echo": {
