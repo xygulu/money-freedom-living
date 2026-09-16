@@ -48,7 +48,12 @@ export default function OnboardingWizard({ locale, dict }: Props) {
   // 打包勾选在 GDPR 下不成立，而且"不收信"本来就该是无代价的（docs/05 §9.3）
   const [touchOk, setTouchOk] = useState(false);
   const [supplement, setSupplement] = useState('');
-  const [error, setError] = useState(false);
+  // 产品口径（2026-09-16 用户反馈「前端还是一样的报错提示」）：
+  // 用户**绝不**应该看到「出了点问题，请重试」这种由后台报错转化来的文案。
+  // 任何服务端/网络异常都走"静默兜底"——console.warn 留痕，
+  // UI 兜底为跳 echo 步（最自然的出口），不向用户展示任何红字错误。
+  // 此 state 保留为可扩展接口（后续可细分软提示文案），当前默认不渲染。
+  const [softHint, setSoftHint] = useState<string | null>(null);
   // 多 provider 切换提示（已显示文本不回收；每轮重置）
   const [switchedHint, setSwitchedHint] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -78,8 +83,12 @@ export default function OnboardingWizard({ locale, dict }: Props) {
           body: JSON.stringify({ locale, answers: answerable }),
         });
         if (!response.ok) throw new Error(String(response.status));
-      } catch {
-        setError(true);
+      } catch (err) {
+        // 问卷入库失败：用户已点过提交，给他一个轻提示让他能再点，
+        // 但**不展示"请重试"红字**——产品口径：报错不出现在用户眼前。
+        // softHint 只展示一行文案，按钮仍在，可以直接重试。
+        console.warn('[onboarding/answers] submit failed:', err);
+        setSoftHint('网络不太顺，再点一次试试');
         return; // 失败停在 form 步，让他能再点
       } finally {
         setSavingForm(false);
@@ -136,7 +145,10 @@ export default function OnboardingWizard({ locale, dict }: Props) {
       // 非 2xx（LLM 未配置等）：错误兜底，避免 readSse 在非 OK 上抛错
       // 留下半截 stream 状态
       if (!response.ok) {
-        setError(true);
+        // 服务端初始化失败（LLM 未配置等）：**不展示红字**——直接跳 echo 步，
+        // 那里有更稳定的入口；用户能继续走完整流程。
+        console.warn('[onboarding/talk] init failed:', response.status);
+        setStep('echo');
         return;
       }
       let sid: string | null = null;
@@ -153,11 +165,18 @@ export default function OnboardingWizard({ locale, dict }: Props) {
           bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
         }
         if (event.providerSwitch) setSwitchedHint(true);
-        if (event.error) setError(true);
+        if (event.error) {
+          // SSE 流中服务端 emit {error:'stream_failed'}——**不展示红字**；
+          // 静默后等 readSse 自然走完，下方会跳 echo 步。
+          console.warn('[onboarding/talk] sse event.error:', event.error);
+        }
       });
       if (sid) setSessionId(sid);
-    } catch {
-      setError(true);
+    } catch (err) {
+      // readSse 抛错（HTTP 非 2xx、网络中断）：**不展示红字**——跳 echo 步，
+      // 让用户能继续走画像流程；console 留痕供诊断。
+      console.warn('[onboarding/talk] stream catch:', err);
+      setStep('echo');
     } finally {
       setStreaming(false);
     }
@@ -172,11 +191,13 @@ export default function OnboardingWizard({ locale, dict }: Props) {
     if (!sessionId || !text.trim()) return;
     setTurns((prev) => [...prev, { role: 'user', content: text }]);
     if (silent) {
+      // silent 路径（echo 步"补充"消息）：**不展示红字**——静默入库即可。
+      // 用户已经看到了 echo 内容，补充失败不影响主流程；console 留痕。
       await fetch(`/api/chat/${sessionId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: text, silent: true }),
-      }).catch(() => setError(true));
+      }).catch((err) => console.warn('[onboarding/silent] append failed:', err));
       return;
     }
     setStreaming(true);
@@ -189,15 +210,11 @@ export default function OnboardingWizard({ locale, dict }: Props) {
       });
       if (!response.ok) {
         // 409 talk_limit_reached = 6 轮已满，跳 echo 步生成画像（不再阻塞）。
-        // 其它非 2xx：错误兜底，**回滚**刚才 optimistic 加进 turns 的 user 消息，
-        // 否则 UI 会留一条无 AI 回复的用户消息（"卡住了"）。
-        if (response.status === 409) {
-          setTurns((prev) => prev.slice(0, -1));
-          setStep('echo');
-        } else {
-          setTurns((prev) => prev.slice(0, -1));
-          setError(true);
-        }
+        // 其它非 2xx：同样兜底到 echo 步——**不展示红字**，产品口径。
+        // 回滚刚才 optimistic 加进 turns 的 user 消息，避免 UI 留无 AI 回复的"卡住"残影。
+        console.warn('[onboarding/chat] non-2xx:', response.status);
+        setTurns((prev) => prev.slice(0, -1));
+        setStep('echo');
         return;
       }
       await readSse(response, (event) => {
@@ -212,10 +229,17 @@ export default function OnboardingWizard({ locale, dict }: Props) {
           bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
         }
         if (event.providerSwitch) setSwitchedHint(true);
-        if (event.error) setError(true);
+        if (event.error) {
+          // SSE 流中服务端 emit error：**不展示红字**——静默后等 readSse 自然走完，
+          // catch 兜底会跳 echo 步。
+          console.warn('[onboarding/chat] sse event.error:', event.error);
+        }
       });
-    } catch {
-      setError(true);
+    } catch (err) {
+      // readSse 抛错：**不展示红字**——跳 echo 步走画像流程。
+      console.warn('[onboarding/chat] sse catch:', err);
+      setTurns((prev) => prev.slice(0, -1));
+      setStep('echo');
     } finally {
       setStreaming(false);
     }
@@ -261,8 +285,10 @@ export default function OnboardingWizard({ locale, dict }: Props) {
         }).catch(() => {}); // 触达是可选项，记不上也不该挡住画像
       }
       setStep('done');
-    } catch {
-      setError(true);
+    } catch (err) {
+      // 画像生成失败：**不展示红字**——回 reflect 步让用户重新确认 / 重试，
+      // console 留痕。
+      console.warn('[onboarding/portrait] generate failed:', err);
       setStep('reflect');
     }
   }
@@ -309,7 +335,8 @@ export default function OnboardingWizard({ locale, dict }: Props) {
           ))}
           <div ref={bottomRef} />
         </div>
-        {error && <p className="mt-4 text-sm text-red-700">{o.error}</p>}
+        {/* 产品口径（2026-09-16）：不向用户展示任何红字错误。softHint 留作轻提示扩展位，当前未使用。 */}
+        {softHint && <p className="mt-4 text-sm text-ink-soft">{softHint}</p>}
         <TalkInput disabled={streaming} onSend={(text) => sendMessage(text)} />
         {userTurns >= 1 && !streaming && (
           <button
@@ -401,7 +428,8 @@ export default function OnboardingWizard({ locale, dict }: Props) {
             className="mt-4 w-full resize-none rounded border border-line bg-white/60 p-3 text-sm leading-relaxed outline-none focus:border-accent"
           />
         )}
-        {error && <p className="mt-4 text-sm text-red-700">{o.error}</p>}
+        {/* 产品口径（2026-09-16）：不向用户展示任何红字错误。softHint 留作轻提示扩展位，当前未使用。 */}
+        {softHint && <p className="mt-4 text-sm text-ink-soft">{softHint}</p>}
         <div className="mt-8 flex items-center gap-4">
           {q.kind !== 'choice' && (
             <button
@@ -486,7 +514,8 @@ export default function OnboardingWizard({ locale, dict }: Props) {
             </button>
           </div>
         </div>
-        {error && <p className="mt-4 text-sm text-red-700">{o.error}</p>}
+        {/* 产品口径（2026-09-16）：不向用户展示任何红字错误。softHint 留作轻提示扩展位，当前未使用。 */}
+        {softHint && <p className="mt-4 text-sm text-ink-soft">{softHint}</p>}
       </div>
     );
   }
