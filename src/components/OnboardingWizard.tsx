@@ -6,7 +6,15 @@
 // 两条红线没动：
 // - 顺序铁律（docs/05 §7）：先被说中 → 再注册 / 同意 / 定价。同意区仍在"被说中"**之后**。
 // - 首屏不出现问卷（docs/10 §P0-3）：进页第一眼是欢迎与对话，不是 6 道题。
-import { useRef, useState } from 'react';
+//
+// Dev 快捷通道：URL 加 `?dev=portrait` 跳过 talk（6 轮对话）+ echo（再生成一遍"我听到的"），
+// 直接进 form 步（6 题问卷），用于编码侧快速测 portrait API。
+//   - skipTalk: 不显示 talk 步主按钮，welcome 步直接跳 form
+//   - goReflect 时用 mock summary 不调 LLM，省 5s
+//   - generatePortrait 仍走真实 portrait API（这就是被测目标）
+// 仅当 NEXT_PUBLIC_DEV_FAST_TRACK=1（dev/.env.local）启用，prod 默认不挂这条路径。
+import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { QUESTIONS } from '@/lib/onboarding';
 import { readSse } from '@/lib/sse-client';
@@ -39,6 +47,10 @@ export default function OnboardingWizard({ locale, dict }: Props) {
   // 画像生成失败软提示（产品口径 2026-09-17）：不向用户显示服务端报错，失败置位后在
   // reflect 步显示 o.reflect.retryHint + "再试一次"按钮（直接调 generatePortrait）
   const [portraitFailed, setPortraitFailed] = useState(false);
+  // Dev 快捷通道（?dev=portrait）：跳过 talk + echo，省 6 轮 LLM + echo 5s，
+  // 直接进 form 步走问卷 → reflect 步用 mock summary 不调 LLM → 测 portrait API
+  const searchParams = useSearchParams();
+  const devFastTrack = process.env.NEXT_PUBLIC_DEV_FAST_TRACK === '1' && searchParams.get('dev') === 'portrait';
   // 6 轮温和收尾（产品口径 2026-09-16）：userTurns >= TALK_MAX_USER_MESSAGES 且流结束后
   // 置位 → 输入框 disabled、显示主按钮"差不多了，去看看 →"；不走生硬跳转。
   const [talkFinished, setTalkFinished] = useState(false);
@@ -63,6 +75,10 @@ export default function OnboardingWizard({ locale, dict }: Props) {
   // 多 provider 切换提示（已显示文本不回收；每轮重置）
   const [switchedHint, setSwitchedHint] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  // Dev 快捷通道：挂载后直接进 form 步，跳过 welcome + talk + echo
+  useEffect(() => {
+    if (devFastTrack) setStep('form');
+  }, [devFastTrack]);
   // 首次"说中了"耗时的起点：进到这个页面的那一刻（指标见 docs/05 §7）。
   // 首启重排后起点仍是落地那一刻——欢迎屏、对话、问卷都算在这 3 分钟里，
   // 所以问卷必须排在"被说中"之后（否则它会把这一句顶出 3 分钟）。
@@ -276,6 +292,12 @@ export default function OnboardingWizard({ locale, dict }: Props) {
   }
 
   async function goReflect() {
+    if (devFastTrack) {
+      // Dev 快捷通道：跳过 LLM 调用，省 5s。generatePortrait 仍走真实 portrait API（被测目标）
+      setSummary('[dev mock] 你在自由职业 / 体验设计领域找长期安心的活法；目前在试小步转型，关心财务安全感、节奏感和不被打断的深度工作空间。');
+      setReflectDone(true);
+      return;
+    }
     if (!sessionId) {
       setReflectDone(true);
       return;
@@ -335,7 +357,7 @@ export default function OnboardingWizard({ locale, dict }: Props) {
         <p className="mt-4 text-sm leading-relaxed text-ink-soft">{o.welcome.sub}</p>
         <button
           type="button"
-          onClick={goTalk}
+          onClick={devFastTrack ? goForm : goTalk}
           className="mt-10 self-start rounded-full bg-accent px-8 py-3 text-base text-paper transition-opacity hover:opacity-90"
         >
           {o.welcome.start}
