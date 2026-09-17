@@ -10,7 +10,8 @@
 // Dev 快捷通道：URL 加 `?dev=portrait` 跳过 talk（6 轮对话）+ echo（再生成一遍"我听到的"），
 // 直接进 form 步（6 题问卷），用于编码侧快速测 portrait API。
 //   - skipTalk: 不显示 talk 步主按钮，welcome 步直接跳 form
-//   - goReflect 时用 mock summary 不调 LLM，省 5s
+//   - goReflect 不调 LLM（sessionId=null 走早退路径，summary 留空）—— 不是 mock，是真的没有对话
+//     历史可总结；任何文字硬编码都是假数据，用户测的是 portrait API 不是 reflect
 //   - generatePortrait 仍走真实 portrait API（这就是被测目标）
 // 仅当 NEXT_PUBLIC_DEV_FAST_TRACK=1（dev/.env.local）启用，prod 默认不挂这条路径。
 import { useEffect, useRef, useState } from 'react';
@@ -293,13 +294,9 @@ export default function OnboardingWizard({ locale, dict }: Props) {
   }
 
   async function goReflect() {
-    if (devFastTrack) {
-      // Dev 快捷通道：跳过 LLM 调用，省 5s。generatePortrait 仍走真实 portrait API（被测目标）
-      // 文本不复用「mock / dev」字样——即使 env 闸门失效，文字也应看起来像正常复述。
-      setSummary('你在自由职业 / 体验设计领域找长期安心的活法；目前在试小步转型，关心财务安全感、节奏感和不被打断的深度工作空间。');
-      setReflectDone(true);
-      return;
-    }
+    // Dev 快捷通道：跳过 talk → sessionId=null → 不调 reflect API；summary 留空
+    // （用户在测 portrait API，不是测 reflect 步；不写死任何文字，避免假数据）。
+    // generatePortrait 仍走真实 portrait API（被测目标）。
     if (!sessionId) {
       setReflectDone(true);
       return;
