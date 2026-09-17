@@ -295,7 +295,8 @@ export default function OnboardingWizard({ locale, dict }: Props) {
   async function goReflect() {
     if (devFastTrack) {
       // Dev 快捷通道：跳过 LLM 调用，省 5s。generatePortrait 仍走真实 portrait API（被测目标）
-      setSummary('[dev mock] 你在自由职业 / 体验设计领域找长期安心的活法；目前在试小步转型，关心财务安全感、节奏感和不被打断的深度工作空间。');
+      // 文本不复用「mock / dev」字样——即使 env 闸门失效，文字也应看起来像正常复述。
+      setSummary('你在自由职业 / 体验设计领域找长期安心的活法；目前在试小步转型，关心财务安全感、节奏感和不被打断的深度工作空间。');
       setReflectDone(true);
       return;
     }
