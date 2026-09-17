@@ -1,14 +1,15 @@
 // /[locale]：落地页。
 //
-// 四态分支（用户 2026-09-17 拍板·v2）：
+// 三态分支（用户 2026-09-17 拍板·v2）：
 // - 已登录 + 有画像 → redirect 到旅程页（按 ui_version 分流）
 // - 已登录 + 无画像 → redirect 到 onboarding
-// - 访客   + 有画像 → 钩子 + "看你的画像" CTA → /portrait + "登录 / 注册" CTA
-// - 访客   + 无画像 → 钩子 + "看看我和金钱的关系" CTA → /onboarding（直接 form 第一题，无中间页）
-//                   + "登录 / 注册" CTA
+// - 访客（不管有没有画像）→ 钩子 + 主 CTA "看看我和金钱的关系"（永远统一文案）+ 副 CTA "登录 / 注册"
 //
-// 钩子 + 双 CTA：访客进来第一眼不是营销页——是一句引起兴趣的话 + 两个动作。
-// 访客+无画像的 ctaTest 在 v2 下 → /onboarding 直接进 form 第一题（无 welcome 步、无中间页）。
+// 主 CTA 文案永远 dict.landing.ctaTest（"看看我和金钱的关系"），href 按 hasPortrait 分流：
+//   - 访客+有画像 → /portrait（点击后"显示画像"，看已有画像）
+//   - 访客+无画像 → /onboarding（点击后"直接开始测试题"，无中间页跳转）
+// 用户原话（2026-09-17）："首页按钮改成 看看我和金钱的关系 点击后直接开始第一题，不要中间再有页面跳转"
+// 用户原话（2026-09-17）："如果有金钱关系画像就显示画像，如果没有就直接开始测试题"——描述点击行为，不分 CTA 文案。
 import { headers, cookies } from 'next/headers';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
@@ -53,9 +54,12 @@ export default async function LandingPage({ params }: { params: Promise<{ locale
   }
 
   // 访客态：钩子 + 双 CTA
-  // v2：访客+有画像 CTA 文案"看你的画像" → /portrait（看已有画像）；访客+无画像 CTA "看看我和金钱的关系" → /onboarding（直接 form 第一题，无中间页）
+  // v2（用户 2026-09-17 拍板）：主 CTA 文案永远统一"看看我和金钱的关系"（dict.landing.ctaTest），
+  // href 按 hasPortrait 分流——访客+有画像 → /portrait（点击后显示画像）；访客+无画像 → /onboarding（点击后直接 form 第一题）。
+  // 这条规则复刻了首页按钮的"测试/重新测试"语义：所有访客的主入口都是同一个 CTA，不让"看你的画像"
+  // 与"看看我和金钱的关系"在 landing 上同时出现，避免用户被两条分支带去不同页面。
   const primaryHref = hasPortrait ? `/${locale}/portrait` : `/${locale}/onboarding`;
-  const primaryLabel = hasPortrait ? dict.landing.ctaPortrait : dict.landing.ctaTest;
+  const primaryLabel = dict.landing.ctaTest;
   const signInHref = `/${locale}/login?next=${encodeURIComponent(primaryHref)}`;
 
   return (
