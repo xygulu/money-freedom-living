@@ -2,8 +2,10 @@
 // 初谈是首次流程的一部分，永不占配额（P§7）。触发 LLM 的首条 user 消息
 // 只用于调用、不落库（聊天记录里只有 AI 追问与用户回答）。
 //
-// P0-3 首启重排：初谈现在**先于**问卷发生（首屏不出现问卷、直接开始一段对话），
-// 所以这里不再要求问卷已交——没有问卷时开场纪律更严（见 buildTalkSystem）。
+// 首启重排 v2（2026-09-17）：talk 在新流程下也可在画像完成后由 echo 步 CTA
+// 触发（"想多聊聊？"）—— 形成 onboarding_talk session，进入 talk 步的深度对话。
+// 这两个入口都复用本接口；问卷**可以**已交（画像生成后再聊），所以这里不强制
+// questionnaire 必填——开场纪律根据 questionnaire 是否为空走不同分支（见 buildTalkSystem）。
 import { NextRequest } from 'next/server';
 import { resolveIdentity } from '@/lib/identity';
 import { getProfile } from '@/lib/profile';

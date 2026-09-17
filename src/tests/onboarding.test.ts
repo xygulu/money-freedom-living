@@ -147,4 +147,18 @@ describe('第一次被说中（M11-C）：问卷交完就给的那一句', () =>
     expect(system).toContain('2-3 句');
     expect(system).toContain('不升华');
   });
+
+  it('首启重排 v2 · echo 步 Path B：只有 choice 也得能产出素材', () => {
+    // 新流程下 echo 拉到 portrait 之后；questionnaire 必有 4 choice + ≥1 free。
+    // 即使 free 漏进（边角情况），prompt 仍要能产出 ≥1 条素材。
+    const { system, messages } = buildEchoMessages('zh-CN', {
+      specific_moments: 'cant_remember',
+      money_feeling: 'avoid',
+      payday_habit: 'repay',
+      aspiration: 'relaxed',
+    });
+    expect(system).toContain('一个字都不许编');
+    expect(messages[0].content).toContain('cant_remember');
+    expect(messages[0].content).toContain('avoid');
+  });
 });

@@ -1,13 +1,16 @@
 'use client';
 
-// 体检向导（P0-3 首启重排后的顺序）：
-//   欢迎（一句，不问任何题）→ 一段对话 → 「我听到的是…」（前 3 分钟，第一个物件）
-//   → 问卷（6 题拆成多段，一次一件、能跳过）→ 复述确认 + 单独同意 → 画像生成 → 完成。
+// 体检向导（P0-3 首启重排 v2 · 2026-09-17）：
+//   首页按钮 → /onboarding → 直接进 form 第一题（无 welcome 步、无中间页）
+//   form → reflect（问卷答案本地复述 + 同意区）→ generating → echo（画像完成礼物）
+//   echo 步三个 CTA：看画像（跳 /portrait）/ 想多聊聊（创建 session 进 talk）/ 保存（注册 nudge）
+//
 // 两条红线没动：
 // - 顺序铁律（docs/05 §7）：先被说中 → 再注册 / 同意 / 定价。同意区仍在"被说中"**之后**。
-// - 首屏不出现问卷（docs/10 §P0-3）：进页第一眼是欢迎与对话，不是 6 道题。
+// - 校验口径（2026-09-17）：4 道 choice 必选 + 至少 1 道 free-text 非空，否则后端 400 拒收；
+//   `canSubmit` 在前端先把守，避免最后一题按钮无效点击。
 //
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { QUESTIONS } from '@/lib/onboarding';
 import { readSse } from '@/lib/sse-client';
@@ -24,26 +27,24 @@ interface Turn {
   content: string;
 }
 
-type Step = 'welcome' | 'talk' | 'echo' | 'form' | 'reflect' | 'generating' | 'done';
+type Step = 'form' | 'reflect' | 'generating' | 'echo' | 'talk';
 
 export default function OnboardingWizard({ locale, dict }: Props) {
-  const [step, setStep] = useState<Step>('welcome');
+  // 首启直接 form（设计决策 #6：welcome 步彻底删除）
+  const [step, setStep] = useState<Step>('form');
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [turns, setTurns] = useState<Turn[]>([]);
   const [streaming, setStreaming] = useState(false);
-  const [summary, setSummary] = useState('');
-  // 第一次被说中：对话里拿到的那一句（不等注册、不问同意）
-  const [echo, setEcho] = useState('');
-  const [echoFailed, setEchoFailed] = useState(false);
-  const [echoLoading, setEchoLoading] = useState(false);
   // 画像生成失败软提示（产品口径 2026-09-17）：不向用户显示服务端报错，失败置位后在
   // reflect 步显示 o.reflect.retryHint + "再试一次"按钮（直接调 generatePortrait）
   const [portraitFailed, setPortraitFailed] = useState(false);
-  // Dev 快捷通道已移除（2026-09-17）：用户指正"测的是正式系统，不是 dev 系统"。
-  // 测速慢 = 公网代理 SSE 问题，用户已用本地 IP 解决，不再需要 dev 旁路。
-  // 6 轮温和收尾（产品口径 2026-09-16）：userTurns >= TALK_MAX_USER_MESSAGES 且流结束后
-  // 置位 → 输入框 disabled、显示主按钮"差不多了，去看看 →"；不走生硬跳转。
+  // 画像完成后的第一句话（echo 步）—— 由 /api/onboarding/reflect Path B 生成
+  const [echo, setEcho] = useState('');
+  const [echoFailed, setEchoFailed] = useState(false);
+  const [echoLoading, setEchoLoading] = useState(false);
+  const [echoLoaded, setEchoLoaded] = useState(false); // 防止 echo 步 useEffect 重复触发
+  // 6 轮温和收尾（产品口径 2026-09-16）：chat 后置后仍适用（echo CTA 进 talk 后可能聊满 6 轮）
   const [talkFinished, setTalkFinished] = useState(false);
   // 问卷一次一件（P0-3：不一次给 6 题）
   const [qi, setQi] = useState(0);
@@ -59,59 +60,62 @@ export default function OnboardingWizard({ locale, dict }: Props) {
   const [supplement, setSupplement] = useState('');
   // 产品口径（2026-09-16 用户反馈「前端还是一样的报错提示」）：
   // 用户**绝不**应该看到「出了点问题，请重试」这种由后台报错转化来的文案。
-  // 任何服务端/网络异常都走"静默兜底"——console.warn 留痕，
-  // UI 兜底为跳 echo 步（最自然的出口），不向用户展示任何红字错误。
-  // 此 state 保留为可扩展接口（后续可细分软提示文案），当前默认不渲染。
+  // 任何服务端/网络异常都走"静默兜底"——console.warn 留痕，UI 不展示红字。
   const [softHint, setSoftHint] = useState<string | null>(null);
-  // 多 provider 切换提示（已显示文本不回收；每轮重置）
+  // 多 provider 切换提示
   const [switchedHint, setSwitchedHint] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   // 首次"说中了"耗时的起点：进到这个页面的那一刻（指标见 docs/05 §7）。
-  // 首启重排后起点仍是落地那一刻——欢迎屏、对话、问卷都算在这 3 分钟里，
-  // 所以问卷必须排在"被说中"之后（否则它会把这一句顶出 3 分钟）。
+  // 首启重排 v2 后起点仍是落地那一刻——问卷/复述/画像/echo 都算在这 3 分钟里
   const startedAtRef = useRef(Date.now());
 
   const o = dict.onboarding;
   const userTurns = turns.filter((t) => t.role === 'user').length;
-  const canGenerate = userTurns >= 3;
-  // 派生：userTurns 达到服务端上限即视为聊够了（不依赖服务端 wrap 事件；
-  // onboarding 路径服务端不发 wrap，前端数满即视为温和收尾时机）
   // 6 是与 src/lib/chat.ts:22 TALK_MAX_USER_MESSAGES 镜像的 UI 上限
   const reachedTalkLimit = userTurns >= 6;
+
+  // 校验口径（设计决策 #4）：4 道 choice 必选 + 至少 1 道 free-text 非空
+  const choiceFilled = QUESTIONS.every((q) => q.kind !== 'choice' || Boolean(answers[q.id]?.trim()));
+  const freeTextFilled = QUESTIONS.filter((q) => q.kind === 'free').some((q) => answers[q.id]?.trim());
+  const canSubmit = choiceFilled && freeTextFilled;
 
   function setAnswer(id: string, value: string) {
     setAnswers((prev) => ({ ...prev, [id]: value }));
   }
 
-  /** form 步最后一题触发：提交问卷答案进档 + 进 reflect 步（commit ffd34ad P0-3 设计稿顺序）。
-   *  全跳过也允许——服务端空答会拒，这里先兜住（不调 API，直接 reflect）。 */
+  /** form 步最后一题触发：提交问卷答案进档 + 进 reflect 步。
+   *  校验由 canSubmit 在前端先守；服务端再守一次（answers route 400）。 */
   async function submitAnswersAndReflect(): Promise<void> {
+    if (!canSubmit) return;
     const answerable = Object.fromEntries(Object.entries(answers).filter(([, v]) => v.trim()));
-    if (Object.keys(answerable).length > 0) {
-      setSavingForm(true);
-      try {
-        const response = await fetch('/api/onboarding/answers', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ locale, answers: answerable }),
-        });
-        if (!response.ok) throw new Error(String(response.status));
-      } catch (err) {
-        // 问卷入库失败：用户已点过提交，给他一个轻提示让他能再点，
-        // 但**不展示"请重试"红字**——产品口径：报错不出现在用户眼前。
-        // softHint 只展示一行文案，按钮仍在，可以直接重试。
-        console.warn('[onboarding/answers] submit failed:', err);
-        setSoftHint('网络不太顺，再点一次试试');
-        return; // 失败停在 form 步，让他能再点
-      } finally {
-        setSavingForm(false);
-      }
+    setSavingForm(true);
+    try {
+      const response = await fetch('/api/onboarding/answers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ locale, answers: answerable }),
+      });
+      if (!response.ok) throw new Error(String(response.status));
+    } catch (err) {
+      // 问卷入库失败：用户已点过提交，给他一个轻提示让他能再点，
+      // 但**不展示"请重试"红字**——产品口径：报错不出现在用户眼前。
+      console.warn('[onboarding/answers] submit failed:', err);
+      setSoftHint('网络不太顺，再点一次试试');
+      return; // 失败停在 form 步，让他能再点
+    } finally {
+      setSavingForm(false);
     }
     setStep('reflect');
     void goReflect();
   }
 
-  /** 对话里 →「我听到的是…」：素材是**他刚说的话**，不是问卷（P0-3 主素材） */
+  /** reflect 步准备：在新流程下不调 LLM——只标记 reflectDone 让同意区出现。
+   *  echo 内容由 echo 步的 useEffect 单独拉（/api/onboarding/reflect Path B）。 */
+  async function goReflect() {
+    setReflectDone(true);
+  }
+
+  /** echo 步：拉"我从你刚填的里听到的一句话"（Path B：questionnaire 主素材） */
   async function loadEcho() {
     setEchoLoading(true);
     try {
@@ -133,18 +137,17 @@ export default function OnboardingWizard({ locale, dict }: Props) {
       setEchoFailed(true);
     } finally {
       setEchoLoading(false);
+      setEchoLoaded(true);
     }
   }
 
-  async function goEcho() {
-    setStep('echo');
-    await loadEcho();
-  }
-
-  /** 从 echo 步进 form 步（仅切状态，提交+reflect 由最后一题的 submitAnswersAndReflect 负责） */
-  async function goForm() {
-    setStep('form');
-  }
+  /** echo 步首次进入时自动拉取——避免空 echo 闪现 */
+  useEffect(() => {
+    if (step === 'echo' && !echoLoaded && !echoLoading) {
+      void loadEcho();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
 
   async function startTalk() {
     setStreaming(true);
@@ -155,11 +158,8 @@ export default function OnboardingWizard({ locale, dict }: Props) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ locale }),
       });
-      // 非 2xx（LLM 未配置等）：错误兜底，避免 readSse 在非 OK 上抛错
-      // 留下半截 stream 状态
       if (!response.ok) {
-        // 服务端初始化失败（LLM 未配置等）：**不展示红字**——直接跳 echo 步，
-        // 那里有更稳定的入口；用户能继续走完整流程。
+        // 服务端初始化失败：跳 echo 步兜底
         console.warn('[onboarding/talk] init failed:', response.status);
         setStep('echo');
         return;
@@ -179,15 +179,11 @@ export default function OnboardingWizard({ locale, dict }: Props) {
         }
         if (event.providerSwitch) setSwitchedHint(true);
         if (event.error) {
-          // SSE 流中服务端 emit {error:'stream_failed'}——**不展示红字**；
-          // 静默后等 readSse 自然走完，下方会跳 echo 步。
           console.warn('[onboarding/talk] sse event.error:', event.error);
         }
       });
       if (sid) setSessionId(sid);
     } catch (err) {
-      // readSse 抛错（HTTP 非 2xx、网络中断）：**不展示红字**——跳 echo 步，
-      // 让用户能继续走画像流程；console 留痕供诊断。
       console.warn('[onboarding/talk] stream catch:', err);
       setStep('echo');
     } finally {
@@ -202,14 +198,10 @@ export default function OnboardingWizard({ locale, dict }: Props) {
 
   async function sendMessage(text: string, silent = false) {
     if (!sessionId || !text.trim()) return;
-    // 算这条发完是否到 6 轮——setTurns 之后本次 render 的 reachedTalkLimit 仍是旧值
-    // （React 状态更新异步），所以这里直接基于当前 userTurns + 1 预判
     const willReachLimit = userTurns + 1 >= 6;
     setTurns((prev) => [...prev, { role: 'user', content: text }]);
     if (silent) {
-      // silent 路径（echo 步"补充"消息）：**不展示红字**——静默入库即可。
-      // 用户已经看到了 echo 内容，补充失败不影响主流程；console 留痕。
-      // onboarding_talk 会话**复用** /api/chat/[sessionId]（kind=chat 才 401 的闸门让 onboarding_talk 放行）
+      // silent 路径（echo 步"补充"消息）：不展示红字；console 留痕
       await fetch(`/api/chat/${sessionId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -220,25 +212,18 @@ export default function OnboardingWizard({ locale, dict }: Props) {
     setStreaming(true);
     setSwitchedHint(false);
     try {
-      // onboarding_talk 会话**复用** /api/chat/[sessionId]：
-      // 服务端按 session.kind 分流，kind=onboarding_talk 走 respondToMessage 流程
-      // （不能用 /api/onboarding/talk——那个接口每次新建会话、只发开场）
       const response = await fetch(`/api/chat/${sessionId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: text }),
       });
       if (!response.ok) {
-        // 409 talk_limit_reached = 6 轮已满，温和收尾（不生硬跳 echo；流没走完也会在 finally 触发 talkFinished）
-        // 其它非 2xx：兜底到 echo 步——**不展示红字**，产品口径。
-        // 回滚刚才 optimistic 加进 turns 的 user 消息，避免 UI 留无 AI 回复的"卡住"残影。
-        // 用 willReachLimit 不用 reachedTalkLimit——setTurns 异步更新，render 内派生量滞后
         console.warn('[onboarding/chat] non-2xx:', response.status);
         setTurns((prev) => prev.slice(0, -1));
         if (response.status === 409 && willReachLimit) {
           setTalkFinished(true);
         } else {
-          void goEcho();
+          setStep('echo');
         }
         return;
       }
@@ -255,50 +240,20 @@ export default function OnboardingWizard({ locale, dict }: Props) {
         }
         if (event.providerSwitch) setSwitchedHint(true);
         if (event.error) {
-          // SSE 流中服务端 emit error：**不展示红字**——静默后等 readSse 自然走完，
-          // catch 兜底会跳 echo 步。
           console.warn('[onboarding/chat] sse event.error:', event.error);
         }
       });
     } catch (err) {
-      // readSse 抛错：**不展示红字**——6 轮温和收尾 / 跳 echo 步走画像流程。
       console.warn('[onboarding/chat] sse catch:', err);
       setTurns((prev) => prev.slice(0, -1));
       if (reachedTalkLimit) {
-        // 已聊满 6 轮但流挂了——按温和收尾（不跳 echo，避免再次触发 LLM）
         setTalkFinished(true);
       } else {
-        void goEcho();
+        setStep('echo');
       }
     } finally {
       setStreaming(false);
-      // 6 轮温和收尾：流结束且达到上限 → 显示主按钮"差不多了，去看看"
-      // （覆盖流正常完成 + 6 轮已满两种场景；catch 路径走"未达上限则跳 echo"）
       if (reachedTalkLimit) setTalkFinished(true);
-    }
-  }
-
-  async function goReflect() {
-    // Dev 快捷通道：跳过 talk → sessionId=null → 不调 reflect API；summary 留空
-    // （用户在测 portrait API，不是测 reflect 步；不写死任何文字，避免假数据）。
-    // generatePortrait 仍走真实 portrait API（被测目标）。
-    if (!sessionId) {
-      setReflectDone(true);
-      return;
-    }
-    try {
-      const response = await fetch('/api/onboarding/reflect', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId, locale }),
-      });
-      if (!response.ok) throw new Error(String(response.status));
-      const data = (await response.json()) as { summary: string };
-      setSummary(data.summary);
-    } catch {
-      setSummary(''); // 复述失败不阻塞：确认步可跳过，画像仍可生成
-    } finally {
-      setReflectDone(true);
     }
   }
 
@@ -313,18 +268,16 @@ export default function OnboardingWizard({ locale, dict }: Props) {
         body: JSON.stringify({ locale, sessionId, consent: true }),
       });
       if (!response.ok) throw new Error(String(response.status));
-      // 勾了才记：没勾 = 没表态，不给他写一条"拒绝"记录
       if (touchOk) {
         await fetch('/api/touch/consent', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ optIn: true }),
-        }).catch(() => {}); // 触达是可选项，记不上也不该挡住画像
+        }).catch(() => {});
       }
-      setStep('done');
+      // 画像成功 → echo 步（首启重排 v2：echo 作为画像完成礼物）
+      setStep('echo');
     } catch (err) {
-      // 画像生成失败：**不展示红字**——回 reflect 步 + 置 portraitFailed
-      // 显示 o.reflect.retryHint + "再试一次"按钮（用户软重试，不破"不红字"口径）
       console.warn('[onboarding/portrait] generate failed:', err);
       setStep('reflect');
       setPortraitFailed(true);
@@ -333,115 +286,15 @@ export default function OnboardingWizard({ locale, dict }: Props) {
 
   // ---------- 各步渲染 ----------
 
-  // 首屏：一句欢迎 + 直接开始一段对话。不问任何题（P0-3）
-  if (step === 'welcome') {
-    return (
-      <div className="flex flex-col pt-16" data-step="welcome">
-        <h1 className="text-2xl font-medium leading-relaxed tracking-tight">{o.welcome.title}</h1>
-        <p className="mt-4 text-sm leading-relaxed text-ink-soft">{o.welcome.sub}</p>
-        <button
-          type="button"
-          onClick={goTalk}
-          className="mt-10 self-start rounded-full bg-accent px-8 py-3 text-base text-paper transition-opacity hover:opacity-90"
-        >
-          {o.welcome.start}
-        </button>
-      </div>
-    );
-  }
-
-  if (step === 'talk') {
-    return (
-      <div className="flex flex-col pt-12" data-step="talk">
-        <h1 className="text-2xl font-medium tracking-tight">{o.talk.title}</h1>
-        <p className="mt-2 text-sm text-ink-soft">{o.talk.hint}</p>
-        <div className="mt-6 flex min-h-[40vh] flex-col gap-4">
-          {turns.map((turn, i) => (
-            <div
-              key={i}
-              className={turn.role === 'user' ? 'self-end rounded-2xl rounded-br-sm bg-accent/10 px-4 py-3 text-sm leading-relaxed' : 'self-start rounded-2xl rounded-bl-sm border border-line bg-white/60 px-4 py-3 text-sm leading-relaxed'}
-            >
-              {turn.content}
-              {/* 多 provider 切换：仅在末条 assistant 下显示一次灰色小字 */}
-              {i === turns.length - 1 && turn.role === 'assistant' && switchedHint && (
-                <p className="mt-1 text-xs text-ink-soft">
-                  {/* on/offboarding 暂时只有 zh-CN/en，i18n key 在 ChatView 走 dict.chat；这里硬编码中文作 fallback */}
-                  （当前模型暂时不可用，已自动切换继续）
-                </p>
-              )}
-            </div>
-          ))}
-          <div ref={bottomRef} />
-        </div>
-        {/* 产品口径（2026-09-16）：不向用户展示任何红字错误。softHint 留作轻提示扩展位，当前未使用。 */}
-        {softHint && <p className="mt-4 text-sm text-ink-soft">{softHint}</p>}
-        {/* 6 轮温和收尾：禁输入 + 主按钮"差不多了，去看看"；未达到 6 轮时输入框可用 */}
-        <TalkInput disabled={streaming || talkFinished} onSend={(text) => sendMessage(text)} />
-        {talkFinished ? (
-          <div className="mt-6 flex flex-col gap-2" data-talk-finished>
-            <p className="text-sm text-ink-soft">{o.talk.doneHint}</p>
-            <button
-              type="button"
-              onClick={goEcho}
-              className="self-start rounded-full bg-accent px-8 py-3 text-base text-paper transition-opacity hover:opacity-90"
-            >
-              {o.talk.done} →
-            </button>
-          </div>
-        ) : (
-          userTurns >= 1 && !streaming && (
-            <button
-              type="button"
-              onClick={goEcho}
-              className="mt-6 self-start rounded-full border border-accent px-6 py-2 text-sm text-accent hover:bg-accent hover:text-paper"
-            >
-              {o.echo.title} →
-            </button>
-          )
-        )}
-      </div>
-    );
-  }
-
-  // 第一个物件：对话里拿到的那一句。这一步不要注册、不问同意、不提价钱
-  if (step === 'echo') {
-    return (
-      <div className="flex flex-col pt-12" data-step="echo">
-        <h2 className="text-xl font-medium">{o.echo.title}</h2>
-        {echo && (
-          <div data-echo className="mt-6 whitespace-pre-wrap border border-line bg-white/60 p-5 text-base leading-loose">
-            {echo}
-          </div>
-        )}
-        {!echo && !echoFailed && (echoLoading || !echo) && <p className="mt-6 animate-pulse text-sm text-ink-soft">{o.echo.loading}</p>}
-        {echoFailed && <p className="mt-6 text-sm text-ink-soft">{o.echo.fallback}</p>}
-        {(echo || echoFailed) && (
-          <>
-            <p className="mt-6 text-sm leading-relaxed text-ink-soft">{echoFailed ? o.talk.hint : o.echo.hint}</p>
-            <button
-              type="button"
-              onClick={goForm}
-              className="mt-8 self-start rounded-full bg-accent px-8 py-3 text-base text-paper transition-opacity hover:opacity-90"
-            >
-              {o.echo.next} →
-            </button>
-            {echo && (
-              <button type="button" onClick={goTalk} className="mt-3 self-start text-sm text-ink-soft underline underline-offset-4 hover:text-ink">
-                {o.echo.amend}
-              </button>
-            )}
-          </>
-        )}
-      </div>
-    );
-  }
-
-  // 被说中之后的体检：6 题拆成多段，一次一件，跳过的没有任何代价
+  // form 步：6 题拆成多段，一次一件
   if (step === 'form') {
     const q = QUESTIONS[qi];
     const qd = (o.questions as Record<string, { text: string; options?: Record<string, string>; placeholder?: string }>)[q.id];
     const last = qi === QUESTIONS.length - 1;
     const advance = () => (last ? void submitAnswersAndReflect() : setQi((n) => n + 1));
+    // 最后一题：canSubmit 才允许提交；其他题：单题跳过允许
+    const submitDisabled = last ? !canSubmit || savingForm : savingForm;
+    const submitHint = last && !canSubmit ? o.form.choiceRequired : null;
     return (
       <div className="flex flex-col pt-12" data-step="form">
         <h2 className="text-xl font-medium">{o.form.title}</h2>
@@ -480,59 +333,70 @@ export default function OnboardingWizard({ locale, dict }: Props) {
             className="mt-4 w-full resize-none rounded border border-line bg-white/60 p-3 text-sm leading-relaxed outline-none focus:border-accent"
           />
         )}
-        {/* 产品口径（2026-09-16）：不向用户展示任何红字错误。softHint 留作轻提示扩展位，当前未使用。 */}
         {softHint && <p className="mt-4 text-sm text-ink-soft">{softHint}</p>}
         <div className="mt-8 flex items-center gap-4">
           {q.kind !== 'choice' && (
             <button
               type="button"
               onClick={advance}
-              disabled={savingForm}
+              disabled={submitDisabled}
               className="rounded-full bg-accent px-8 py-3 text-base text-paper transition-opacity hover:opacity-90 disabled:opacity-40"
             >
               {o.form.next}
             </button>
           )}
-          <button
-            type="button"
-            onClick={advance}
-            disabled={savingForm}
-            className="text-sm text-ink-soft underline underline-offset-4 hover:text-ink disabled:opacity-40"
-          >
-            {o.form.skip}
-          </button>
+          {last ? (
+            <button
+              type="button"
+              onClick={advance}
+              disabled={submitDisabled}
+              title={submitHint ?? undefined}
+              className="text-sm text-ink-soft underline underline-offset-4 hover:text-ink disabled:opacity-40"
+            >
+              {o.form.skip}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={advance}
+              disabled={savingForm}
+              className="text-sm text-ink-soft underline underline-offset-4 hover:text-ink disabled:opacity-40"
+            >
+              {o.form.skip}
+            </button>
+          )}
         </div>
+        {last && submitHint && (
+          <p className="mt-3 text-xs text-ink-soft" data-form-required-hint>{submitHint}</p>
+        )}
       </div>
     );
   }
 
+  // reflect 步：问卷答案本地复述 + 同意区（无 LLM summary 调用——echo 步另拉）
   if (step === 'reflect') {
-    // 顺序铁律（docs/05 §7）：同意区只在他已经被说中之后才出现——
-    // echo 是前 3 分钟那一句，summary 是初谈复述，两者都没拿到就等这一步结束再放行
-    const beenSeen = Boolean(echo || summary) || reflectDone;
-    // 按钮 disabled 状态的两个原因独立计算——给用户看为啥点不动
     const consentReady = adultOk && sensitiveOk;
-    const portraitReady = consentReady && (canGenerate !== false || userTurns > 0);
-    const buttonDisabled = !portraitReady;
-    const disabledReason = !consentReady
-      ? o.reflect.disabledHint
-      : (canGenerate === false && userTurns === 0)
-        ? o.talk.hint
-        : null;
+    const buttonDisabled = !consentReady;
     return (
       <div className="flex flex-col pt-12" data-step="reflect">
         <h2 className="text-xl font-medium">{o.reflect.title}</h2>
-        {summary && (
-          <div className="mt-6">
-            {/* 显式区分：这是 LLM 听完后的复述，不是画像本身（画像在 /portrait 页） */}
-            <p className="mb-2 text-xs text-ink-soft">{o.reflect.summaryLabel}</p>
-            <div className="whitespace-pre-wrap border border-line bg-white/60 p-5 text-sm leading-relaxed">{summary}</div>
-          </div>
-        )}
-        {!summary && <p className="mt-6 text-sm text-ink-soft">{o.talk.hint}</p>}
+        {/* 问卷答案本地复述：Object.entries(answers) 渲染——素材已是 LLM 输入，不需要再过一道 LLM */}
+        <div className="mt-6 border border-line bg-white/60 p-5 text-sm leading-relaxed" data-reflect-answers>
+          {QUESTIONS.map((q) => {
+            const v = answers[q.id]?.trim();
+            if (!v) return null;
+            const qd = (o.questions as Record<string, { text: string; options?: Record<string, string> }>)[q.id];
+            const display = q.kind === 'choice' && qd.options ? qd.options[v] ?? v : v;
+            return (
+              <div key={q.id} className="mb-3 last:mb-0">
+                <p className="mb-1 text-xs text-ink-soft">{qd.text}</p>
+                <p>{display}</p>
+              </div>
+            );
+          })}
+        </div>
         <div className="mt-8 flex flex-col gap-3">
-          {/* 单独同意区（P§9）：两项各自独立、默认不勾、拒绝不影响问卷/日记使用 */}
-          {beenSeen && (
+          {reflectDone && (
           <div data-consent className="flex flex-col gap-3 border border-line bg-white/60 p-5 text-sm">
             <label className="flex cursor-pointer items-start gap-3">
               <input type="checkbox" checked={adultOk} onChange={(e) => setAdultOk(e.target.checked)} className="mt-1" />
@@ -550,7 +414,7 @@ export default function OnboardingWizard({ locale, dict }: Props) {
             <p className="text-xs leading-relaxed text-ink-soft">{dict.touch.optInHint}</p>
           </div>
           )}
-          {beenSeen && (
+          {reflectDone && (
             <div className="flex flex-col gap-2">
               <button
                 type="button"
@@ -560,9 +424,9 @@ export default function OnboardingWizard({ locale, dict }: Props) {
               >
                 {o.reflect.confirm} · {o.reflect.next}
               </button>
-              {/* 按钮 disabled 原因——告诉用户"为啥点不动"，避免以为按钮坏了 */}
-              {disabledReason && <p className="text-xs text-ink-soft">{disabledReason}</p>}
-              {/* 画像生成失败软提示 + 重试按钮——不破"不展示红字"产品口径 */}
+              {!consentReady && (
+                <p className="text-xs text-ink-soft">{o.reflect.disabledHint}</p>
+              )}
               {portraitFailed && (
                 <div className="mt-2 flex items-center gap-3" data-portrait-retry>
                   <p className="text-sm text-ink-soft">{o.reflect.retryHint}</p>
@@ -599,7 +463,6 @@ export default function OnboardingWizard({ locale, dict }: Props) {
             </button>
           </div>
         </div>
-        {/* 产品口径（2026-09-16）：不向用户展示任何红字错误。softHint 留作轻提示扩展位，当前未使用。 */}
         {softHint && <p className="mt-4 text-sm text-ink-soft">{softHint}</p>}
       </div>
     );
@@ -613,12 +476,91 @@ export default function OnboardingWizard({ locale, dict }: Props) {
     );
   }
 
+  // echo 步：画像完成礼物——一句"我听到的是" + 三个 CTA（看画像 / 多聊聊 / 保存）
+  if (step === 'echo') {
+    return (
+      <div className="flex flex-col pt-12" data-step="echo">
+        <h2 className="text-xl font-medium">{o.echo.title}</h2>
+        {echo && (
+          <div data-echo className="mt-6 whitespace-pre-wrap border border-line bg-white/60 p-5 text-base leading-loose">
+            {echo}
+          </div>
+        )}
+        {!echo && !echoFailed && (echoLoading || !echoLoaded) && <p className="mt-6 animate-pulse text-sm text-ink-soft">{o.echo.loading}</p>}
+        {echoFailed && <p className="mt-6 text-sm text-ink-soft">{o.echo.fallback}</p>}
+        {(echo || echoFailed) && (
+          <>
+            <p className="mt-6 text-sm leading-relaxed text-ink-soft">{o.echo.hint}</p>
+            {/* 主 CTA：看画像（已有 /portrait 页面） */}
+            <Link
+              href={`/${locale}/portrait`}
+              className="mt-8 inline-block self-start rounded-full bg-accent px-8 py-3 text-base text-paper transition-opacity hover:opacity-90"
+            >
+              {o.echo.next} →
+            </Link>
+            {/* 次 CTA：想多聊聊（创建 onboarding_talk session，进 talk 步） */}
+            <button
+              type="button"
+              onClick={goTalk}
+              className="mt-3 self-start rounded-full border border-accent px-6 py-2 text-sm text-accent hover:bg-accent hover:text-paper"
+            >
+              {o.echo.chatCTA}
+            </button>
+            {/* 次 CTA：保存你的画像（注册 nudge：跳登录页，next 让登录后回 /portrait） */}
+            <Link
+              href={`/${locale}/login?next=${encodeURIComponent(`/${locale}/portrait`)}`}
+              className="mt-3 self-start text-sm text-ink-soft underline underline-offset-4 hover:text-ink"
+            >
+              {o.echo.saveCTA}
+            </Link>
+          </>
+        )}
+      </div>
+    );
+  }
+
+  // talk 步：echo CTA 触发的深度对话（chat 后置）—— 6 轮温和收尾逻辑保留
   return (
-    <div className="flex flex-col items-center pt-20 text-center">
-      <p className="text-lg">{dict.landing.hero}</p>
-      <Link href={`/${locale}/portrait`} className="mt-8 rounded-full bg-accent px-8 py-3 text-base text-paper hover:opacity-90">
-        {o.portraitLink} →
-      </Link>
+    <div className="flex flex-col pt-12" data-step="talk">
+      <h1 className="text-2xl font-medium tracking-tight">{o.talk.title}</h1>
+      <p className="mt-2 text-sm text-ink-soft">{o.talk.hint}</p>
+      <div className="mt-6 flex min-h-[40vh] flex-col gap-4">
+        {turns.map((turn, i) => (
+          <div
+            key={i}
+            className={turn.role === 'user' ? 'self-end rounded-2xl rounded-br-sm bg-accent/10 px-4 py-3 text-sm leading-relaxed' : 'self-start rounded-2xl rounded-bl-sm border border-line bg-white/60 px-4 py-3 text-sm leading-relaxed'}
+          >
+            {turn.content}
+            {i === turns.length - 1 && turn.role === 'assistant' && switchedHint && (
+              <p className="mt-1 text-xs text-ink-soft">（当前模型暂时不可用，已自动切换继续）</p>
+            )}
+          </div>
+        ))}
+        <div ref={bottomRef} />
+      </div>
+      {softHint && <p className="mt-4 text-sm text-ink-soft">{softHint}</p>}
+      <TalkInput disabled={streaming || talkFinished} onSend={(text) => sendMessage(text)} />
+      {talkFinished ? (
+        <div className="mt-6 flex flex-col gap-2" data-talk-finished>
+          <p className="text-sm text-ink-soft">{o.talk.doneHint}</p>
+          <Link
+            href={`/${locale}/portrait`}
+            className="self-start rounded-full bg-accent px-8 py-3 text-base text-paper transition-opacity hover:opacity-90"
+          >
+            {o.talk.done} →
+          </Link>
+        </div>
+      ) : (
+        userTurns >= 1 && !streaming && (
+          <button
+            type="button"
+            onClick={() => setStep('echo')}
+            className="mt-6 self-start rounded-full border border-accent px-6 py-2 text-sm text-accent hover:bg-accent hover:text-paper"
+          >
+            {o.echo.title} →
+          </button>
+        )
+      )}
     </div>
   );
 }

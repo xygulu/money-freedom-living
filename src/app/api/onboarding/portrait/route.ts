@@ -1,6 +1,10 @@
 // POST /api/onboarding/portrait：画像生成（问卷 + 初谈素材 → 四段画像）→ 落库。
 // 结构不合法重试一次；仍失败返回 502——禁止编造默认画像（docs/02 §2② 红线）。
 // 完成即计一次活跃足迹（docs/02 §11：体检完成属于活跃动作）。
+//
+// 首启重排 v2（2026-09-17）：body.sessionId 在新流程下基本为 null——
+// 大多数访客走完 form → 直接生成画像，不经过 chat；
+// sessionId 只在 echo 步 CTA "想多聊聊" → 走完 talk 步再生成画像时才有值。
 import { NextRequest } from 'next/server';
 import { resolveIdentity } from '@/lib/identity';
 import { getProfile, savePortrait, bumpActiveDay, type Portrait } from '@/lib/profile';

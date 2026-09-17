@@ -17,7 +17,7 @@
     "cta": "See your money portrait",
     "hook": "You don't have to retell your money story every time.",
     "hookSub": "30 minutes. 6 questions. See what an AI quietly hears in what you say — and notice it shifts the next time you read it.",
-    "ctaTest": "See how you relate to money",
+    "ctaTest": "See how I relate to money",
     "ctaPortrait": "See your portrait",
     "ctaSignIn": "Sign in / Sign up",
     "privacy": "Private by design. Your words stay yours."
@@ -390,11 +390,6 @@
   "onboarding": {
     "title": "A check-up for your relationship with money",
     "start": "Begin",
-    "welcome": {
-      "title": "Take a breath. Then we start from one small thing.",
-      "sub": "No questionnaire. No sign-up. Just the two of us, talking.",
-      "start": "I'm here"
-    },
     "questions": {
       "moment_when": {
         "text": "When did you last buy something purely because you wanted it?",
@@ -447,7 +442,8 @@
       "next": "Next",
       "skip": "Skip this one",
       "placeholder": "One sentence is enough",
-      "noQuestion": "Nothing left to ask."
+      "noQuestion": "Nothing left to ask.",
+      "choiceRequired": "All four choices + at least one line of text"
     },
     "talk": {
       "title": "A short talk",
@@ -459,10 +455,12 @@
     "echo": {
       "title": "Here's what I heard",
       "loading": "Letting me say back what I heard…",
-      "hint": "This is the first thing that's yours. There are a few more things I'd like to know — one at a time, from here on.",
-      "next": "Tell me a little more",
+      "hint": "This is the first thing you get, after your portrait is drawn. From here you can see the portrait, or keep talking.",
+      "next": "See my portrait",
       "amend": "Not quite right? You can fix it in the next step",
-      "fallback": "I didn't catch it clearly yet. Let's talk a little first — no rush."
+      "fallback": "I didn't catch it clearly yet. Let's talk a little first — no rush.",
+      "chatCTA": "Want to keep talking?",
+      "saveCTA": "Save this portrait?"
     },
     "reflect": {
       "title": "Is this you?",

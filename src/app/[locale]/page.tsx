@@ -7,6 +7,8 @@
 // - 访客   + 无画像 → 钩子 + "看看你和钱的关系" CTA + "登录 / 注册" CTA
 //
 // 钩子 + 双 CTA：访客进来第一眼不是营销页——是一句引起兴趣的话 + 两个动作。
+// ctaTest 按钮在新流程（2026-09-17 首启重排 v2）下 → /onboarding 直接进 form 第一题
+// （无 welcome 步、无中间页），文案"看看我和金钱的关系"见 dict.landing.ctaTest。
 import { headers, cookies } from 'next/headers';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';

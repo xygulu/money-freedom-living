@@ -1,5 +1,12 @@
 // POST /api/onboarding/answers：体检问卷落库（首次流程，永不占配额——P§7）
 // 答案进 portrait.questionnaire（画像素材）；Q6（最近一次为钱心慌）同时种一条 concern
+//
+// 校验口径（2026-09-17 · 首启重排 v2 · 设计决策 #4）：
+// - 4 道 choice 题必选（不在 options 内的不收）
+// - 至少 1 道 free-text 题非空（否则前端 canSubmit 拒；但服务端再守一次，
+//   防止直接打 API 的绕过）
+// 任一不满足 → 400 + { code: 'choice_required' | 'free_text_required', field }
+// 老的 empty_answers 兜底（按题意是"答案全空"）保留为 alias。
 import { NextRequest, NextResponse } from 'next/server';
 import { resolveIdentity } from '@/lib/identity';
 import { ensureProfile, savePortrait, addConcern, savePayday } from '@/lib/profile';
@@ -29,8 +36,18 @@ export async function POST(request: NextRequest) {
         questionnaire[q.field] = raw.trim().slice(0, FREE_MAX);
       }
     }
-    // 两道开放题至少答一题才收（全选择题也能生成画像，但素材会薄——前端已引导）
-    if (Object.keys(questionnaire).length === 0) return jsonError('empty_answers', 400);
+
+    // 校验口径：4 道 choice 必选
+    const missingChoice = QUESTIONS.find((q) => q.kind === 'choice' && !questionnaire[q.field]);
+    if (missingChoice) {
+      return jsonError('choice_required', 400, { field: missingChoice.id });
+    }
+    // 至少 1 道 free-text 非空
+    const hasFreeText = QUESTIONS.some((q) => q.kind === 'free' && questionnaire[q.field]);
+    if (!hasFreeText) {
+      const freeQ = QUESTIONS.find((q) => q.kind === 'free');
+      return jsonError('free_text_required', 400, { field: freeQ ? freeQ.id : '' });
+    }
 
     const identity = await resolveIdentity(request);
     const profile = await ensureProfile(identity.key, locale);
