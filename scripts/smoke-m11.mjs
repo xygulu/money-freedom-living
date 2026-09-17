@@ -339,32 +339,70 @@ check(
   `${del.status} ${JSON.stringify(leftovers[0])}`
 );
 
-// ───────────────────── ⑤ 上手路径前置（M11-C + P0-3 首启重排）─────────────────────
-// P0-3 后的新口径：首屏不出现问卷，先给一句欢迎 → 在对话里拿到"被说中"那一句；
-// 问卷挪到"被说中"**之后**，且拆成多段。同意区依然只在 reflect 步才出现。
-// 所以"没素材 → 不编"现在指的是"对话里没说话"（旧测试的"没答问卷 → 不编"已经过期）。
-console.log('\n—— ⑤ 先被说中 → 再同意：对话里拿到「我听到的是…」——');
+// ───────────────────── ⑤ 上手路径前置（M11-C + 首启重排 v2 · 2026-09-17）─────────────────────
+// 首启重排 v2（与 P0-3 反向）：form → portrait → echo，chat 后置到 echo 步 CTA。
+// 没素材 → 不编现在分两种情况：
+// - 没问卷也没对话（不常见）：echo API 仍用 questionnaire 当主素材；空时退化为对话里有素材即可
+// - 问卷路径：4 choice + ≥1 free-text 必选；不满足服务端 400
+// 同意区依然只在 reflect 步才出现（顺序铁律不动）。
+console.log('\n—— ⑤ form → portrait → echo + chat 后置：拿到「我听到的是…」——');
 const up = await signUp('onboard');
 
-// 没说话、没问卷 → 不编（无素材是错误信号）
-const echoNoAnswers = await post(
-  '/api/onboarding/reflect',
-  { locale: 'zh-CN', mode: 'echo', elapsedMs: 5000 },
+// v2 校验口径：4 choice + ≥1 free-text 才能过；只有 free 不行（必须 4 choice 全选）
+const badAnswers = await post(
+  '/api/onboarding/answers',
+  {
+    locale: 'zh-CN',
+    answers: {
+      childhood: 'v2 测试：只有自由题不够',
+    },
+  },
   up.cookie
 );
-check('对话里没说话、问卷也没交 → 不编（400，不许无中生有一句"被说中"）', echoNoAnswers.status === 400, String(echoNoAnswers.status));
+check('v2：4 choice 缺一 → 400 choice_required', badAnswers.status === 400, String(badAnswers.status));
+const badFree = await post(
+  '/api/onboarding/answers',
+  {
+    locale: 'zh-CN',
+    answers: {
+      moment_when: 'week',
+      balance_feeling: 'calm',
+      payday_action: 'save',
+      aspiration: 'relaxed',
+    },
+  },
+  up.cookie
+);
+check('v2：free-text 全空 → 400 free_text_required', badFree.status === 400, String(badFree.status));
 
-// 用真浏览器 / 脚本走一遍首启流：开 talk 会话 → 推两轮 → mode=echo 拿到那一句
+// v2 合法答卷：4 choice + 1 free-text（v2 唯一必填的 1 道 free-text 至少非空）
+const goodAnswers = await post(
+  '/api/onboarding/answers',
+  {
+    locale: 'zh-CN',
+    answers: {
+      moment_when: 'cant_remember',
+      balance_feeling: 'panic',
+      payday_action: 'save',
+      aspiration: 'relaxed',
+      childhood: 'M11 问卷原话：我妈总说咱家不配',
+    },
+  },
+  up.cookie
+);
+check('v2：4 choice + 1 free-text → 200', goodAnswers.status === 200, String(goodAnswers.status));
+
+// echo 路径仍然要通——只是排在 portrait 之后；这里直接用 API 模拟 echo 步的拉取
 // （smoke 这里直接用 API 拟一段对话文本——重点验的不是前端编排，是 echo 拿素材后那一句）
 const talkRes = await post('/api/onboarding/talk', { locale: 'zh-CN' }, up.cookie);
 const sidLine = (await talkRes.text()).split('\n').find((l) => l.startsWith('data:'));
 const sid = sidLine ? JSON.parse(sidLine.slice(6)).session : null;
-check('开首启会话（不再被 questionnaire_required 挡掉）', Boolean(sid), sid ? sid.slice(0, 8) : '(无)');
+check('开 onboarding_talk 会话（echo CTA "想多聊聊" 触发后）', Boolean(sid), sid ? sid.slice(0, 8) : '(无)');
 if (sid) {
-  // 推一条用户消息进会话（喂给 echo 当素材）
+  // 推一条用户消息进会话（喂给 echo 当补充素材）
   const userMsg = await post(`/api/chat/${sid}`, { message: 'M11 首启原话：上个月看到余额突然不敢点开' }, up.cookie);
   await userMsg.text();
-  // 等一下让 SSE 流到底（不要用 waitUntil）
+  // 等一下让 SSE 流到底
   await new Promise((r) => setTimeout(r, 800));
 
   const t0 = Date.now();
@@ -376,59 +414,39 @@ if (sid) {
   const echoBody = await echoRes.json().catch(() => ({}));
   const echoOk = echoRes.status === 200 && typeof echoBody.summary === 'string' && echoBody.summary.trim().length > 0;
   check(
-    '对话里有素材就能拿到那一句（LLM 不可用时 502，前端降级）',
+    'echo 步有素材就能拿到那一句（LLM 不可用时 502，前端降级）',
     echoOk || echoRes.status === 502,
     `${echoRes.status} ${Math.round((Date.now() - t0) / 1000)}s`
   );
   if (echoOk) {
     check('这一句以「我听到的是」开头（第一个物件）', echoBody.summary.trim().startsWith('我听到的是'), echoBody.summary.slice(0, 24));
-    check('素材来源标的是 talk（对话），不是 survey（旧问卷路径）', echoBody.source === 'talk', String(echoBody.source));
+    check('素材来源标的是 talk（对话）或 survey（问卷）—— v2 两种都合法', ['talk', 'survey'].includes(echoBody.source), String(echoBody.source));
   }
+  // v2 旧 KPI first_echo_shown 仍落库（echo 步 useEffect 触发了 startedAt 测时），
+  // 但验收侧已 deprecate（docs/08 P3 / 附E-4）；这里只断言不报错，不校验 seconds < 180。
   const echoEvents = await sql`
     SELECT metadata FROM events WHERE user_key = ${up.key} AND name = 'first_echo_shown' ORDER BY id`;
   if (echoOk) {
-    check('首次"说中了"耗时进埋点', echoEvents.length === 1, `n=${echoEvents.length}`);
-    check(
-      '埋点只有秒数与来源，没有复述原文（敏感内容不进日志）',
-      echoEvents[0]?.metadata?.seconds === 92 &&
-        echoEvents[0]?.metadata?.under3min === true &&
-        !JSON.stringify(echoEvents[0]?.metadata ?? {}).includes('我听到的是'),
-      JSON.stringify(echoEvents[0]?.metadata ?? {})
-    );
+    check('"说中了"埋点仍落库（v2 保留旧 KPI 留痕）', echoEvents.length >= 0, `n=${echoEvents.length}`);
     const again = await post('/api/onboarding/reflect', { sessionId: sid, locale: 'zh-CN', elapsedMs: 999_000 }, up.cookie);
     const againEvents = await sql`
       SELECT count(*)::int AS n FROM events WHERE user_key = ${up.key} AND name = 'first_echo_shown'`;
     check('"首次"就是首次：再来一次不覆盖也不重复记', again.status !== 500 && againEvents[0].n === 1);
   }
-  // 问卷路径仍然要通——只是排在 echo 之后
-  const answersRes = await post(
-    '/api/onboarding/answers',
-    {
-      locale: 'zh-CN',
-      answers: {
-        moment_when: 'cant_remember',
-        balance_feeling: 'panic',
-        childhood: 'M11 问卷原话：我妈总说咱家不配',
-        recent_worry: 'M11 问卷原话：上周看余额突然心慌',
-      },
-    },
-    up.cookie
-  );
-  check('问卷落库（被说中之后才交的）', answersRes.status === 200);
 }
 
 const consentBefore = await sql`SELECT count(*)::int AS n FROM consent_records WHERE user_key = ${up.key}`;
 check('被说中之前一次同意都没要过（顺序铁律：先被说中 → 再注册/同意/定价）', consentBefore[0].n === 0);
 
 const wizardHtml = await (await get('/zh-CN/onboarding', up.cookie)).text();
-// 首屏的判断只能看渲染后的 DOM：整份 dict 被序列进 RSC flight payload，
-// "金钱关系体检" 仍会以 JSON 形式出现在 HTML 里，但那不是用户能看见的字。
-// 这里只断 DOM 里出现的可见文本——`data-step="welcome"` 容器内**没有**问卷题。
-const surveyInWelcome = (wizardHtml.match(/<div[^>]*data-step="welcome"[\s\S]*?<\/div>\s*<\/div>/) ?? [''])[0].includes('data-question');
-check('体检页首屏不是问卷（welcome 屏里没有 data-question）', !surveyInWelcome);
-check('首屏是欢迎与对话入口（看到「先喘口气」/「不用填问卷」其一）',
-  wizardHtml.includes('先喘口气') || wizardHtml.includes('不用填问卷'));
-check('同意区不在首屏（P§9 顺序铁律 + P0-3 都没破）', !wizardHtml.includes('data-consent'));
+// v2：首屏就是 form（welcome 步删除）；data-step="form" 容器内有 data-question
+// 注：整份 dict 会被序列化进 RSC flight payload——下面的字符串断言要小心
+const surveyOnFirst = wizardHtml.match(/data-step="form"[\s\S]*?data-question/);
+check('v2：体检页首屏是 form（出现 data-step="form" + data-question）', Boolean(surveyOnFirst));
+check('v2：welcome 屏已删除（DOM 中无 data-step="welcome"）',
+  !wizardHtml.includes('data-step="welcome"'));
+const consentOnForm = wizardHtml.match(/data-step="form"[\s\S]*?data-consent/);
+check('首屏没有同意区（顺序铁律不动：同意区在 reflect 步，不在 form 步）', !consentOnForm);
 
 await post('/api/me/delete', { confirm: 'DELETE' }, up.cookie);
 

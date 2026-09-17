@@ -15,21 +15,16 @@ const check = (name, cond, detail = '') => {
   cond ? pass++ : fail++;
 };
 
-// ── 1. 体检：首屏是欢迎与对话入口，不再是 6 题问卷（P0-3）──
+// ── 1. 体检：首屏直接是 form（首启重排 v2 · 2026-09-17）──
+// v2：welcome 步彻底删除；首页按钮 → /onboarding → 直接进 form 第一题
 await page.goto(`${BASE}/zh-CN/onboarding`, { waitUntil: 'networkidle' });
-const welcomeTitle = page.locator('[data-step="welcome"]').first();
-check('体检页加载（首屏是欢迎）', await welcomeTitle.isVisible().catch(() => false));
-// 选项 P0-3 不在首屏：检查问卷整块不在 welcome 屏里
-const surveyOnFirst = await page.locator('[data-step="welcome"] [data-question]').count();
-check('首屏不出现问卷（welcome 屏里没有 data-question）', surveyOnFirst === 0, `n=${surveyOnFirst}`);
-// 进入对话：点「我在」开始
-const startBtn = page.locator('button:has-text("我在")').first();
-check('首屏有「我在」入口', (await startBtn.count()) > 0);
-if ((await startBtn.count()) > 0) {
-  await startBtn.click();
-  await page.waitForSelector('[data-step="talk"]', { timeout: 8000 });
-  check('点「我在」进入对话屏', await page.locator('[data-step="talk"]').isVisible());
-}
+const formStep = page.locator('[data-step="form"]').first();
+check('体检页加载（首屏是 form 第一题）', await formStep.isVisible().catch(() => false));
+// v2：首屏就是问卷（与 v1 相反——v1 首屏不允许出现问卷题）
+const surveyOnFirst = await page.locator('[data-step="form"] [data-question]').count();
+check('首屏是问卷题（v2：welcome 步删除，第一眼就是题）', surveyOnFirst >= 1, `n=${surveyOnFirst}`);
+const welcomeGone = (await page.locator('[data-step="welcome"]').count()) === 0;
+check('welcome 屏不再存在（v2：彻底删除）', welcomeGone);
 
 // ── 2. journey → chat CTA ──
 await page.goto(`${BASE}/zh-CN/journey`, { waitUntil: 'networkidle' });
