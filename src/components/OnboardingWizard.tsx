@@ -7,15 +7,7 @@
 // - 顺序铁律（docs/05 §7）：先被说中 → 再注册 / 同意 / 定价。同意区仍在"被说中"**之后**。
 // - 首屏不出现问卷（docs/10 §P0-3）：进页第一眼是欢迎与对话，不是 6 道题。
 //
-// Dev 快捷通道：URL 加 `?dev=portrait` 跳过 talk（6 轮对话）+ echo（再生成一遍"我听到的"），
-// 直接进 form 步（6 题问卷），用于编码侧快速测 portrait API。
-//   - skipTalk: 不显示 talk 步主按钮，welcome 步直接跳 form
-//   - goReflect 不调 LLM（sessionId=null 走早退路径，summary 留空）—— 不是 mock，是真的没有对话
-//     历史可总结；任何文字硬编码都是假数据，用户测的是 portrait API 不是 reflect
-//   - generatePortrait 仍走真实 portrait API（这就是被测目标）
-// 仅当 NEXT_PUBLIC_DEV_FAST_TRACK=1（dev/.env.local）启用，prod 默认不挂这条路径。
-import { useEffect, useRef, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRef, useState } from 'react';
 import Link from 'next/link';
 import { QUESTIONS } from '@/lib/onboarding';
 import { readSse } from '@/lib/sse-client';
@@ -48,10 +40,8 @@ export default function OnboardingWizard({ locale, dict }: Props) {
   // 画像生成失败软提示（产品口径 2026-09-17）：不向用户显示服务端报错，失败置位后在
   // reflect 步显示 o.reflect.retryHint + "再试一次"按钮（直接调 generatePortrait）
   const [portraitFailed, setPortraitFailed] = useState(false);
-  // Dev 快捷通道（?dev=portrait）：跳过 talk + echo，省 6 轮 LLM + echo 5s，
-  // 直接进 form 步走问卷 → reflect 步用 mock summary 不调 LLM → 测 portrait API
-  const searchParams = useSearchParams();
-  const devFastTrack = process.env.NEXT_PUBLIC_DEV_FAST_TRACK === '1' && searchParams.get('dev') === 'portrait';
+  // Dev 快捷通道已移除（2026-09-17）：用户指正"测的是正式系统，不是 dev 系统"。
+  // 测速慢 = 公网代理 SSE 问题，用户已用本地 IP 解决，不再需要 dev 旁路。
   // 6 轮温和收尾（产品口径 2026-09-16）：userTurns >= TALK_MAX_USER_MESSAGES 且流结束后
   // 置位 → 输入框 disabled、显示主按钮"差不多了，去看看 →"；不走生硬跳转。
   const [talkFinished, setTalkFinished] = useState(false);
@@ -76,10 +66,6 @@ export default function OnboardingWizard({ locale, dict }: Props) {
   // 多 provider 切换提示（已显示文本不回收；每轮重置）
   const [switchedHint, setSwitchedHint] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
-  // Dev 快捷通道：挂载后直接进 form 步，跳过 welcome + talk + echo
-  useEffect(() => {
-    if (devFastTrack) setStep('form');
-  }, [devFastTrack]);
   // 首次"说中了"耗时的起点：进到这个页面的那一刻（指标见 docs/05 §7）。
   // 首启重排后起点仍是落地那一刻——欢迎屏、对话、问卷都算在这 3 分钟里，
   // 所以问卷必须排在"被说中"之后（否则它会把这一句顶出 3 分钟）。
@@ -87,8 +73,7 @@ export default function OnboardingWizard({ locale, dict }: Props) {
 
   const o = dict.onboarding;
   const userTurns = turns.filter((t) => t.role === 'user').length;
-  // Dev 快捷通道：跳过 talk → userTurns=0；没有 talk 历史可参考，直接放行 portrait
-  const canGenerate = devFastTrack || userTurns >= 3;
+  const canGenerate = userTurns >= 3;
   // 派生：userTurns 达到服务端上限即视为聊够了（不依赖服务端 wrap 事件；
   // onboarding 路径服务端不发 wrap，前端数满即视为温和收尾时机）
   // 6 是与 src/lib/chat.ts:22 TALK_MAX_USER_MESSAGES 镜像的 UI 上限
@@ -356,7 +341,7 @@ export default function OnboardingWizard({ locale, dict }: Props) {
         <p className="mt-4 text-sm leading-relaxed text-ink-soft">{o.welcome.sub}</p>
         <button
           type="button"
-          onClick={devFastTrack ? goForm : goTalk}
+          onClick={goTalk}
           className="mt-10 self-start rounded-full bg-accent px-8 py-3 text-base text-paper transition-opacity hover:opacity-90"
         >
           {o.welcome.start}
