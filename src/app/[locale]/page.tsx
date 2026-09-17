@@ -1,14 +1,14 @@
 // /[locale]：落地页。
 //
-// 四态分支（用户 2026-09-14 拍板）：
+// 四态分支（用户 2026-09-17 拍板·v2）：
 // - 已登录 + 有画像 → redirect 到旅程页（按 ui_version 分流）
 // - 已登录 + 无画像 → redirect 到 onboarding
-// - 访客   + 有画像 → 钩子 + "看你的画像" CTA + "登录 / 注册" CTA
-// - 访客   + 无画像 → 钩子 + "看看你和钱的关系" CTA + "登录 / 注册" CTA
+// - 访客   + 有画像 → 钩子 + "看你的画像" CTA → /portrait + "登录 / 注册" CTA
+// - 访客   + 无画像 → 钩子 + "看看我和金钱的关系" CTA → /onboarding（直接 form 第一题，无中间页）
+//                   + "登录 / 注册" CTA
 //
 // 钩子 + 双 CTA：访客进来第一眼不是营销页——是一句引起兴趣的话 + 两个动作。
-// ctaTest 按钮在新流程（2026-09-17 首启重排 v2）下 → /onboarding 直接进 form 第一题
-// （无 welcome 步、无中间页），文案"看看我和金钱的关系"见 dict.landing.ctaTest。
+// 访客+无画像的 ctaTest 在 v2 下 → /onboarding 直接进 form 第一题（无 welcome 步、无中间页）。
 import { headers, cookies } from 'next/headers';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
@@ -53,6 +53,7 @@ export default async function LandingPage({ params }: { params: Promise<{ locale
   }
 
   // 访客态：钩子 + 双 CTA
+  // v2：访客+有画像 CTA 文案"看你的画像" → /portrait（看已有画像）；访客+无画像 CTA "看看我和金钱的关系" → /onboarding（直接 form 第一题，无中间页）
   const primaryHref = hasPortrait ? `/${locale}/portrait` : `/${locale}/onboarding`;
   const primaryLabel = hasPortrait ? dict.landing.ctaPortrait : dict.landing.ctaTest;
   const signInHref = `/${locale}/login?next=${encodeURIComponent(primaryHref)}`;
