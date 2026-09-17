@@ -86,7 +86,8 @@ export default function OnboardingWizard({ locale, dict }: Props) {
 
   const o = dict.onboarding;
   const userTurns = turns.filter((t) => t.role === 'user').length;
-  const canGenerate = userTurns >= 3;
+  // Dev 快捷通道：跳过 talk → userTurns=0；没有 talk 历史可参考，直接放行 portrait
+  const canGenerate = devFastTrack || userTurns >= 3;
   // 派生：userTurns 达到服务端上限即视为聊够了（不依赖服务端 wrap 事件；
   // onboarding 路径服务端不发 wrap，前端数满即视为温和收尾时机）
   // 6 是与 src/lib/chat.ts:22 TALK_MAX_USER_MESSAGES 镜像的 UI 上限
