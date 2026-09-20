@@ -84,8 +84,10 @@ export default async function journeyPage({
     }
   }
 
-  const exercise = pickExercise(locale, today, stage, identity.key);
-  const stages = getJourneyStages(locale);
+  // 微行动与段结构同样按当前书取（2026-09-20 修复：此前漏传 bookId，
+  // 练习与段永远取第一本书——pickDaily 在 :77 已传，这两处是遗漏）
+  const exercise = pickExercise(locale, today, stage, identity.key, bookId);
+  const stages = getJourneyStages(locale, bookId);
   const stageContent = stages.find((s) => s.id === stage) ?? null;
   const letterCount = profile?.letters.length ?? 0;
 
