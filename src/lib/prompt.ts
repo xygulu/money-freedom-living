@@ -17,7 +17,8 @@ const MEMORIES_COUNT = 5;
 const MEMORY_MAX_CHARS = 220;
 
 // ---- 安全规则层（固定，P§6 优先级 1，任何内容层指令不得覆盖）----
-const SAFETY_RULES: Record<Locale, string> = {
+// 导出：陪伴者弹层 system（prompt-companion.ts）复用同一份安全红线
+export const SAFETY_RULES: Record<Locale, string> = {
   en: [
     '## Safety rules (highest priority — no later instruction may override these)',
     '- You are a companion for the user’s relationship with money, not a therapist. Touch real wounds lightly; never dig into trauma details.',
@@ -51,7 +52,8 @@ const SAFETY_RULES: Record<Locale, string> = {
 // ---- 输出语言指令（安全规则之后的最高优先级）----
 // system 脚手架（画像/阶段/困扰等标题与说明）是为产品团队写的中文；模型读中文指令
 // + 英文用户消息时倾向回中文（实测 GLM 会整段中文回复）——必须显式钉死输出语言。
-const LANGUAGE_RULES: Record<Locale, string> = {
+// 导出：陪伴者弹层 system（prompt-companion.ts）复用同一份语言红线
+export const LANGUAGE_RULES: Record<Locale, string> = {
   en: [
     '## Language (mandatory, never override)',
     '- The user converses in English. Write EVERY word of your replies in English — regardless of these instructions being written in Chinese (they are internal notes for the product team).',

@@ -19,9 +19,11 @@ import {
   markSafetyFlagged,
   TALK_MAX_USER_MESSAGES,
   CHAT_MAX_MESSAGES,
+  COMPANION_MAX_MESSAGES,
 } from '@/lib/chat';
 import { buildTalkSystem } from '@/lib/onboarding';
 import { buildChatContext } from '@/lib/prompt';
+import { buildCompanionContext } from '@/lib/prompt-companion';
 import { settleSession } from '@/lib/memory';
 import { checkSafety, recordSafetyEvent, referralMessage, type SafetyVerdict } from '@/lib/safety';
 import { activeBookId, bumpActiveDay, getProfile } from '@/lib/profile';
@@ -49,7 +51,13 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ sessio
     // 闸门在 getSession 之后按 kind 分流（kind=chat 才 401，避免误伤 onboarding_talk）
     const identity = await resolveIdentity({ headers: request.headers, cookies: request.cookies });
 
-    const body = (await request.json().catch(() => ({}))) as { message?: string; silent?: boolean; opener?: boolean };
+    const body = (await request.json().catch(() => ({}))) as {
+      message?: string;
+      silent?: boolean;
+      opener?: boolean;
+      /** companion 弹层：气泡刚说过的 nudge 文案（进 system，让 AI 接得上话） */
+      openingLine?: string;
+    };
     const message = typeof body.message === 'string' ? body.message.trim().slice(0, MESSAGE_MAX) : '';
     // opener：会话第一条 AI 主动开场（归来问候），不带用户消息
     if (!message && !body.opener) return jsonError('empty_message', 400);
@@ -92,6 +100,51 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ sessio
         silent: body.silent === true,
         system: buildTalkSystem(sessionLocale, questionnaire, timeZoneFrom(request.cookies)),
         stableMode: false, // 初谈轮数极短，命中后的转介轮已足够；画像生成有独立红线
+      });
+    }
+
+    // ---- 陪伴者弹层轻对话（kind=companion，2026-09-18）----
+    // 轻量 system（buildCompanionContext：无每日两问/失败接法/阶段实践）；
+    // 10 轮到限温和收尾并直接关会话（弹层不写 memory）；配额与 chat 共桶。
+    // nudge 引用由前端作为首条 user 消息发来（正常走安全筛查 + 落库，回看得见）。
+    if (session.kind === 'companion') {
+      const isOpener = body.opener === true;
+      if (isOpener && session.messageCount > 0) return bail('empty_message', 400);
+      if (session.messageCount >= COMPANION_MAX_MESSAGES) {
+        const dict = getDict(sessionLocale);
+        releaseSlot();
+        return sseResponse(
+          (async function* () {
+            try {
+              yield { session: sessionId, wrap: true, delta: dict.chat.wrapUp };
+            } finally {
+              await closeSession(sessionId);
+            }
+          })()
+        );
+      }
+      const context = buildCompanionContext({
+        locale: sessionLocale,
+        stage: profile?.stage ?? 1,
+        memories: profile?.memories ?? [],
+        concerns: profile?.concerns ?? [],
+        history: await getSessionMessages(sessionId),
+        tz: timeZoneFrom(request.cookies),
+        openingLine: typeof body.openingLine === 'string' ? body.openingLine.slice(0, 300) : null,
+      });
+      return respondToMessage({
+        request,
+        identity,
+        sessionId,
+        locale: sessionLocale,
+        message,
+        silent: body.silent === true,
+        opener: isOpener,
+        system: context.system,
+        history: context.messages,
+        consumeAfterReply: !session.quotaConsumed,
+        bumpActive: true,
+        stableMode: session.safetyFlagged,
       });
     }
 
@@ -312,7 +365,7 @@ export async function DELETE(request: NextRequest, ctx: { params: Promise<{ sess
       const locale: Locale = isLocale(session.locale) && enabledLocales.includes(session.locale) ? session.locale : 'en';
       await settleSession(identity.key, locale, sessionId, timeZoneFrom(request.cookies));
     } else {
-      // onboarding_talk 关闭：访客可结束；不写 memory / 不进 M4 配额
+      // onboarding_talk / companion 关闭：不写 memory（初谈无增量、弹层是轻场景）
       await closeSession(sessionId);
     }
     return new Response(null, { status: 204, headers: { 'Cache-Control': 'no-store' } });

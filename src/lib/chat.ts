@@ -1,9 +1,10 @@
 // 对话会话存取（chat_sessions / chat_messages）。
 // kind: 'onboarding_talk'（体检初谈）| 'chat'（正式对话，M4 接配额落账）
+//       | 'companion'（陪伴者弹层轻对话，2026-09-18；与 chat 共享配额桶，不写 memory）
 import { randomUUID } from 'crypto';
 import { ensureSchema, execWithFailover, iso } from '@/lib/db';
 
-export type SessionKind = 'onboarding_talk' | 'chat';
+export type SessionKind = 'onboarding_talk' | 'chat' | 'companion';
 
 export interface ChatSession {
   id: string;
@@ -23,6 +24,9 @@ export const TALK_MAX_USER_MESSAGES = 6;
 
 /** 正式对话轮数上限：20 轮 = 40 条消息（用户+AI），到限温和收尾（P§7"1 次 = 一次对话会话"） */
 export const CHAT_MAX_MESSAGES = 40;
+
+/** 陪伴者弹层轻对话上限：10 轮 = 20 条消息——弹层是"顺便说一句"的轻场景，比 /chat 短 */
+export const COMPANION_MAX_MESSAGES = 20;
 
 function rowToSession(row: Record<string, unknown>): ChatSession {
   return {
@@ -72,6 +76,67 @@ export async function findOpenChatSession(userKey: string): Promise<ChatSession 
         ORDER BY created_at DESC LIMIT 1`
   );
   return rows[0] ? rowToSession(rows[0]) : null;
+}
+
+/** 用户当前打开的陪伴者弹层会话（与 open chat 互不影响——两类各持一个同时 open） */
+export async function findOpenCompanionSession(userKey: string): Promise<ChatSession | null> {
+  await ensureSchema();
+  const rows = await execWithFailover((sql) =>
+    sql`SELECT id, user_key, locale, kind, message_count, quota_consumed, safety_flagged, status, closed_at, created_at
+        FROM chat_sessions
+        WHERE user_key = ${userKey} AND kind = 'companion' AND status = 'open'
+        ORDER BY created_at DESC LIMIT 1`
+  );
+  return rows[0] ? rowToSession(rows[0]) : null;
+}
+
+/**
+ * 弹层「上次说到这儿」：最近 N 个会话（kind ∈ chat/companion，排除体检初谈）
+ * 的完整消息，按 COALESCE(closed_at, created_at) 倒序。closed 全收；
+ * **open 的 companion 会话也收**——弹层复用 open 会话续聊时需要它的消息
+ * （open 的 chat 会话不收，那是 /chat 页的活会话，弹层不掺和）。
+ * N 由调用方 clamp（[1,20]）。
+ */
+export interface RecentSessionBundle {
+  id: string;
+  kind: SessionKind;
+  status: string;
+  closedAt: string | null;
+  createdAt: string;
+  messages: ChatTurn[];
+}
+
+export async function findUserRecentSessions(userKey: string, limit: number): Promise<RecentSessionBundle[]> {
+  await ensureSchema();
+  const sessionRows = await execWithFailover((sql) =>
+    sql`SELECT id, kind, status, closed_at, created_at
+        FROM chat_sessions
+        WHERE user_key = ${userKey}
+          AND kind IN ('chat', 'companion')
+          AND (status = 'closed' OR (kind = 'companion' AND status = 'open'))
+        ORDER BY COALESCE(closed_at, created_at) DESC
+        LIMIT ${limit}`
+  );
+  if (sessionRows.length === 0) return [];
+  const ids = sessionRows.map((r) => r.id as string);
+  // Postgres 数组字面量 + 显式 cast（与 profile.ts 的 ${JSON.stringify(...)}::jsonb 同一惯用法；
+  // id 来自本表 UUID 行，仍防御性剥掉引号/反斜杠）
+  const idArrayLiteral = `{${ids.map((id) => `"${id.replace(/["\\]/g, '')}"`).join(',')}}`;
+  const messageRows = await execWithFailover((sql) =>
+    sql`SELECT session_id, role, content FROM chat_messages
+        WHERE session_id = ANY(${idArrayLiteral}::uuid[])
+        ORDER BY session_id, id`
+  );
+  return sessionRows.map((s) => ({
+    id: s.id as string,
+    kind: s.kind as SessionKind,
+    status: s.status as string,
+    closedAt: s.closed_at ? iso(s.closed_at) : null,
+    createdAt: iso(s.created_at),
+    messages: messageRows
+      .filter((m) => m.session_id === s.id)
+      .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content as string })),
+  }));
 }
 
 /**

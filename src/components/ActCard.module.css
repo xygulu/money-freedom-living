@@ -34,6 +34,13 @@
   line-height: 1.7;
 }
 
+/* 书写位（2026-09-18）：练习文本下的常驻输入框——"写下一条…"这类练习的落笔处。
+   textarea 本体复用 .commitTextarea（block + width:100%，与卡片满宽对齐）；
+   这里不设 margin——交给 .card 的 flex gap 做上下等距。 */
+.writeWrap {
+  margin: 0;
+}
+
 .choices {
   display: flex;
   flex-wrap: wrap;
@@ -108,6 +115,7 @@
 }
 
 .sheet {
+  position: relative;
   width: min(420px, 100vw);
   max-height: 80vh;
   overflow-y: auto;
@@ -119,6 +127,48 @@
   display: flex;
   flex-direction: column;
   gap: 18px;
+}
+
+/* 标题行：与陪伴者弹层（CompanionChat header）同款——
+   标题左（16px medium）、关闭钮右（24px），同行居中 + 分隔线。
+   nowrap + margin-left:auto + flex-shrink:0 三重保险，结构上不可能换行。 */
+.sheetHead {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--scene-line);
+  padding-bottom: 10px;
+}
+
+.sheetTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: 0.025em;
+  color: var(--scene-ink);
+  min-width: 0;
+}
+
+.sheetClose {
+  flex-shrink: 0;
+  margin-left: auto;
+  white-space: nowrap;
+  appearance: none;
+  background: none;
+  border: 0;
+  /* × 字形与 CompanionChat .close 完全同源：显式同一字体栈（见彼处注释） */
+  font-family: var(--scene-font, -apple-system, sans-serif);
+  font-size: 24px;
+  font-weight: 400;
+  line-height: 1;
+  color: var(--scene-soft);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+.sheetClose:hover {
+  color: var(--scene-ink);
 }
 
 .commitGroup {
@@ -145,6 +195,8 @@
 
 .commitTextarea {
   appearance: none;
+  display: block;
+  width: 100%;
   border: 1px solid var(--scene-line);
   background: var(--scene-surface);
   color: var(--scene-ink);
@@ -199,7 +251,7 @@
 .commitFooter {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 12px;
   margin-top: 6px;
 }
@@ -225,18 +277,6 @@
 .submit:disabled {
   opacity: 0.4;
   cursor: not-allowed;
-}
-
-.cancel {
-  appearance: none;
-  background: none;
-  border: 0;
-  font: inherit;
-  font-size: 22px;
-  line-height: 1;
-  color: var(--scene-soft);
-  cursor: pointer;
-  padding: 4px 8px;
 }
 
 .error {

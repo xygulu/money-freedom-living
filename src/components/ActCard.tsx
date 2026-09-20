@@ -14,6 +14,13 @@
 //   did: 'done' | 'partial' | 'missed'
 //   thought: commitSheet ②
 //   firstLine: commitSheet ③（用户首句；firstLineSkipped=true 表示留空）
+//
+// 2026-09-18 书写位（用户反馈："这里说写一条 xxx，但是用户在哪里写呢"）：
+// 练习是"写下/试着改成…"这类动作，但卡片上只有 做了/换一个/跳过 三个按钮，
+// 没有写的地方。现已在练习文本下常驻一个书写框——写完点「做了」，commitSheet ③
+// 自动带入写的内容（可改），落库走既有 firstLine 通道（threads[].evidence 原话 +
+// L5 分类 + 回执引用），/api/journey/close 契约零改动。产品由此拿到"真做了"的
+// 行为证据（写了 = 灯有记录可依，M10 行为证据硬闸）。
 import { useState } from 'react';
 import type { Dict } from '@/i18n/get-dict';
 import styles from './ActCard.module.css';
@@ -44,6 +51,7 @@ export default function ActCard({ locale, dict, exercise, onSubmitted }: Props) 
   const [thought, setThought] = useState('');
   const [firstLine, setFirstLine] = useState('');
   const [firstLineSkipped, setFirstLineSkipped] = useState(false);
+  const [actWrite, setActWrite] = useState('');
   const [state, setState] = useState<'idle' | 'saving' | 'error'>('idle');
 
   const choices: { value: ActPick; label: string }[] = [
@@ -59,7 +67,8 @@ export default function ActCard({ locale, dict, exercise, onSubmitted }: Props) 
       setShowCommit(true);
       setDid(null);
       setThought('');
-      setFirstLine('');
+      // 书写位已写的内容带入 ③（可改可留空跳过）——用户在卡片上写的字不丢
+      setFirstLine(actWrite.trim());
       setFirstLineSkipped(false);
     }
     // swap / skip 不弹 commitSheet —— ActCard 内文本/折叠各自处理
@@ -131,6 +140,20 @@ export default function ActCard({ locale, dict, exercise, onSubmitted }: Props) 
         )}
         {actNote && <p className={styles.actNote}>{actNote}</p>}
 
+        {/* 书写位（2026-09-18）：练习若要写（写下一条"必须"…），写在这里。
+            点「做了」时内容自动带入 commitSheet ③ 落证据；不写直接点也行。 */}
+        <div className={styles.writeWrap}>
+          <textarea
+            value={actWrite}
+            onChange={(e) => setActWrite(e.target.value)}
+            maxLength={300}
+            placeholder={t.actWritePlaceholder}
+            className={styles.commitTextarea}
+            data-act-write=""
+            aria-label={t.actWritePlaceholder}
+          />
+        </div>
+
         <fieldset className={styles.choices}>
           <legend className={styles.srOnly}>{t.actEyebrow}</legend>
           {choices.map((c) => (
@@ -152,9 +175,27 @@ export default function ActCard({ locale, dict, exercise, onSubmitted }: Props) 
       {showCommit && (
         <div className={styles.scrim} role="dialog" aria-modal="true" aria-label={t.commitEyebrow} data-commit-sheet>
           <div className={styles.sheet}>
-            <p className={styles.eyebrow}>{t.commitEyebrow}</p>
+            {/* 标题行：与陪伴者弹层同款——标题左（16px medium）、关闭钮右（24px），同行居中 + 分隔线 */}
+            <div className={styles.sheetHead}>
+              <p className={styles.sheetTitle}>{t.commitEyebrow}</p>
+              <button
+                type="button"
+                className={styles.sheetClose}
+                aria-label="关闭"
+                onClick={() => {
+                  setShowCommit(false);
+                  setPick(null);
+                }}
+                data-commit-close
+              >
+                ×
+              </button>
+            </div>
 
-            {/* ① 我做了吗 */}
+            {/* 叙述顺序（2026-09-18 重排，用户反馈"1/2/3 的逻辑搞不懂"）：
+                ① 做了吗 → ② 写下的那句（卡片书写框自动带入，连接可见）→ ③ 还想到什么。
+                字段通道不变（thought / firstLine），只动 UI 顺序与标签。 */}
+            {/* ① 我做了 */}
             <fieldset className={styles.commitGroup}>
               <legend className={styles.commitQ}>{t.commitQ1}</legend>
               <div className={styles.commitOpts}>
@@ -175,25 +216,10 @@ export default function ActCard({ locale, dict, exercise, onSubmitted }: Props) 
               </div>
             </fieldset>
 
-            {/* ② 我留意到 */}
-            <div className={styles.commitGroup}>
-              <label htmlFor="commit-thought" className={styles.commitQ}>
-                {t.commitQ2}
-              </label>
-              <textarea
-                id="commit-thought"
-                value={thought}
-                onChange={(e) => setThought(e.target.value)}
-                maxLength={300}
-                placeholder={t.commitQ2Placeholder}
-                className={styles.commitTextarea}
-              />
-            </div>
-
-            {/* ③ 第一句话 */}
+            {/* ② 我写下的（= 卡片书写框带入的那句；跳过也行） */}
             <div className={styles.commitGroup}>
               <label htmlFor="commit-firstline" className={styles.commitQ}>
-                {t.commitQ3}
+                {t.commitQ2}
               </label>
               <textarea
                 id="commit-firstline"
@@ -203,7 +229,7 @@ export default function ActCard({ locale, dict, exercise, onSubmitted }: Props) 
                   if (firstLineSkipped) setFirstLineSkipped(false);
                 }}
                 maxLength={300}
-                placeholder={t.commitQ3Placeholder}
+                placeholder={t.commitQ2Placeholder}
                 disabled={firstLineSkipped}
                 className={styles.commitTextarea}
               />
@@ -217,9 +243,24 @@ export default function ActCard({ locale, dict, exercise, onSubmitted }: Props) 
                   className={styles.cantRecall}
                   data-cant-recall={firstLineSkipped}
                 >
-                  {firstLineSkipped ? '✓ ' : ''}{t.commitQ3Hint}
+                  {firstLineSkipped ? '✓ ' : ''}{t.commitWrittenHint}
                 </button>
               </div>
+            </div>
+
+            {/* ③ 我想到 */}
+            <div className={styles.commitGroup}>
+              <label htmlFor="commit-thought" className={styles.commitQ}>
+                {t.commitQ3}
+              </label>
+              <textarea
+                id="commit-thought"
+                value={thought}
+                onChange={(e) => setThought(e.target.value)}
+                maxLength={300}
+                placeholder={t.commitQ3Placeholder}
+                className={styles.commitTextarea}
+              />
             </div>
 
             <p className={styles.commitHint}>{t.commitAllEmptyHint}</p>
@@ -233,16 +274,6 @@ export default function ActCard({ locale, dict, exercise, onSubmitted }: Props) 
                 data-commit-submit
               >
                 {state === 'saving' ? '…' : t.commitSubmit}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowCommit(false);
-                  setPick(null);
-                }}
-                className={styles.cancel}
-              >
-                ×
               </button>
             </div>
             {state === 'error' && <p className={styles.error}>这一格没交上。再试一次。</p>}

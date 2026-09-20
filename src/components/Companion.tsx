@@ -7,6 +7,10 @@
 //   静 = 默认（box-shadow 三层 + accent glow）
 //   晃 = nudge 触发（1.2s ease-in-out × 2，不重复）
 //   开 = 点开后弹层（CompanionChat）
+// - 2026-09-18 行为调整（docs/03 §11）：陪伴者气泡点开**优先**导航到
+//   /chat?start=1&door=1&quote=<urlencoded nudge.text>——把"想说的那句话"接进
+//   对话里（用户原话："点击了之后这句话就看不见了…能不能放到对话里"）。
+//   fallback 文案（source==='fallback'）走老路径：弹 CompanionChat 弹层。
 // - nudge：组件 mount 时 fetch /api/companion/nudge 一次，命中即触发晃 + 写 seen cookie
 //   频次闸：24h 内不重（cookie `mfl_nudge_seen`，document.cookie 写读）
 // - 递归防呆：/chat 路由内 display:none（layout 端 + 本组件 usePathname 双保险）
@@ -16,12 +20,14 @@
 // - 加 <span className="pulse"> 元素（呼吸圈），box-shadow 三层顺序照原型 line 99-112。
 // - 接收 todayStepDone：true 且 nudge 命中时，弹层切 hintToday 模式（§6 唯一例外）。
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import CompanionChat, { type CompanionChatMode } from '@/components/CompanionChat';
 import type { Dict } from '@/i18n/get-dict';
 import styles from './Companion.module.css';
 
 const NUDGE_SEEN_COOKIE = 'mfl_nudge_seen';
+// 弹层历史不再走 localStorage 缓存（2026-09-18 撤销）：缓存让重开弹窗看到旧数据、
+// 缺刚聊的内容（用户反馈）。弹层自己每次打开拉 /api/chat/recent，正确性优先。
 
 function readNudgeSeen(): boolean {
   if (typeof document === 'undefined') return false;
@@ -51,6 +57,7 @@ interface Props {
 
 export default function Companion({ todayStepDone = false, dict }: Props) {
   const pathname = usePathname() ?? '';
+  const router = useRouter();
 
   // 递归防呆：chat 路由内不挂载（CompanionChat 走自己的状态）
   const inChatRoute = pathname.endsWith('/chat') || pathname.includes('/chat/');
@@ -101,6 +108,24 @@ export default function Companion({ todayStepDone = false, dict }: Props) {
   const chatMode: CompanionChatMode =
     !todayStepDone && nudge && nudge.source !== 'fallback' ? 'hintToday' : 'presence';
 
+  // 2026-09-18 留痕（docs/03 §11）：陪伴者气泡点击改成导航到 /chat?start=1&door=1&quote=<nudge>。
+  // 用户原话："点击了之后这句话就看不见了，能不能放到对话里，不然用户想要再看到它就不可能了"。
+  // - ?start=1 让 ChatView 落地即开聊（不要求第二次点击）
+  // - ?door=1 让 /chat 顶部显示 CompanionDoor banner（"你刚说的：…"，或 fallback 文案）
+  // - ?quote=<urlencoded nudge.text> 同时落到对话历史里 + 给 AI opener 做素材。
+  // 落地后 bubble 消失是合理的——用户已经接到这句话并进了对话；24h cookie 闸保留，
+  // 避免回 /journey-new 又立刻被晃回去再次点。
+  const hasQuote = Boolean(nudge && nudge.text && nudge.text.trim().length > 0);
+  const handleBallClick = useCallback(() => {
+    if (hasQuote) {
+      const locale = pathname.split('/')[1] || 'zh-CN';
+      const url = `/${locale}/chat?start=1&door=1&quote=${encodeURIComponent(nudge!.text)}`;
+      router.push(url);
+      return;
+    }
+    setOpen((v) => !v);
+  }, [hasQuote, nudge, pathname, router]);
+
   return (
     <>
       <div
@@ -119,7 +144,7 @@ export default function Companion({ todayStepDone = false, dict }: Props) {
           className={styles.ball}
           aria-label={dict.companion.aria}
           aria-expanded={open}
-          onClick={() => setOpen((v) => !v)}
+          onClick={handleBallClick}
         >
           {/* 呼吸圈：breathe 动画，layer 在 SVG 下 */}
           <span className={styles.pulse} aria-hidden="true" />
@@ -144,6 +169,7 @@ export default function Companion({ todayStepDone = false, dict }: Props) {
       {open && (
         <CompanionChat
           onClose={() => setOpen(false)}
+          locale={pathname.split('/')[1] || 'zh-CN'}
           dictNudge={nudge?.text ?? null}
           mode={chatMode}
           dict={dict}

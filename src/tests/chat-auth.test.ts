@@ -63,6 +63,22 @@ describe('gateSessionChat：M4 正式对话要登录', () => {
   });
 });
 
+describe('gateSessionChat：companion 弹层（2026-09-18）', () => {
+  it('kind=companion + 访客 → 401（球挂在 /journey-new，访客本就被 layout 闸挡住；防御兜底）', async () => {
+    const r = gateSessionChat({ session: baseSession({ kind: 'companion' }), identity: guest() });
+    expect(r.ok).toBe(false);
+    if (r.ok) throw new Error('unreachable');
+    expect(r.response.status).toBe(401);
+    const body = (await r.response.json()) as { error: string; reason: string };
+    expect(body.reason).toBe('signed_in_required');
+  });
+
+  it('kind=companion + 已登录 → 放行', () => {
+    const r = gateSessionChat({ session: baseSession({ kind: 'companion' }), identity: signedIn() });
+    expect(r.ok).toBe(true);
+  });
+});
+
 describe('gateSessionChat：boundary', () => {
   it('不抛错（纯函数，session / identity 字段不被改）', () => {
     const session = baseSession({ kind: 'onboarding_talk', messageCount: 3 });
@@ -71,5 +87,13 @@ describe('gateSessionChat：boundary', () => {
     expect(r.ok).toBe(true);
     expect(session.messageCount).toBe(3);
     expect(identity.userId).toBeNull();
+  });
+
+  it('默认收紧：未知 kind（防御性强转）+ 访客 → 401（未来新增 kind 忘写鉴权也不放行）', async () => {
+    const session = baseSession({ kind: 'future_kind' as never });
+    const r = gateSessionChat({ session, identity: guest() });
+    expect(r.ok).toBe(false);
+    if (r.ok) throw new Error('unreachable');
+    expect(r.response.status).toBe(401);
   });
 });

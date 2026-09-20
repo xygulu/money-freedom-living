@@ -4,7 +4,7 @@
 // 摘要只入 memories（可滚动），pinned 是结构化字段永不参与滚动合并。
 import { llmCompleteJson } from '@/lib/llm';
 import { appendMemories, addPinned, ensureProfile, type SessionMemory } from '@/lib/profile';
-import { getSessionMessages, claimSession } from '@/lib/chat';
+import { getSession, getSessionMessages, claimSession, closeSession } from '@/lib/chat';
 import { todayIn } from '@/lib/time';
 import type { Locale } from '@/i18n/config';
 
@@ -77,6 +77,13 @@ export async function buildSessionDigest(locale: Locale, turns: { role: string; 
  * 对话本身就是建档动作：没有档案行先建（appendMemories 才有落点）。
  */
 export async function settleSession(userKey: string, locale: Locale, sessionId: string, tz: string): Promise<void> {
+  // 陪伴者弹层会话不写 memory（2026-09-18）：弹层是"顺便说一句"的轻场景，
+  // 摘要没有增量信息（opener 已带 quote 入场）；只关会话，不产摘要。
+  const session = await getSession(sessionId);
+  if (session?.kind === 'companion') {
+    await closeSession(sessionId);
+    return;
+  }
   if (!(await claimSession(sessionId))) return;
   const turns = await getSessionMessages(sessionId);
   const digest = await buildSessionDigest(locale, turns);

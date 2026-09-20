@@ -1,3 +1,8 @@
+/* 弹层只保留结构壳（遮罩/面板/关闭钮）；对话气泡、输入框、按钮的样式
+   一律用与 ChatView（/chat）相同的 Tailwind 类，保证"展示的形式统一"
+   （用户 2026-09-18 反馈：弹层字体/样式和其他地方不一致）。
+   颜色走全局 token（--paper/--line/--ink-soft…），不再走 scene-* 主题变量。 */
+
 .scrim {
   position: fixed;
   inset: 0;
@@ -16,142 +21,37 @@
 
 .panel {
   width: min(420px, 100vw);
-  height: min(520px, 78vh);
-  background: var(--scene-bg);
+  height: min(540px, 82vh);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-bottom: none;
   border-top-left-radius: 18px;
   border-top-right-radius: 18px;
   display: flex;
   flex-direction: column;
-  padding: 16px 18px 18px;
+  padding: 16px 18px 14px;
   box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.12);
-  font-family: var(--scene-font);
+  /* 字体与旅程页卡片（DailyCardNew/MirrorCard/ActCard）同一声明：
+     scene-serif 宋体栈——弹层漂浮在旅程页上，跟它脚下的页面一致
+     （用户 2026-09-18 二次反馈"字体仍然和产品其他页面的字体不一致"：
+      body 的 Georgia 栈与卡片场景 serif 栈是两个不同栈，须用卡片那个） */
+  font-family: var(--scene-serif, var(--scene-font));
 }
-
-.header {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  border-bottom: 1px solid var(--scene-line);
-  padding-bottom: 10px;
-}
-
-.titleWrap {
-  flex: 1;
-  min-width: 0;
-}
-
-.title {
-  font-size: 16px;
-  font-weight: 500;
-  color: var(--scene-ink);
-  letter-spacing: 0.04em;
-}
-
-.sub {
-  margin: 4px 0 0;
-  font-size: 13px;
-  color: var(--scene-soft);
-  line-height: 1.6;
-}
-
-.dots {
-  appearance: none;
-  background: none;
-  border: none;
-  font-size: 22px;
-  line-height: 1;
-  padding: 4px 8px;
-  color: var(--scene-soft);
-  cursor: pointer;
-  border-radius: 6px;
-}
-.dots:hover { color: var(--scene-ink); }
 
 .close {
   appearance: none;
   background: none;
   border: none;
+  /* × 字形与 ActCard .sheetClose 完全同源：显式锁同一字体栈——
+     按钮缺省用 UA 自带字体，另一弹层是继承的衬线字体，度量不同，
+     同为 24px 视觉大小也不一样（用户 2026-09-18 反馈） */
+  font-family: var(--scene-font, -apple-system, sans-serif);
   font-size: 24px;
+  font-weight: 400;
   line-height: 1;
   padding: 4px 8px;
-  color: var(--scene-soft);
+  color: var(--ink-soft);
   cursor: pointer;
   border-radius: 6px;
 }
-.close:hover { color: var(--scene-ink); }
-
-.body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 18px 4px;
-}
-
-.empty {
-  color: var(--scene-soft);
-  font-size: 14px;
-  line-height: 1.7;
-  text-align: center;
-  padding: 60px 20px;
-}
-
-.bubbleCompanion {
-  background: var(--scene-surface);
-  color: var(--scene-ink);
-  padding: 12px 14px;
-  border-radius: 14px;
-  border: 1px solid var(--scene-line);
-  font-size: 14px;
-  line-height: 1.7;
-  max-width: 88%;
-  white-space: pre-wrap;
-}
-
-.footer {
-  display: flex;
-  gap: 8px;
-  border-top: 1px solid var(--scene-line);
-  padding-top: 10px;
-}
-
-.input {
-  flex: 1;
-  appearance: none;
-  border: 1px solid var(--scene-line);
-  background: var(--scene-surface);
-  font: inherit;
-  font-size: 14px;
-  padding: 10px 12px;
-  border-radius: 999px;
-  color: var(--scene-ink);
-}
-
-.input:focus {
-  outline: 2px solid var(--scene-accent);
-  outline-offset: 1px;
-}
-
-.send {
-  appearance: none;
-  border: 1px solid var(--scene-ink);
-  background: var(--scene-ink);
-  color: var(--scene-bg);
-  font: inherit;
-  font-size: 13px;
-  padding: 0 18px;
-  border-radius: 999px;
-  cursor: pointer;
-}
-
-.send:disabled {
-  background: var(--scene-line);
-  color: var(--scene-soft);
-  border-color: var(--scene-line);
-  cursor: not-allowed;
-}
-
-.exitHint {
-  margin: 8px 0 0;
-  text-align: center;
-  font-size: 12px;
-  color: var(--scene-faint);
-}
+.close:hover { color: var(--ink); }

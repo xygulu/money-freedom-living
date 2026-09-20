@@ -53,13 +53,17 @@ export async function POST(request: NextRequest) {
 
     const { system, messages } = buildPortraitMessages(locale, questionnaire, chatText);
 
-    // zhipu flash 模型偶发 JSON 输出格式异常（漏字段/截断）—— 3 次内通过率近 100%，
-    // 第 3 次仍败才 502。前端对应可点击'再试一次'软重试（per 产品口径 2026-09-17）
+    // zhipu flash 模型偶发 JSON 输出格式异常（漏字段/截断）—— 5 次内通过率近 100%，
+    // 第 5 次仍败才 502。前端对应可点击'再试一次'软重试（per 产品口径 2026-09-17）。
+    // 修法（2026-09-18）：3→5 retry + 500ms 步进退避——给 ProviderHealth cooldown（连续
+    // 失败 3 次进入 10s/30s/60s/300s 指数退避）留呼吸空间，避免 cooldown 期内继续打
+    // provider 直接被 filter 掉而连续失败。
     let draft: ReturnType<typeof validatePortraitDraft> = null;
-    for (let attempt = 1; attempt <= 3; attempt++) {
+    for (let attempt = 1; attempt <= 5; attempt++) {
       draft = validatePortraitDraft(await llmCompleteJson({ system, messages, maxTokens: 2000 }));
       if (draft) break;
-      console.warn(`[api/onboarding/portrait] draft invalid, attempt ${attempt}/3`);
+      console.warn(`[api/onboarding/portrait] draft invalid, attempt ${attempt}/5`);
+      if (attempt < 5) await new Promise((r) => setTimeout(r, 500 * attempt));
     }
     if (!draft) return jsonError('portrait_generation_failed', 502);
 
