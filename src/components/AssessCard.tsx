@@ -10,7 +10,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Dict } from '@/i18n/get-dict';
 import type { StageAssessment } from '@/lib/profile';
-import { DEFAULT_BOOK_ID } from '@/lib/content';
+import { DEFAULT_BOOK_ID, localizedText } from '@/lib/content';
 import { lampsFor } from '@/lib/stage';
 
 type AssessAction = 'generate' | 'confirm' | 'advance' | 'dismiss';
@@ -86,7 +86,11 @@ export default function AssessCard({
 
   // review 模式：它看到的你——位置 + 灯 + 依据 + 总结，确认才作数
   const canAdvance = pending.actualStage > stage;
-  const rules = new Map(lampsFor(bookId ?? DEFAULT_BOOK_ID, stage).map((r) => [r.kind, r.labelKey]));
+  // 灯名属于书（V0.2 B4）：从内容层灯表取，按 locale 解析（缺失回落 en，再回落 kind）
+  const lampNames = new Map(
+    lampsFor(bookId ?? DEFAULT_BOOK_ID, stage).map((r) => [r.kind, localizedText(r.label, locale, r.kind)]),
+  );
+  const lampName = (kind: string) => lampNames.get(kind) ?? kind;
 
   return (
     <div className="mt-6 border border-accent/50 bg-white/70 p-6">
@@ -101,7 +105,7 @@ export default function AssessCard({
           <li key={l.kind} className="text-sm leading-relaxed">
             {l.lit ? (
               <>
-                <span className="text-accent">● {(dict.journey as unknown as Record<string, string>)[rules.get(l.kind) ?? ''] ?? l.kind}</span>
+                <span className="text-accent">● {lampName(l.kind)}</span>
                 {l.evidence && (
                   <span className="mt-1 block text-xs leading-relaxed text-ink-soft/80">
                     {t.evidenceLead}
@@ -110,9 +114,7 @@ export default function AssessCard({
                 )}
               </>
             ) : (
-              <span className="text-ink-soft">
-                ○ {(dict.journey as unknown as Record<string, string>)[rules.get(l.kind) ?? ''] ?? l.kind}
-              </span>
+              <span className="text-ink-soft">○ {lampName(l.kind)}</span>
             )}
           </li>
         ))}

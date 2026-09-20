@@ -144,6 +144,58 @@ function validateDaily(bookId, locale) {
   return pool;
 }
 
+// ---- 灯表（V0.2 B4：灯的形状与文案属于书，docs/02 §20.2）----
+// content/books/<id>/lamps.md frontmatter stages：<段号> = 灯数组。
+// kind 是心印身份（跨书不得重复，否则旧书亮过的灯会在新书里被误点亮）；
+// label/hint 四语随书（U6：书的语汇不得留在产品层 i18n）；promptHint 是评估 LLM 的内部备注。
+function readLamps(bookId, journeyStageIds, globalKinds) {
+  const path = join(booksDir, bookId, 'lamps.md');
+  const at0 = `books/${bookId}/lamps.md`;
+  if (!existsSync(path)) {
+    fail(`${at0}: 缺灯表（B4：每本书必须自带 lamps.md，换书不改代码）`);
+    return null;
+  }
+  const { data } = matter(readFileSync(path, 'utf8'));
+  const stages = data.stages ?? {};
+  const table = {};
+  for (const [stageKey, rules] of Object.entries(stages)) {
+    const stage = Number(stageKey);
+    if (!Number.isInteger(stage) || stage < 1) {
+      fail(`${at0}: 段号必须是正整数，得到 ${stageKey}`);
+      continue;
+    }
+    if (!journeyStageIds.has(stage)) fail(`${at0}: 段 ${stage} 没有对应的 journey 内容（灯挂在段上，段必须先存在）`);
+    if (!Array.isArray(rules) || rules.length === 0) {
+      fail(`${at0}: 段 ${stage} 的灯表必须是非空数组`);
+      continue;
+    }
+    table[stage] = rules.map((r, i) => {
+      const at = `${at0} 段${stage}[${i}]`;
+      const kind = String(r.kind ?? '').trim();
+      if (!kind) fail(`${at}: 缺 kind（心印身份）`);
+      else if (globalKinds.has(kind)) fail(`${at}: kind「${kind}」跨书重复——心印按 kind 存档，重复会互相点亮`);
+      globalKinds.add(kind);
+      if (!TOPICS.includes(r.topic)) fail(`${at}: topic 必须是 ${TOPICS.join('/')}，得到 ${r.topic}`);
+      if (typeof r.needsAction !== 'boolean') fail(`${at}: needsAction 必须是布尔（这盏灯要不要真实行为证据）`);
+      if (!String(r.promptHint ?? '').trim()) fail(`${at}: 缺 promptHint（给评估 prompt 的内部备注，程度句式）`);
+      for (const field of ['label', 'hint']) {
+        for (const locale of TITLE_LOCALES) {
+          if (!String(r[field]?.[locale] ?? '').trim()) fail(`${at}: ${field} 缺 ${locale}（灯的文案四语齐，U6）`);
+        }
+      }
+      return {
+        kind,
+        topic: r.topic,
+        needsAction: Boolean(r.needsAction),
+        promptHint: String(r.promptHint ?? ''),
+        label: Object.fromEntries(TITLE_LOCALES.map((l) => [l, String(r.label?.[l] ?? '')])),
+        hint: Object.fromEntries(TITLE_LOCALES.map((l) => [l, String(r.hint?.[l] ?? '')])),
+      };
+    });
+  }
+  return table;
+}
+
 // practices 保持中文单一事实源、不分语言；frontmatter 可选 bookId（缺省归 v1 书）
 function readPractices(bookIds) {
   const dir = join(contentDir, 'practices');
@@ -195,6 +247,8 @@ if (!bookIds.includes(DEFAULT_BOOK_ID)) fail(`content/books/ 下缺默认书 ${D
 const books = [];
 const journeyByBook = {};
 const dailyByBook = {};
+const lampsByBook = {};
+const globalLampKinds = new Set(); // kind 是心印身份：跨书不得重复
 
 for (const bookId of bookIds) {
   const meta = readBookMeta(bookId);
@@ -211,6 +265,7 @@ for (const bookId of bookIds) {
       .sort((a, b) => a.id - b.id);
     dailyByBook[bookId][locale] = validateDaily(bookId, locale);
   }
+  lampsByBook[bookId] = readLamps(bookId, new Set(journeyIds.flat()), globalLampKinds);
   // 语言间结构对齐（同一本书内）：journey 阶段集合一致、一签条数一致
   if (journeyIds.length > 1 && !journeyIds.every((ids) => JSON.stringify(ids) === JSON.stringify(journeyIds[0]))) {
     fail(`books/${bookId}: 各语言 journey 阶段集合不一致: ${JSON.stringify(journeyIds)}`);
@@ -228,6 +283,7 @@ const generated = {
   books,
   journey: journeyByBook,
   daily: dailyByBook,
+  lamps: lampsByBook,
   practices: readPractices(bookIds),
   safety: safetyByLocale,
   builtAt: new Date().toISOString(),
@@ -243,7 +299,10 @@ mkdirSync(dirname(outFile), { recursive: true });
 // 去掉 builtAt 的易变秒数不利于缓存——保留完整时间戳，本文件入库后 diff 可读即可
 writeFileSync(outFile, JSON.stringify(generated, null, 2) + '\n');
 const summary = books
-  .map((b) => `${b.id}(${b.status}, journey=${journeyByBook[b.id][ENABLED_LOCALES[0]].length}, 一签 ${ENABLED_LOCALES.map((l) => `${l}=${dailyByBook[b.id][l].length}`).join(' ')})`)
+  .map((b) => {
+    const lampCount = Object.values(lampsByBook[b.id] ?? {}).reduce((n, rules) => n + rules.length, 0);
+    return `${b.id}(${b.status}, journey=${journeyByBook[b.id][ENABLED_LOCALES[0]].length}, 灯 ${lampCount}, 一签 ${ENABLED_LOCALES.map((l) => `${l}=${dailyByBook[b.id][l].length}`).join(' ')})`;
+  })
   .join(' | ');
 console.log(`内容校验通过 ✅ ${books.length} 本书：${summary}`);
 console.log(`practices=${generated.practices.length} 篇, safety=${Object.keys(safetyByLocale).length} 语言`);

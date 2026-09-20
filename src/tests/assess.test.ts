@@ -8,7 +8,8 @@ import {
   ASSESS_DISMISS_COOLDOWN_DAYS,
   ASSESS_PENDING_TTL_DAYS,
 } from '@/lib/assess';
-import { STAGE_LAMPS } from '@/lib/stage';
+import { lampsFor } from '@/lib/stage';
+import { DEFAULT_BOOK_ID } from '@/lib/content';
 import { parseAssessmentState, type GrowthProfile, type StageAssessment } from '@/lib/profile';
 import type { JourneyStage } from '@/lib/content';
 
@@ -29,7 +30,7 @@ const stageFixture = (id: number): JourneyStage => ({
 
 const draftFor = (stage: number, over: Record<string, unknown> = {}) => ({
   actualStage: stage,
-  lamps: (STAGE_LAMPS[stage] ?? []).map((r) => ({ kind: r.kind, lit: false, evidence: '' })),
+  lamps: (lampsFor(DEFAULT_BOOK_ID, stage)).map((r) => ({ kind: r.kind, lit: false, evidence: '' })),
   summary: '它看到你正站在这里，有些话开始松动了，不急，慢慢来就好。',
   diagnosis: '旧脚本让你觉得钱一动就危险，所以你先看见、先不评判，这就是位置。',
   distance: '活法还没有终点线；你已经能把感觉说出口，这是第一段路标。',
@@ -39,8 +40,8 @@ const draftFor = (stage: number, over: Record<string, unknown> = {}) => ({
 });
 
 describe('validateAssessment（结构校验：禁止半成品评估入库）', () => {
-  it('合法草稿通过；lamps 按 STAGE_LAMPS 顺序重构；assessedAt 不在返回值里（由路由填）', () => {
-    const rules = STAGE_LAMPS[1];
+  it('合法草稿通过；lamps 按灯表顺序重构；assessedAt 不在返回值里（由路由填）', () => {
+    const rules = lampsFor(DEFAULT_BOOK_ID, 1);
     const draft = {
       actualStage: 2,
       lamps: [...rules].reverse().map((r, i) => ({
@@ -78,7 +79,7 @@ describe('validateAssessment（结构校验：禁止半成品评估入库）', (
   it('程度制硬约束：本阶段灯全亮 ⇒ actualStage 必须判下一阶段（阶段完成即开启）；有灯未点亮不受限', () => {
     const allLit = (stage: number) => ({
       ...draftFor(stage),
-      lamps: (STAGE_LAMPS[stage] ?? []).map((r) => ({ kind: r.kind, lit: true, evidence: '程度达成的依据。' })),
+      lamps: (lampsFor(DEFAULT_BOOK_ID, stage)).map((r) => ({ kind: r.kind, lit: true, evidence: '程度达成的依据。' })),
     });
     // 全亮 + 停在原地 → 拒绝（不允许「程度全达成却不开下一阶段」的结论存在）
     expect(validateAssessment(allLit(1), 1, true)).toBeNull();
@@ -105,10 +106,10 @@ describe('validateAssessment（结构校验：禁止半成品评估入库）', (
 
   it('点亮必须有依据；evidence trim 后空串同样拒绝', () => {
     const noEvidence = draftFor(1);
-    noEvidence.lamps = STAGE_LAMPS[1].map((r, i) => ({ kind: r.kind, lit: i === 0, evidence: i === 0 ? '   ' : '' }));
+    noEvidence.lamps = lampsFor(DEFAULT_BOOK_ID, 1).map((r, i) => ({ kind: r.kind, lit: i === 0, evidence: i === 0 ? '   ' : '' }));
     expect(validateAssessment(noEvidence, 1, true)).toBeNull();
     const missing = draftFor(1);
-    missing.lamps = STAGE_LAMPS[1].map((r, i) => ({ kind: r.kind, lit: i === 0, evidence: undefined as unknown as string }));
+    missing.lamps = lampsFor(DEFAULT_BOOK_ID, 1).map((r, i) => ({ kind: r.kind, lit: i === 0, evidence: undefined as unknown as string }));
     expect(validateAssessment(missing, 1, true)).toBeNull();
   });
 
@@ -150,15 +151,15 @@ describe('行为证据硬闸（评估必须以真实记录为依据）', () => {
   // 阶段 2：stage2_try 需要行为证据，claim/voice 不需要（认知与话语）
   const litAll = (stage: number, actualStage: number) => ({
     ...draftFor(stage, { actualStage }),
-    lamps: (STAGE_LAMPS[stage] ?? []).map((r) => ({ kind: r.kind, lit: true, evidence: `${r.kind} 的依据` })),
+    lamps: (lampsFor(DEFAULT_BOOK_ID, stage)).map((r) => ({ kind: r.kind, lit: true, evidence: `${r.kind} 的依据` })),
   });
 
   it('标注：每盏灯都声明了要不要行为证据；需要的是「做过」类，不需要的是「看见/认领/话语」类', () => {
-    expect(STAGE_LAMPS[1].every((r) => r.needsAction === false)).toBe(true); // 阶段 1 全是认知
-    expect(STAGE_LAMPS[2].find((r) => r.kind === 'stage2_try')!.needsAction).toBe(true);
-    expect(STAGE_LAMPS[2].find((r) => r.kind === 'stage2_claim')!.needsAction).toBe(false);
-    expect(STAGE_LAMPS[2].find((r) => r.kind === 'stage2_voice')!.needsAction).toBe(false);
-    expect(STAGE_LAMPS[3].every((r) => r.needsAction === true)).toBe(true); // 阶段 3 讲的是日子里的练习
+    expect(lampsFor(DEFAULT_BOOK_ID, 1).every((r) => r.needsAction === false)).toBe(true); // 阶段 1 全是认知
+    expect(lampsFor(DEFAULT_BOOK_ID, 2).find((r) => r.kind === 'stage2_try')!.needsAction).toBe(true);
+    expect(lampsFor(DEFAULT_BOOK_ID, 2).find((r) => r.kind === 'stage2_claim')!.needsAction).toBe(false);
+    expect(lampsFor(DEFAULT_BOOK_ID, 2).find((r) => r.kind === 'stage2_voice')!.needsAction).toBe(false);
+    expect(lampsFor(DEFAULT_BOOK_ID, 3).every((r) => r.needsAction === true)).toBe(true); // 阶段 3 讲的是日子里的练习
   });
 
   it('一条记录都没有：需行为证据的灯被按灭、依据清空；认知类的灯不受影响', () => {
@@ -193,7 +194,7 @@ describe('行为证据硬闸（评估必须以真实记录为依据）', () => {
     // 阶段 2 只亮 claim（认知类）、actualStage 判在门口 = 2：没有触发闸，原样返回
     const draft = {
       ...draftFor(2, { actualStage: 2 }),
-      lamps: (STAGE_LAMPS[2] ?? []).map((r) => ({
+      lamps: (lampsFor(DEFAULT_BOOK_ID, 2) ?? []).map((r) => ({
         kind: r.kind,
         lit: r.kind === 'stage2_claim',
         evidence: r.kind === 'stage2_claim' ? '你亲口认领了那句话。' : '',
@@ -234,7 +235,7 @@ describe('行为证据硬闸（评估必须以真实记录为依据）', () => {
 
   it('阶段 1 没有需行为证据的灯：无记录也照常评估，不平白拦人', () => {
     const out = validateAssessment(
-      { ...draftFor(1, { actualStage: 2 }), lamps: STAGE_LAMPS[1].map((r) => ({ kind: r.kind, lit: true, evidence: '依据' })) },
+      { ...draftFor(1, { actualStage: 2 }), lamps: lampsFor(DEFAULT_BOOK_ID, 1).map((r) => ({ kind: r.kind, lit: true, evidence: '依据' })) },
       1,
       false
     );
@@ -276,7 +277,7 @@ describe('shouldOfferAssess（提议闸：首评/素材/天数/冷却/锁/TTL）
   });
   const pendingAssessment = (assessedAt: string): StageAssessment => ({
     actualStage: 1,
-    lamps: STAGE_LAMPS[1].map((r) => ({ kind: r.kind, lit: false, evidence: '' })),
+    lamps: lampsFor(DEFAULT_BOOK_ID, 1).map((r) => ({ kind: r.kind, lit: false, evidence: '' })),
     summary: '待确认的评估。',
     diagnosis: '待确认的评估诊断，说明为什么在这里。',
     distance: '待确认的评估距离，路标式描述。',
@@ -413,13 +414,15 @@ describe('buildAssessMessages（评估 prompt：诊断四问、红线、语言�
     expect(en).not.toContain('80-200 字，镜子式');
   });
 
-  it('标尺来自 content 原文：阶段 goal 与 advance_when、灯清单（kind + hint）都在 system', () => {
+  it('标尺来自 content 原文：阶段 goal 与 advance_when、灯清单（kind + promptHint）都在 system', () => {
     const { system } = buildAssessMessages('zh-CN', 1, [stageFixture(1), stageFixture(2)], material, { earnedKinds: [], hasActionRecord: true });
     expect(system).toContain('阶段1的样子（goal 原文）');
     expect(system).toContain('阶段2的标志一；阶段2的标志二');
-    for (const r of STAGE_LAMPS[1]) {
+    // V0.2 U6 后灯的判定备注是 promptHint（给评估 LLM 的内部中文备注）；
+    // hint 是面向用户的四语标准，随书住内容层，不再进 prompt
+    for (const r of lampsFor(DEFAULT_BOOK_ID, 1)) {
       expect(system).toContain(r.kind);
-      expect(system).toContain(r.hint);
+      expect(system).toContain(r.promptHint);
     }
     expect(system).toContain('"actualStage"');
   });
@@ -447,7 +450,7 @@ describe('buildAssessMessages（评估 prompt：诊断四问、红线、语言�
 
     const confirmed: StageAssessment = {
       actualStage: 1,
-      lamps: STAGE_LAMPS[1].map((r) => ({ kind: r.kind, lit: r.kind === 'stage1_story', evidence: 'x' })),
+      lamps: lampsFor(DEFAULT_BOOK_ID, 1).map((r) => ({ kind: r.kind, lit: r.kind === 'stage1_story', evidence: 'x' })),
       summary: '上次它看到你把故事讲了出来。',
       diagnosis: '上次它看到你的旧脚本还在拧紧。',
       distance: '上次它看到你在第一段路上。',
@@ -480,7 +483,7 @@ describe('buildAssessMessages（评估 prompt：诊断四问、红线、语言�
   it('M10 归因对照行：有 confirmed 评估时，system 提示在 diagnosis 里描述归因方式的变化（只描述，不打分）', () => {
     const confirmed: StageAssessment = {
       actualStage: 1,
-      lamps: STAGE_LAMPS[1].map((r) => ({ kind: r.kind, lit: false, evidence: '' })),
+      lamps: lampsFor(DEFAULT_BOOK_ID, 1).map((r) => ({ kind: r.kind, lit: false, evidence: '' })),
       summary: '上次的样子。', diagnosis: '上次的原因。', distance: '上次的距离。',
       actions: ['上次的小步。'], nextHint: '继续。', assessedAt: daysAgo(30),
     };

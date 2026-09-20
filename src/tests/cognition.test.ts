@@ -17,6 +17,7 @@ import {
   topicForToday,
   VERDICT_NODES,
 } from '@/lib/cognition';
+import { DEFAULT_BOOK_ID } from '@/lib/content';
 import type { GrowthProfile, ThreadEvidence } from '@/lib/profile';
 
 function ev(at: string, kind?: ThreadEvidence['kind'], quote = '我不配'): ThreadEvidence {
@@ -60,18 +61,18 @@ describe('L5 停顿：③填了才算', () => {
 describe('今天的线：AI 给的优先，其次当前阶段的灯，再其次碰过的', () => {
   it('AI 给了就用 AI 的', () => {
     const p = { stage: 1, threads: { parents: { evidence: [ev('2026-09-01T00:00:00Z')] } } } as unknown as GrowthProfile;
-    expect(topicForToday(p, 'v1', 'money-safety')).toBe('money-safety');
+    expect(topicForToday(p, DEFAULT_BOOK_ID, 'money-safety')).toBe('money-safety');
   });
 
   it('AI 没给就按当前阶段的第一盏灯', () => {
     const p = { stage: 1, threads: {} } as unknown as GrowthProfile;
-    const t = topicForToday(p, 'v1');
+    const t = topicForToday(p, DEFAULT_BOOK_ID);
     expect(t).toBeTruthy();
   });
 
   it('什么都没有也兜得住（不会返回 undefined 写进库）', () => {
     const p = { stage: 1, threads: {} } as unknown as GrowthProfile;
-    expect(typeof topicForToday(p, 'v1', undefined)).toBe('string');
+    expect(typeof topicForToday(p, DEFAULT_BOOK_ID, undefined)).toBe('string');
   });
 });
 

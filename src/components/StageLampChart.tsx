@@ -41,7 +41,6 @@ export default function StageLampChart({
   hasActionRecord: boolean;
 }) {
   const t = dict.journey;
-  const lampName = (labelKey: string) => (dict.journey as unknown as Record<string, string>)[labelKey] ?? labelKey;
   const topicName = (topic: string) => (dict.topics as unknown as Record<string, string>)[topic] ?? topic;
   const depthName = (depth: string) =>
     depth === 'mastered' ? dict.road.depthMastered : depth === 'replaced' ? dict.road.depthReplaced : dict.road.depthSeen;
@@ -92,7 +91,6 @@ export default function StageLampChart({
       </p>
       <ul className="mt-3 flex flex-col gap-1">
         {checks.map((c, i) => {
-          const hint = (dict.journey as unknown as Record<string, string>)[`${c.labelKey}Hint`];
           return (
             <li key={c.kind} data-lamp-row={c.kind}>
               <button
@@ -102,7 +100,7 @@ export default function StageLampChart({
                 aria-expanded={open === i}
               >
                 <span className={c.done ? 'text-accent' : 'text-ink-soft'}>
-                  {c.done ? '●' : '○'} {lampName(c.labelKey)}
+                  {c.done ? '●' : '○'} {c.label}
                 </span>
                 {/* 命题才是他的心智锚点（书只是入口）——所以这一行常显，不藏在展开里 */}
                 <span data-lamp-topic={c.topic} className="shrink-0 text-[11px] text-ink-soft/60">
@@ -126,10 +124,10 @@ export default function StageLampChart({
                     )
                   ) : (
                     <>
-                      {hint && (
+                      {c.hint && (
                         <p className="text-xs leading-relaxed text-ink-soft/70">
                           {t.stageLampHintLead}
-                          {hint}
+                          {c.hint}
                         </p>
                       )}
                       {/* 这盏灯要真实做过才点得亮，而他一条记录都还没有：

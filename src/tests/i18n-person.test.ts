@@ -49,15 +49,9 @@ const COMPANION_VOICE = [
 /** 用户口吻的按钮：「我」在这里是用户自己，陪伴者不能来抢这个字——所以不带主语 */
 const USER_VOICE_BUTTONS = ['journal.replyBtn', 'changes.generate'];
 
-/** 这些「它」指的是旧脚本/早期场景/画像等物件，不是陪伴者——必须留着，否则句子没了主语 */
-const OBJECT_IT = [
-  'journey.stageLampStoryHint',
-  'journey.stageLampScriptHint',
-  'journey.stageLampClaimHint',
-  'journey.stageLampSevenHint',
-  'portrait.historicalBanner',
-  'me.portraitDone',
-];
+/** 这些「它」指的是旧脚本/早期场景/画像等物件，不是陪伴者——必须留着，否则句子没了主语。
+ *  （灯的标准文案 V0.2 U6 起随书住在内容层 lamps.md，i18n 里不再有 stageLamp*Hint 键。） */
+const OBJECT_IT = ['portrait.historicalBanner', 'me.portraitDone'];
 
 describe('人称口径：陪伴者是「我」，不是「它」', () => {
   it.each(['zh-CN', 'zh-TW'] as const)('%s：陪伴者自述的文案一处「它」都不许有', (loc) => {

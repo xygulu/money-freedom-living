@@ -283,7 +283,7 @@ export function buildAssessMessages(
     '',
     `当前阶段的灯（评估对象，每盏是本阶段应达程度的一个切面——判定的是他到达了这个状态没有，不是他做过哪些动作）：`,
     ...lampsFor(context.bookId ?? DEFAULT_BOOK_ID, stage).map(
-      (r) => `- ${r.kind}：${r.hint}${r.needsAction ? '【这盏灯必须有真实行为证据：他在日子里真的做过、并且留下了记录；只在对话里说得好不算】' : ''}`
+      (r) => `- ${r.kind}：${r.promptHint}${r.needsAction ? '【这盏灯必须有真实行为证据：他在日子里真的做过、并且留下了记录；只在对话里说得好不算】' : ''}`
     ),
     ...(actionLamps.length > 0 && !context.hasActionRecord
       ? [

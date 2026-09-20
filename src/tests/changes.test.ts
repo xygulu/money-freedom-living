@@ -1,13 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { buildChangeListView, buildChangeListMessages, validateChangeListText } from '@/lib/changes';
-import { STAGE_LAMPS } from '@/lib/stage';
+import { lampsFor } from '@/lib/stage';
+import { DEFAULT_BOOK_ID } from '@/lib/content';
 import type { GrowthProfile, StageAssessment, AssessmentLamp } from '@/lib/profile';
 
 const NOW = '2026-09-15T00:00:00.000Z';
 const daysAgo = (n: number) => new Date(Date.parse(NOW) - n * 86_400_000).toISOString();
 
 const lampsOf = (stage: number, litKinds: string[], evidence: (k: string) => string): AssessmentLamp[] =>
-  (STAGE_LAMPS[stage] ?? []).map((r) => ({ kind: r.kind, lit: litKinds.includes(r.kind), evidence: litKinds.includes(r.kind) ? evidence(r.kind) : '' }));
+  (lampsFor(DEFAULT_BOOK_ID, stage)).map((r) => ({ kind: r.kind, lit: litKinds.includes(r.kind), evidence: litKinds.includes(r.kind) ? evidence(r.kind) : '' }));
 
 const assessment = (over: Partial<StageAssessment> = {}): StageAssessment => ({
   actualStage: 1,

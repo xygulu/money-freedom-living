@@ -89,12 +89,26 @@ export interface BookMeta {
   note: string;
 }
 
+/** 一盏灯的原始数据（content/books/<id>/lamps.md，V0.2 B4）——灯的形状与文案属于书。
+ *  kind/needsAction/promptHint 语义与产品层一致；label/hint 四语随书（U6：书的语汇
+ *  不得留在产品层 i18n）；promptHint 是给评估 prompt 的内部备注（中文，不面向用户）。 */
+export interface LampRuleData {
+  kind: string;
+  label: Record<string, string>;
+  hint: Record<string, string>;
+  promptHint: string;
+  needsAction: boolean;
+  topic: TopicId;
+}
+
 interface ContentBundle {
   books: BookMeta[];
   /** journey[bookId][locale] */
   journey: Record<string, Record<string, JourneyStage[]>>;
   /** daily[bookId][locale] */
   daily: Record<string, Record<string, DailyCard[]>>;
+  /** lamps[bookId][stage]（JSON 键是字符串，getBookLamps 负责转数字） */
+  lamps: Record<string, Record<string, LampRuleData[]>>;
   practices: PracticeNote[];
   safety: Record<string, { keywords: SafetyKeywords; resources: SafetyResources }>;
   builtAt: string;
@@ -149,6 +163,19 @@ export function stageCountFor(bookId: string = DEFAULT_BOOK_ID): number {
 
 export function getDailyPool(locale: Locale, bookId: string = DEFAULT_BOOK_ID): DailyCard[] {
   return (isEnabled(locale) ? bundle.daily[bookId]?.[locale] : null) ?? [];
+}
+
+/** 这本书的灯表（段号 → 灯数组）。不认识的书返回 null——**调用方必须显式处理**，
+ *  不许静默回落第一本书（docs/02 §20.7 红线 6；stage.ts 的 lampsFor 据此报错）。 */
+export function getBookLamps(bookId: string): Record<number, LampRuleData[]> | null {
+  const byStage = bundle.lamps[bookId];
+  if (!byStage) return null;
+  return Object.fromEntries(Object.entries(byStage).map(([k, v]) => [Number(k), v]));
+}
+
+/** 多语文案解析：目标语言缺失回落 en，再回落调用方给的兜底（书名回落 bookId、灯名回落 kind）。 */
+export function localizedText(map: Record<string, string> | undefined, locale: string, fallback: string): string {
+  return map?.[locale]?.trim() || map?.en?.trim() || fallback;
 }
 
 export function getPractices(): PracticeNote[] {

@@ -17,7 +17,7 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { getDict } from '@/i18n/get-dict';
 import { enabledLocales, isLocale } from '@/i18n/config';
-import { DEFAULT_BOOK_ID, pickDaily, pickExercise } from '@/lib/content';
+import { DEFAULT_BOOK_ID, getJourneyStages, pickDaily, pickExercise } from '@/lib/content';
 import { requireSignedIn } from '@/lib/identity';
 import { activeBookId, getProfile, recordDailySeen } from '@/lib/profile';
 import { getUiVersion } from '@/lib/ui-version';
@@ -78,8 +78,12 @@ export default async function journeyNewPage({
 
   // 阶段进度（14 格里的"已走"格数；用于 PathBar 渲染）
   const progress = profile
-    ? computeStageProgress(stage, profile, bookId)
+    ? computeStageProgress(locale, stage, profile, bookId)
     : { checks: [], litCount: 0 };
+
+  // 阶段名属于书（U6：i18n 里不得留单本书的阶段语汇）——从内容层按当前书取，
+  // 路上的节点名随书替换（title 就是各语言 journey md 里的短名，如「看见」）
+  const stageNames = getJourneyStages(locale, bookId).map((s) => s.title);
 
   return (
     <div className="flex flex-col pt-12" data-step="root">
@@ -121,6 +125,7 @@ export default async function journeyNewPage({
         daily={daily}
         exercise={exercise}
         progress={progress}
+        stageNames={stageNames}
         userKey={identity.key}
         stage={stage}
       />

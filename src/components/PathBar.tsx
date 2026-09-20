@@ -17,13 +17,14 @@ interface Props {
   dict: Dict;
   stage: number;
   progress: StageProgress;
+  /** 阶段名属于书（服务端从内容层按当前书解析好再传下来）——U6：书的语汇不得留在产品层 i18n */
+  stageNames: string[];
 }
 
 const TOTAL_DOTS = 14;
 
-export default function PathBar({ dict, stage, progress }: Props) {
+export default function PathBar({ dict, stage, progress, stageNames }: Props) {
   const t = dict.newJourney;
-  const stageNames = t.stageNames ?? ['看见', '松动', '练习', '活法'];
 
   // 把"已走的灯数"按当前阶段的进度比例映射到 14 格里的若干格
   // 已完成阶段整段填充；当前阶段按 litCount/totalChecks
@@ -77,7 +78,7 @@ export default function PathBar({ dict, stage, progress }: Props) {
             data-stage={s}
           >
             <span className={styles.stageDot} aria-hidden="true" />
-            <span className={styles.stageName}>{stageNames[s - 1] ?? `阶段 ${s}`}</span>
+            <span className={styles.stageName}>{stageNames[s - 1] ?? String(s)}</span>
           </span>
         ))}
       </div>

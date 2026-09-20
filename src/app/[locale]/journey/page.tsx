@@ -350,7 +350,7 @@ export default async function journeyPage({
           const locked = s.id === MAX_STAGE && s.id !== stage;
           const current = s.id === stage;
           const walked = s.id < stage;
-          const stProgress = profile ? computeStageProgress(s.id, profile, bookId) : null;
+          const stProgress = profile ? computeStageProgress(locale, s.id, profile, bookId) : null;
           // 渲染侧按 kind 去重兜底（历史行可能带重复；appendStamps 已原子化并自愈存量）
           const seenStampKinds = new Set<string>();
           const stageStamps = (profile?.stamps ?? []).filter((st) => {
@@ -387,7 +387,7 @@ export default async function journeyPage({
                   <ul className="mt-3 flex flex-col gap-2">
                     {stProgress.checks.map((c) => (
                       <li key={c.kind} className="text-sm leading-relaxed">
-                        <span className="text-accent">● {(dict.journey as unknown as Record<string, string>)[c.labelKey] ?? c.labelKey}</span>
+                        <span className="text-accent">● {c.label}</span>
                         {confirmedEvidence.get(c.kind) && (
                           <span className="mt-1 block text-xs leading-relaxed text-ink-soft/80">
                             {dict.assess.evidenceLead}

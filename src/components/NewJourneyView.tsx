@@ -28,6 +28,8 @@ interface Props {
   daily: DailyCard | null;
   exercise: string | null;
   progress: StageProgress;
+  /** 阶段名属于书（服务端从内容层按当前书取）——路上的节点名随书替换（U6） */
+  stageNames: string[];
   userKey: string;
   stage: number;
 }
@@ -45,7 +47,7 @@ export interface MirrorState {
   receipt: string | null;
 }
 
-export default function NewJourneyView({ locale, dict, daily, exercise, progress, userKey, stage }: Props) {
+export default function NewJourneyView({ locale, dict, daily, exercise, progress, stageNames, userKey, stage }: Props) {
   // 提交后的镜像状态（用户原话 + echo）；null = 未提交，仍在 act 段
   const [mirror, setMirror] = useState<MirrorState | null>(null);
 
@@ -79,7 +81,7 @@ export default function NewJourneyView({ locale, dict, daily, exercise, progress
 
       {/* 段 4: 你的路（始终在底部，与提交状态无关；margin-top:auto 一屏放下硬约束）*/}
       <section data-step="path" className={styles.path}>
-        <PathBar dict={dict} stage={stage} progress={progress} />
+        <PathBar dict={dict} stage={stage} progress={progress} stageNames={stageNames} />
       </section>
 
       {/* 陪伴者：仅在 mirror 提交后即 todayStepDone=true 时切 hintToday（§6 例外） */}

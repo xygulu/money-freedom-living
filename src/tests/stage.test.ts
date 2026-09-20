@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { computeStageProgress, stageLampScales, stageAdvanceTarget, lampChartPoints, STAGE_LAMPS, MAX_STAGE } from '@/lib/stage';
+import { computeStageProgress, stageLampScales, stageAdvanceTarget, lampChartPoints, lampsFor, MAX_STAGE } from '@/lib/stage';
+import { DEFAULT_BOOK_ID, getBookLamps } from '@/lib/content';
 import type { GrowthProfile } from '@/lib/profile';
 
 // 灯 = 评估结论：点亮真值是最近一次确认评估的 lamps（assessment.confirmed），
@@ -55,24 +56,35 @@ const confirmedWith = (lamps: { kind: string; lit: boolean; evidence: string }[]
   },
 });
 
-describe('STAGE_LAMPS（灯判定表的形状）', () => {
-  it('阶段 1/2/3 分别 3/3/2 盏灯；kind 在各阶段内唯一；hint 非空（评估 prompt 的判定提示）', () => {
-    expect(STAGE_LAMPS[1].map((r) => r.kind)).toEqual(['stage1_story', 'stage1_script', 'stage1_color']);
-    expect(STAGE_LAMPS[2].map((r) => r.kind)).toEqual(['stage2_claim', 'stage2_try', 'stage2_voice']);
-    expect(STAGE_LAMPS[3].map((r) => r.kind)).toEqual(['stage3_seven', 'stage3_review']);
-    for (const rules of Object.values(STAGE_LAMPS)) {
+describe('灯判定表（V0.2 B4：形状与文案属于书，来源 content/books/<id>/lamps.md）', () => {
+  it('阶段 1/2/3 分别 3/3/2 盏灯；kind 在各阶段内唯一；promptHint 非空（评估 prompt 的判定提示）', () => {
+    expect(lampsFor(DEFAULT_BOOK_ID, 1).map((r) => r.kind)).toEqual(['stage1_story', 'stage1_script', 'stage1_color']);
+    expect(lampsFor(DEFAULT_BOOK_ID, 2).map((r) => r.kind)).toEqual(['stage2_claim', 'stage2_try', 'stage2_voice']);
+    expect(lampsFor(DEFAULT_BOOK_ID, 3).map((r) => r.kind)).toEqual(['stage3_seven', 'stage3_review']);
+    const table = getBookLamps(DEFAULT_BOOK_ID)!;
+    for (const rules of Object.values(table)) {
       const kinds = rules.map((r) => r.kind);
       expect(new Set(kinds).size).toBe(kinds.length);
       for (const r of rules) {
-        expect(r.labelKey).toMatch(/^stageLamp/);
-        expect(r.hint.trim().length).toBeGreaterThan(0);
+        expect(r.promptHint.trim().length).toBeGreaterThan(0);
+        // 灯的文案四语随书（U6）：label/hint 在内容层，i18n 里不再有 stageLamp* 键
+        for (const locale of ['en', 'zh-CN', 'zh-TW', 'ja']) {
+          expect(r.label[locale]?.trim().length).toBeGreaterThan(0);
+          expect(r.hint[locale]?.trim().length).toBeGreaterThan(0);
+        }
       }
     }
   });
 
   it('阶段 4 无灯（活法没有终点线）；越界阶段同样安全返回空', () => {
-    expect(STAGE_LAMPS[4]).toBeUndefined();
+    expect(lampsFor(DEFAULT_BOOK_ID, 4)).toEqual([]);
     expect(MAX_STAGE).toBe(4);
+  });
+
+  it('未知 bookId 显式报错，不静默回落第一本书（docs/02 §20.7 红线 6）', () => {
+    expect(() => lampsFor('no-such-book', 2)).toThrow(/no-such-book/);
+    expect(() => stageLampScales(profile(), 'no-such-book')).toThrow(/内容层/);
+    expect(() => stageAdvanceTarget(profile(), 'no-such-book')).toThrow(/no-such-book/);
   });
 });
 
@@ -85,7 +97,7 @@ describe('computeStageProgress（最近一次确认评估 = 点亮真值）', ()
         { kind: 'stage1_color', lit: true, evidence: 'e2' },
       ]),
     });
-    const pr = computeStageProgress(1, p);
+    const pr = computeStageProgress('zh-CN', 1, p);
     expect(pr.checks.map((c) => c.done)).toEqual([true, false, true]);
     expect(pr.litCount).toBe(2);
     // stamps 是动作存档，不参与判定：历史印再多也点不亮评估没说亮的灯
@@ -93,28 +105,31 @@ describe('computeStageProgress（最近一次确认评估 = 点亮真值）', ()
       stamps: stamps(['stage1_script', 'stage1_color']),
       assessment: confirmedWith([{ kind: 'stage1_story', lit: true, evidence: 'e1' }]),
     });
-    expect(computeStageProgress(1, legacy).checks.map((c) => c.done)).toEqual([true, false, false]);
+    expect(computeStageProgress('zh-CN', 1, legacy).checks.map((c) => c.done)).toEqual([true, false, false]);
     // 无确认评估 → 全不亮；操作数据不参与判定（聊再多、实验再多也不亮）
-    expect(computeStageProgress(1, profile()).litCount).toBe(0);
+    expect(computeStageProgress('zh-CN', 1, profile()).litCount).toBe(0);
     const busy = profile({
       memories: Array.from({ length: 20 }, (_, i) => ({ date: '2026-09-01', text: String(i) })),
       experiments: Array.from({ length: 10 }, () => ({ date: '2026-09-01', action: 'x' })),
     });
-    expect(computeStageProgress(1, busy).litCount).toBe(0);
+    expect(computeStageProgress('zh-CN', 1, busy).litCount).toBe(0);
   });
 
-  it('每盏灯都携带 kind + labelKey（「这盏灯是什么」，点亮/未点亮共用）', () => {
+  it('每盏灯都带按 locale 解析好的灯名与标准（「这盏灯是什么」，点亮/未点亮共用）', () => {
     const p = profile({ assessment: confirmedWith([{ kind: 'stage2_claim', lit: true, evidence: 'e' }]) });
-    const pr = computeStageProgress(2, p);
-    expect(pr.checks.find((c) => c.kind === 'stage2_claim')).toMatchObject({ done: true, labelKey: 'stageLampClaim' });
-    expect(pr.checks.find((c) => c.done === false)).toMatchObject({ labelKey: 'stageLampTry' });
+    const pr = computeStageProgress('zh-CN', 2, p);
+    expect(pr.checks.find((c) => c.kind === 'stage2_claim')).toMatchObject({ done: true, label: '旧脚本被你认领' });
+    expect(pr.checks.find((c) => c.done === false)!.hint.length).toBeGreaterThan(0);
+    // 灯表四语随书：ja 直取日文，不走 en 回落（回落顺序本身在 lamps.test.ts 的 localizedText 用例守）
+    const ja = computeStageProgress('ja', 2, p);
+    expect(ja.checks.find((c) => c.kind === 'stage2_claim')!.label).toBe('古いスクリプトを引き取っている');
   });
 
   it('阶段 4 无 checks；越界 stage（0/9）安全返回空集', () => {
     const p = profile({ stage: 4, stamps: stamps(['stage4_entered']) });
-    expect(computeStageProgress(4, p)).toEqual({ checks: [], litCount: 0 });
-    expect(computeStageProgress(0, p).checks).toHaveLength(0);
-    expect(computeStageProgress(9, p).checks).toHaveLength(0);
+    expect(computeStageProgress('zh-CN', 4, p)).toEqual({ checks: [], litCount: 0 });
+    expect(computeStageProgress('zh-CN', 0, p).checks).toHaveLength(0);
+    expect(computeStageProgress('zh-CN', 9, p).checks).toHaveLength(0);
   });
 });
 
@@ -162,9 +177,9 @@ describe('stageLampScales（四段刻度 = 评估结论：走过段满、当前�
 });
 
 describe('stageAdvanceTarget（程度制联动：本阶段灯全亮 → 下一阶段开启）', () => {
-  const litAll = (stage: number) => STAGE_LAMPS[stage].map((r) => ({ kind: r.kind, lit: true, evidence: '程度达成的依据。' }));
+  const litAll = (stage: number) => lampsFor(DEFAULT_BOOK_ID, stage).map((r) => ({ kind: r.kind, lit: true, evidence: '程度达成的依据。' }));
   const litSome = (stage: number, n: number) =>
-    STAGE_LAMPS[stage].map((r, i) => ({ kind: r.kind, lit: i < n, evidence: i < n ? '依据。' : '' }));
+    lampsFor(DEFAULT_BOOK_ID, stage).map((r, i) => ({ kind: r.kind, lit: i < n, evidence: i < n ? '依据。' : '' }));
 
   it('本阶段灯全亮且已确认 → 推进到下一阶段（stage1→2、stage3→4 封顶）', () => {
     expect(stageAdvanceTarget({ ...profile(), assessment: confirmedWith(litAll(1)) })).toBe(2);
