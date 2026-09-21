@@ -107,6 +107,14 @@ const fixture = vi.hoisted(() => {
 
 vi.mock('@/generated/content.json', () => ({ default: fixture }));
 
+// C3 起运行时优先读磁盘 content.json——本测试要用上面的 fixture，就得让磁盘读取
+// 失败（抛错），装载层才回落到这份被 mock 的「打包副本」。语义与 C3 之前的测试一致。
+vi.mock('node:fs', () => ({
+  readFileSync: () => {
+    throw new Error('ENOENT (test fixture): lamps.test 用 mock 的 content.json，不读磁盘');
+  },
+}));
+
 const BOOK_A = 'test-a';
 const BOOK_B = 'test-b';
 

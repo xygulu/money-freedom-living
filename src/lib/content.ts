@@ -1,5 +1,10 @@
 // content/ 装载层：只读构建期产物 src/generated/content.json（pnpm build-content 生成）
-// 源文件在 content/（git 管理），改内容后重跑脚本，代码永远不直接读运行时文件系统
+// 源文件在 content/（git 管理），改内容后重跑脚本。
+// V0.2 C3（发布即生效）：运行时优先读磁盘上的 content.json——后台「发布」重编译并重写
+// 该文件后，reloadContent() 换掉内存 bundle，改书不用重新部署/重启；磁盘读取失败
+// （文件不存在/坏 JSON）回落静态打包副本，内容层永不挂掉。
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import generated from '@/generated/content.json';
 import { isEnabled, type Locale } from '@/i18n/config';
 
@@ -114,7 +119,25 @@ interface ContentBundle {
   builtAt: string;
 }
 
-const bundle = generated as ContentBundle;
+const contentJsonPath = join(process.cwd(), 'src', 'generated', 'content.json');
+
+function loadFromDisk(): ContentBundle | null {
+  try {
+    return JSON.parse(readFileSync(contentJsonPath, 'utf8')) as ContentBundle;
+  } catch {
+    return null; // 文件不存在/坏 JSON：回落打包副本（磁盘产物永远由 build-content 校验后写出）
+  }
+}
+
+let bundle: ContentBundle = loadFromDisk() ?? (generated as ContentBundle);
+
+/** 后台发布后调用：重读磁盘 content.json 换掉内存 bundle（进程内即刻生效，C3）。
+ *  磁盘读不到就不换——保留旧 bundle，绝不清空内容层。 */
+export function reloadContent(): ContentBundle {
+  const fresh = loadFromDisk();
+  if (fresh) bundle = fresh;
+  return bundle;
+}
 
 /**
  * v1 的书。所有 bookId 参数缺省时落到它——存量用户档案里没有 books 字段时同样按它归位，

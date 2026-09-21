@@ -1,10 +1,12 @@
-// 后台首页（V0.2 批 C0 落位页）：批 C 五步的进度清单。
-// C1-C4 逐批把真功能换进来；这一页先回答「后台在不在、我是不是管理员」。
+// 后台首页（V0.2 批 C 落位页）：批 C 五步的进度清单 + 发布按钮（C3）。
+// 改内容层（content/）不在这里——这里是「把已写好的内容包推上线」的闸口。
+import PublishButton from '@/components/admin/PublishButton';
+
 const STEPS = [
   { id: 'C0', title: '管理员闸', status: 'done', note: 'ADMIN_EMAILS 白名单 + /admin 页面闸 + API 闸（requireApiAdmin）' },
-  { id: 'C1', title: '新书脚手架', status: 'todo', note: '一条命令生成 content/books/<id>/ 目录骨架' },
-  { id: 'C2', title: '校验增强', status: 'todo', note: '发布闸口收拢内容包校验，不合规挡下不上线' },
-  { id: 'C3', title: '发布即生效', status: 'todo', note: '运行时重载内容装载，改书不用重新部署' },
+  { id: 'C1', title: '新书脚手架', status: 'done', note: 'pnpm new-book <id> "<书名>" 生成 content/books/<id>/ 骨架' },
+  { id: 'C2', title: '校验增强', status: 'done', note: '发布闸收拢在 build-content：结构校验对 draft 生效，量级闸只在 active 硬拦' },
+  { id: 'C3', title: '发布即生效', status: 'done', note: '发布 = 重编译 content.json + 进程内热替换，失败 422 带校验日志、旧内容继续服务' },
   { id: 'C4', title: '打标与校正页', status: 'todo', note: '贴素材 → AI 自动打标 → 人工校正 → 发布' },
 ] as const;
 
@@ -27,6 +29,16 @@ export default function AdminPage() {
           </li>
         ))}
       </ul>
+      <div className="mt-6 border border-line bg-white/60 p-4">
+        <h2 className="text-sm">发布</h2>
+        <p className="mt-1 text-xs leading-relaxed text-ink-soft/70">
+          重新编译 content/ 全部书稿并立即生效（先过发布闸：不合规挡下，旧内容继续服务）。
+          内容源文件在 content/ 目录改，这里只负责推上线。
+        </p>
+        <div className="mt-3">
+          <PublishButton />
+        </div>
+      </div>
     </section>
   );
 }
