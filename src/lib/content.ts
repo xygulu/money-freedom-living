@@ -247,6 +247,9 @@ function hash(str: string): number {
 /**
  * 今日一签：确定性抽取——同一天同一阶段看到同一条（共时感），同一用户 90 天不重复。
  * seenTexts 由调用方从用户档案传入；某阶段候选耗尽后自动回落全阶段池。
+ * focusTopic（V0.2 B5 焦点调度）：设了焦点命题，先在「该命题线的未看候选」里抽
+ * （候选自带 topics，B3 打标）；该线在这本书里没有候选/已被看干时回落原逻辑——
+ * 焦点只是优先级，绝不让它变成返回 null 的理由。
  */
 export function pickDaily(
   locale: Locale,
@@ -254,14 +257,16 @@ export function pickDaily(
   stage: number,
   seenTexts: string[] = [],
   bookId: string = DEFAULT_BOOK_ID,
+  focusTopic?: TopicId | null,
 ): DailyCard | null {
   const pool = getDailyPool(locale, bookId);
   if (pool.length === 0) return null;
 
   const seen = new Set(seenTexts);
   const candidates = pool.filter((c) => c.stages.includes(stage) && !seen.has(c.text));
+  const focused = focusTopic ? candidates.filter((c) => c.topics.includes(focusTopic)) : [];
   const fallback = pool.filter((c) => !seen.has(c.text));
-  const finalPool = candidates.length > 0 ? candidates : fallback.length > 0 ? fallback : pool;
+  const finalPool = focused.length > 0 ? focused : candidates.length > 0 ? candidates : fallback.length > 0 ? fallback : pool;
 
   return finalPool[hash(`${dateISO}#${stage}`) % finalPool.length];
 }

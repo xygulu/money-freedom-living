@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getDailyPool, getJourneyStage, getJourneyStages, getPracticesForStage, pickDaily } from '@/lib/content';
+import { DEFAULT_BOOK_ID, getDailyPool, getJourneyStage, getJourneyStages, getPracticesForStage, pickDaily } from '@/lib/content';
 
 const ENABLED = ['en', 'zh-CN'] as const;
 
@@ -112,6 +112,36 @@ describe('pickDaily 抽取机制', () => {
     for (let i = 0; i < 20; i++) {
       const card = pickDaily('zh-CN', `2026-09-${String(i + 1).padStart(2, '0')}`, 3);
       expect(card?.stages).toContain(3);
+    }
+  });
+});
+
+describe('pickDaily 焦点调度（V0.2 B5：设焦点优先该线，未设与今天等价）', () => {
+  it('设焦点：抽到的一签一定在焦点命题线上（连续 10 天）', () => {
+    for (let i = 0; i < 10; i++) {
+      const day = String(i + 1).padStart(2, '0');
+      const card = pickDaily('zh-CN', `2026-10-${day}`, 1, [], DEFAULT_BOOK_ID, 'inner-turmoil');
+      expect(card?.topics).toContain('inner-turmoil');
+    }
+  });
+
+  it('焦点线的候选全被看过：回落原逻辑（绝不因焦点返回 null）', () => {
+    const pool = getDailyPool('zh-CN');
+    const focusedTexts = pool
+      .filter((c) => c.stages.includes(1) && c.topics.includes('inner-turmoil'))
+      .map((c) => c.text);
+    expect(focusedTexts.length).toBeGreaterThan(0);
+    const card = pickDaily('zh-CN', '2026-10-01', 1, focusedTexts, DEFAULT_BOOK_ID, 'inner-turmoil');
+    expect(card).not.toBeNull();
+    // 该线的 stage-1 候选已全部看过，回落后的候选必然不在焦点线上
+    expect(card?.topics).not.toContain('inner-turmoil');
+  });
+
+  it('未设焦点（undefined/null）与旧签名结果完全一致', () => {
+    for (let i = 0; i < 10; i++) {
+      const day = `2026-10-${String(i + 1).padStart(2, '0')}`;
+      expect(pickDaily('zh-CN', day, 1, [], DEFAULT_BOOK_ID, null)?.text).toBe(pickDaily('zh-CN', day, 1)?.text);
+      expect(pickDaily('zh-CN', day, 1, [], DEFAULT_BOOK_ID, undefined)?.text).toBe(pickDaily('zh-CN', day, 1)?.text);
     }
   });
 });

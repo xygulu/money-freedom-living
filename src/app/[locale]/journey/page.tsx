@@ -74,7 +74,9 @@ export default async function journeyPage({
   // 同一句话在第二本书里不该再当成新的（docs/05 §10 验收 C）
   const bookId = profile ? activeBookId(profile) : DEFAULT_BOOK_ID;
 
-  const daily = pickDaily(locale, today, stage, (profile?.dailySeen ?? []).map((s) => s.text), bookId);
+  // 焦点命题（V0.2 B5）：当前书条目上用户选的「最想先弄明白的事」，一签优先该线
+  const focusTopic = profile?.books.find((b) => b.bookId === bookId)?.focusTopic ?? null;
+  const daily = pickDaily(locale, today, stage, (profile?.dailySeen ?? []).map((s) => s.text), bookId, focusTopic);
   if (daily && profile) {
     // 看过的签记入档案（幂等：同一天只记一条）；无档案（未体检）不记——去重从有档案起算
     try {

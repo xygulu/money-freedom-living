@@ -5,8 +5,8 @@ import en from '@/i18n/messages/en.json';
 import zhCN from '@/i18n/messages/zh-CN.json';
 import zhTW from '@/i18n/messages/zh-TW.json';
 import ja from '@/i18n/messages/ja.json';
-import { getBooks } from '@/lib/content';
-import { appendWish, mergeBookSelection, parseWishedBooks, type BookEntry, type WishEntry } from '@/lib/profile';
+import { TOPICS, getBooks } from '@/lib/content';
+import { appendWish, mergeBookSelection, parseBooks, parseWishedBooks, type BookEntry, type WishEntry } from '@/lib/profile';
 
 const NOW = '2026-09-21T05:00:00.000Z';
 
@@ -82,6 +82,85 @@ describe('appendWish / parseWishedBooks（A4：不在册书的愿望）', () => 
     expect(parseWishedBooks(undefined)).toEqual([]);
     expect(parseWishedBooks('nope')).toEqual([]);
     expect(parseWishedBooks([{ title: 'x' }, null, { title: 'y', at: NOW }])).toEqual([{ title: 'y', at: NOW }]);
+  });
+});
+
+describe('focusTopic（V0.2 B2：焦点命题，老档案无该字段读出不报错）', () => {
+  it('mergeBookSelection 带 focusTopic：落到目标书条目', () => {
+    const books = mergeBookSelection([], 'money-freedom', NOW, 'parents');
+    expect(books[0]?.focusTopic).toBe('parents');
+  });
+
+  it('不带 focusTopic 重选：保留该书已有的焦点（重选不清空）', () => {
+    const once = mergeBookSelection([], 'money-freedom', NOW, 'parents');
+    const twice = mergeBookSelection(once, 'money-freedom', NOW);
+    expect(twice[0]?.focusTopic).toBe('parents');
+  });
+
+  it('换书后回到原书：焦点跟着书条目走', () => {
+    const withFocus = mergeBookSelection([], 'book-a', NOW, 'parents');
+    const switched = mergeBookSelection(withFocus, 'book-b', NOW);
+    expect(switched.find((b) => b.bookId === 'book-a')?.status).toBe('paused');
+    expect(switched.find((b) => b.bookId === 'book-a')?.focusTopic).toBe('parents');
+    const back = mergeBookSelection(switched, 'book-a', NOW);
+    expect(back.find((b) => b.bookId === 'book-a')?.focusTopic).toBe('parents');
+  });
+
+  it('parseBooks：老档案无 focusTopic 读出 undefined，不凭空补字段', () => {
+    const books = parseBooks(
+      [{ bookId: 'money-freedom', status: 'active', startedAt: NOW, stage: 1, stageStartedAt: NOW }],
+      1,
+      NOW,
+      NOW,
+    );
+    expect(books[0]?.focusTopic).toBeUndefined();
+  });
+
+  it('parseBooks：非法 focusTopic（不在六命题）丢弃；合法的保留', () => {
+    const bad = parseBooks(
+      [{ bookId: 'money-freedom', status: 'active', startedAt: NOW, stage: 1, stageStartedAt: NOW, focusTopic: 'not-a-topic' as BookEntry['focusTopic'] }],
+      1,
+      NOW,
+      NOW,
+    );
+    expect(bad[0]?.focusTopic).toBeUndefined();
+    const good = parseBooks(
+      [{ bookId: 'money-freedom', status: 'active', startedAt: NOW, stage: 1, stageStartedAt: NOW, focusTopic: 'parents' }],
+      1,
+      NOW,
+      NOW,
+    );
+    expect(good[0]?.focusTopic).toBe('parents');
+  });
+});
+
+describe('B1 判据：选命题屏', () => {
+  it('四语 onboarding.topic 键齐全且同构', () => {
+    const dicts = [en, zhCN, zhTW, ja] as { onboarding: { topic: Record<string, string> } }[];
+    for (const key of ['title', 'hint', 'none']) {
+      for (const d of dicts) {
+        expect(typeof d.onboarding.topic[key], `onboarding.topic.${key} 缺`).toBe('string');
+        expect((d.onboarding.topic[key] ?? '').length).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('命题用户文案真源 dict.topics：四语六命题齐全（TOPICS_ZH 是 prompt 备注，不进 UI）', () => {
+    const dicts = [en, zhCN, zhTW, ja] as { topics: Record<string, string> }[];
+    for (const t of TOPICS) {
+      for (const d of dicts) {
+        expect(typeof d.topics[t], `topics.${t} 缺`).toBe('string');
+        expect((d.topics[t] ?? '').length).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('在册书的 topics 非空且都是合法命题（选命题选项来自本书 topics）', () => {
+    for (const b of getBooks()) {
+      if (b.status !== 'active') continue;
+      expect(b.topics.length, `${b.id} topics 为空`).toBeGreaterThan(0);
+      for (const t of b.topics) expect(TOPICS, `${b.id} 带非法命题 ${t}`).toContain(t);
+    }
   });
 });
 

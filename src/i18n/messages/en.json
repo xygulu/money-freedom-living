@@ -439,6 +439,11 @@
       "wishReply": "We don't have that book yet. Noted — you'll be the first to know when we do.",
       "next": "See my portrait"
     },
+    "topic": {
+      "title": "Once you've read it, which one do you most want to understand first?",
+      "hint": "Your daily card will lean a little closer to it.",
+      "none": "Hard to say"
+    },
     "talk": {
       "title": "A short talk",
       "hint": "I'll ask about one thing only, and go deeper. You can stop any time.",

@@ -20,12 +20,13 @@ import { QUESTIONS } from '@/lib/onboarding-questions';
 import { readSse } from '@/lib/sse-client';
 import type { Dict } from '@/i18n/get-dict';
 import type { Locale } from '@/i18n/config';
+import type { TopicId } from '@/lib/content'; // 仅类型，编译期擦除，不把 content.ts 拉进浏览器 chunk
 
 interface Props {
   locale: Locale;
   dict: Dict;
-  /** 在册 active 书（服务端按当前语言取好书名；V0.2 A2） */
-  books: { id: string; title: string }[];
+  /** 在册 active 书（服务端按当前语言取好书名；V0.2 A2）。topics 随书带给选命题屏（B1） */
+  books: { id: string; title: string; topics: TopicId[] }[];
 }
 
 interface Turn {
@@ -33,7 +34,7 @@ interface Turn {
   content: string;
 }
 
-type Step = 'form' | 'reflect' | 'generating' | 'echo' | 'book' | 'talk';
+type Step = 'form' | 'reflect' | 'generating' | 'echo' | 'book' | 'topic' | 'talk';
 
 export default function OnboardingWizard({ locale, dict, books }: Props) {
   // 首启直接 form（设计决策 #6：welcome 步彻底删除）
@@ -72,6 +73,8 @@ export default function OnboardingWizard({ locale, dict, books }: Props) {
   const [switchedHint, setSwitchedHint] = useState(false);
   // 选书步（V0.2 A2/A4）：选中的书 / 愿望入口展开 / 愿望已记（回显一次后不再出现）
   const [selectedBook, setSelectedBook] = useState<string | null>(null);
+  // 选命题步（V0.2 B1）：选中的焦点命题（说不清 = 保持 null，与今天行为一致）
+  const [selectedTopic, setSelectedTopic] = useState<TopicId | null>(null);
   const [wishOpen, setWishOpen] = useState(false);
   const [wishTitle, setWishTitle] = useState('');
   const [wishDone, setWishDone] = useState(false);
@@ -310,6 +313,26 @@ export default function OnboardingWizard({ locale, dict, books }: Props) {
       setSelectedBook(bookId);
     } catch (err) {
       console.warn('[onboarding/book] select failed:', err);
+    } finally {
+      setBookBusy(false);
+    }
+  }
+
+  /** 选命题（V0.2 B1）：焦点命题落到 books[].focusTopic（同一 /api/me/books 入口，
+   *  埋点分开记 focus_topic_set）。失败静默——焦点是锦上添花，不拦看画像。 */
+  async function selectTopic(topic: TopicId) {
+    if (!selectedBook || bookBusy) return;
+    setBookBusy(true);
+    try {
+      const response = await fetch('/api/me/books', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookId: selectedBook, focusTopic: topic, locale }),
+      });
+      if (!response.ok) throw new Error(String(response.status));
+      setSelectedTopic(topic);
+    } catch (err) {
+      console.warn('[onboarding/topic] focus failed:', err);
     } finally {
       setBookBusy(false);
     }
@@ -634,7 +657,68 @@ export default function OnboardingWizard({ locale, dict, books }: Props) {
           )}
         </div>
         {softHint && <p className="mt-4 text-sm text-ink-soft">{softHint}</p>}
-        {/* 主 CTA：看画像——不设死闸，没选书也照常走 */}
+        {/* 主 CTA：看画像——不设死闸，没选书也照常走；选了书先过选命题
+            （V0.2 B1 定案「选完接选命题」，书没给命题选项时直接去画像） */}
+        {selectedBook && (books.find((b) => b.id === selectedBook)?.topics.length ?? 0) > 0 ? (
+          <button
+            type="button"
+            onClick={() => setStep('topic')}
+            className="mt-8 inline-block self-start rounded-full bg-accent px-8 py-3 text-base text-paper transition-opacity hover:opacity-90"
+          >
+            {o.book.next} →
+          </button>
+        ) : (
+          <Link
+            href={`/${locale}/portrait`}
+            className="mt-8 inline-block self-start rounded-full bg-accent px-8 py-3 text-base text-paper transition-opacity hover:opacity-90"
+          >
+            {o.book.next} →
+          </Link>
+        )}
+      </div>
+    );
+  }
+
+  // topic 步（V0.2 B1）：「读完它，你最想先弄明白哪一件事？」——选项来自本书 topics，
+  // 命题名用 dict.topics 的用户文案（TOPICS_ZH 是 prompt 内部备注，不当作用户文案）。
+  // 「说不清」＝不设焦点、直接去画像，与没选命题的今天完全一致；不设死闸，「看画像」常亮。
+  if (step === 'topic' && selectedBook) {
+    const topics = books.find((b) => b.id === selectedBook)?.topics ?? [];
+    const topicName = (t: string) => (dict.topics as unknown as Record<string, string>)[t] ?? t;
+    return (
+      <div className="flex flex-col pt-12" data-step="topic">
+        <h2 className="text-xl font-medium">{o.topic.title}</h2>
+        <p className="mt-2 text-sm leading-relaxed text-ink-soft">{o.topic.hint}</p>
+        <div className="mt-6 flex flex-col gap-2">
+          {topics.map((t) => {
+            const selected = selectedTopic === t;
+            return (
+              <button
+                key={t}
+                type="button"
+                data-topic-option={t}
+                aria-pressed={selected}
+                disabled={bookBusy}
+                onClick={() => void selectTopic(t)}
+                className={`rounded border px-4 py-3 text-left text-sm leading-relaxed transition-colors ${
+                  selected ? 'border-accent bg-accent/10 text-ink' : 'border-line bg-white/60 text-ink-soft hover:text-ink'
+                }`}
+              >
+                {topicName(t)}
+              </button>
+            );
+          })}
+        </div>
+        {softHint && <p className="mt-4 text-sm text-ink-soft">{softHint}</p>}
+        {/* 说不清 = 不设焦点（不发请求），与今天线上行为完全一致 */}
+        <Link
+          href={`/${locale}/portrait`}
+          data-topic-option="none"
+          className="mt-6 self-start text-sm text-ink-soft underline underline-offset-4 hover:text-ink"
+        >
+          {o.topic.none}
+        </Link>
+        {/* 主 CTA：看画像——常亮，选不选命题都能走 */}
         <Link
           href={`/${locale}/portrait`}
           className="mt-8 inline-block self-start rounded-full bg-accent px-8 py-3 text-base text-paper transition-opacity hover:opacity-90"

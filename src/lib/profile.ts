@@ -4,7 +4,7 @@
 import { ensureSchema, execWithFailover, iso, type SqlClient } from '@/lib/db';
 import { stageAdvanceTarget } from '@/lib/stage';
 import { track } from '@/lib/analytics';
-import { DEFAULT_BOOK_ID, type TopicId } from '@/lib/content';
+import { DEFAULT_BOOK_ID, TOPICS, type TopicId } from '@/lib/content';
 
 export interface PortraitMoment {
   title: string;
@@ -188,6 +188,9 @@ export interface BookEntry {
   stage: number;
   stageStartedAt: string; // ISO
   finishedAt?: string;
+  /** 焦点命题（V0.2 B2）：「读完它最想先弄明白的事」，调度按命题优先（B5）。
+   *  可选——老档案无此字段读出不报错（parseBooks 丢弃非法值）。 */
+  focusTopic?: TopicId;
 }
 
 /** 一条书愿望（V0.2 A4 wished_books）：他提到过一本我们还没有的书。
@@ -297,6 +300,8 @@ export function parseBooks(value: unknown, stage: number, stageStartedAt: string
       stage: typeof b.stage === 'number' ? b.stage : 1,
       stageStartedAt: typeof b.stageStartedAt === 'string' ? b.stageStartedAt : createdAt,
       ...(typeof b.finishedAt === 'string' ? { finishedAt: b.finishedAt } : {}),
+      // focusTopic 不合法（不在六命题里）直接丢弃，不报错——老档案/坏数据等价于没设焦点
+      ...(b.focusTopic && TOPICS.includes(b.focusTopic) ? { focusTopic: b.focusTopic } : {}),
     }));
   if (entries.length === 0) {
     entries.push({ bookId: DEFAULT_BOOK_ID, status: 'active', startedAt: createdAt, stage, stageStartedAt });
@@ -355,20 +360,24 @@ export function activeBookId(profile: Pick<GrowthProfile, 'books'>): string {
  * - done 保留（读过的书不因换书变成「没读过」）；重新选一本 done 的书 = 重读，
  *   从 now 重新起算并清 finishedAt；
  * - 已有条目保留 startedAt（第一次读的时刻不因暂停/重启而丢）；
- * - 书内进度不在这里写——行级 stage / stage_started_at 是唯一真源（parseBooks 读时覆盖）。
+ * - 书内进度不在这里写——行级 stage / stage_started_at 是唯一真源（parseBooks 读时覆盖）；
+ * - focusTopic（V0.2 B2）：本次带着就落到目标书条目上；没带则保留该书已有的
+ *   （重选/补设焦点都不清空——「说不清」路径根本不发这次请求，等价于今天的行为）。
  */
-export function mergeBookSelection(existing: BookEntry[], bookId: string, now: string): BookEntry[] {
+export function mergeBookSelection(existing: BookEntry[], bookId: string, now: string, focusTopic?: TopicId): BookEntry[] {
   const rest = existing
     .filter((b) => b.bookId !== bookId)
     .map((b): BookEntry => ({ ...b, status: b.status === 'done' ? 'done' : 'paused' }));
   const prev = existing.find((b) => b.bookId === bookId);
   const fresh = !prev || prev.status === 'done';
+  const focus = focusTopic ?? prev?.focusTopic;
   const target: BookEntry = {
     bookId,
     status: 'active',
     startedAt: fresh ? now : prev!.startedAt,
     stage: prev?.stage ?? 1,
     stageStartedAt: prev?.stageStartedAt ?? now,
+    ...(focus ? { focusTopic: focus } : {}),
   };
   return [target, ...rest];
 }

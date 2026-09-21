@@ -55,13 +55,16 @@ export default async function journeyNewPage({
   const today = todayISO();
   const bookId = profile ? activeBookId(profile) : DEFAULT_BOOK_ID;
 
-  // 今日一签（去重档案里的 seenTexts）；与经典版共用同一池子
+  // 今日一签（去重档案里的 seenTexts）；与经典版共用同一池子。
+  // 焦点命题（V0.2 B5）：当前书条目的 focusTopic，设了就优先该线
+  const focusTopic = profile?.books.find((b) => b.bookId === bookId)?.focusTopic ?? null;
   const daily = pickDaily(
     locale,
     today,
     stage,
     (profile?.dailySeen ?? []).map((s) => s.text),
     bookId,
+    focusTopic,
   );
 
   // 看过即记（幂等：同一天只记一条）
