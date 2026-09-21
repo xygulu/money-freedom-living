@@ -116,6 +116,17 @@ export function buildJourneyUser(material: string, bookTitle: string, author: st
   ].join('\n');
 }
 
+const NO_MATERIAL_REDLINE =
+  '没有书的摘录素材——基于你对这本书的理解起草。红线：产出是本产品的原创标尺内容（观察句式、程度句式、练习行为句式），不复述、不摘抄书的原文；抓不住这本书的独特方法时，宁可围绕书名立意写扎实通用的成长旅程，也不要编造「书里的原文」。';
+
+/** 起草 zh-CN journey 的 user（无素材模式：只凭书名——后台新建书的默认路径） */
+export function buildJourneyUserNoMaterial(bookTitle: string, author: string): string {
+  return [
+    `书名：《${bookTitle}》（作者：${author || '未知'}）。${NO_MATERIAL_REDLINE}`,
+    '请输出这本书的四段旅程草稿 JSON：{"stages": [...]}，每段字段：id, title, goal, weeks, exercises, do, dont, advance_when, ritual, skippable, free_alt, topics, body。',
+  ].join('\n');
+}
+
 /** 起草灯表（四语文案一次给齐）的 system */
 export function buildLampsSystem(exemplar: string): string {
   return [
@@ -206,6 +217,14 @@ export function buildDailyUser(material: string, bookTitle: string): string {
     '==========',
     EXCERPT(material, 12000),
     '==========',
+    '请输出一签池草稿 JSON：{"cards": [...]}，每条字段：text, type(observation|practice|way), stages(数字数组), reflection, topics(1-2 个)。',
+  ].join('\n');
+}
+
+/** 起草 zh-CN 一签池的 user（无素材模式：只凭书名） */
+export function buildDailyUserNoMaterial(bookTitle: string): string {
+  return [
+    `书名：《${bookTitle}》。${NO_MATERIAL_REDLINE}`,
     '请输出一签池草稿 JSON：{"cards": [...]}，每条字段：text, type(observation|practice|way), stages(数字数组), reflection, topics(1-2 个)。',
   ].join('\n');
 }

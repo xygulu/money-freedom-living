@@ -194,7 +194,7 @@ function CardForm({ card, onChange }: { card: AdminDailyCard; onChange: (patch: 
 
 export default function BookEditor({ bookId, initial }: { bookId: string; initial: AdminBookState }) {
   const [state, setState] = useState<AdminBookState>(initial);
-  const [busy, setBusy] = useState<'draft' | 'save' | 'tag' | null>(null);
+  const [busy, setBusy] = useState<'draft' | 'all' | 'save' | 'tag' | null>(null);
   const [log, setLog] = useState<{ ok: boolean; text: string } | null>(null);
 
   const patchMeta = (patch: Partial<AdminBookState['meta']>) => setState((s) => ({ ...s, meta: { ...s.meta, ...patch } }));
@@ -231,20 +231,42 @@ export default function BookEditor({ bookId, initial }: { bookId: string; initia
     setBusy(null);
   }
 
+  /** 跑一次起草请求（不碰 UI 态，供单键与整包键共用） */
+  async function runDraft(kind: 'journey' | 'daily'): Promise<{ ok: boolean; text: string; state?: AdminBookState }> {
+    const res = await fetch('/api/admin/draft', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bookId, source: state.source, kind }), // 素材随请求先落盘，免得忘保存
+    });
+    const data = (await res.json()) as { ok: boolean; log?: string[]; state?: AdminBookState };
+    return { ok: Boolean(data.ok), text: (data.log ?? (data.ok ? [] : ['起草失败'])).join('\n'), state: data.state };
+  }
+
   async function draft(kind: 'journey' | 'daily'): Promise<void> {
     setBusy('draft');
     setLog(null);
     try {
-      const res = await fetch('/api/admin/draft', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bookId, source: state.source, kind }), // 素材随请求先落盘，免得忘保存
-      });
-      const data = (await res.json()) as { ok: boolean; log?: string[]; state?: AdminBookState };
-      if (data.ok && data.state) setState(data.state); // 草稿只覆盖对应区块，本地其他编辑不动
-      setLog({ ok: Boolean(data.ok), text: data.ok ? (data.log ?? []).join('\n') : (data.log ?? ['起草失败']).join('\n') });
+      const r = await runDraft(kind);
+      if (r.state) setState(r.state); // 草稿只覆盖对应区块，本地其他编辑不动
+      setLog({ ok: r.ok, text: r.text });
     } catch {
       setLog({ ok: false, text: '网络错误，起草没跑成' });
+    }
+    setBusy(null);
+  }
+
+  // 一键整包：journey（含灯表）→ 一签，顺序跑（一签标尺依赖 journey 的段结构）
+  async function draftAll(): Promise<void> {
+    setBusy('all');
+    setLog(null);
+    try {
+      const a = await runDraft('journey');
+      if (a.state) setState(a.state);
+      const b = await runDraft('daily');
+      if (b.state) setState(b.state);
+      setLog({ ok: a.ok && b.ok, text: `── journey + 灯表 ──\n${a.text || '（成功）'}\n── 一签池 ──\n${b.text || '（成功）'}` });
+    } catch {
+      setLog({ ok: false, text: '网络错误，整包没跑成' });
     }
     setBusy(null);
   }
@@ -282,7 +304,7 @@ export default function BookEditor({ bookId, initial }: { bookId: string; initia
       </div>
 
       <div className={boxCls}>
-        <h2 className="text-sm">素材（给 AI 起草用：书的摘录 / 要点 / 你的转述）</h2>
+        <h2 className="text-sm">素材（可选——贴了更贴书：摘录 / 要点 / 你的转述；不贴则按书名起草）</h2>
         <textarea className={`${inputCls} mt-2`} rows={10} value={state.source} onChange={(e) => setState((s) => ({ ...s, source: e.target.value }))} />
       </div>
 
@@ -335,11 +357,19 @@ export default function BookEditor({ bookId, initial }: { bookId: string; initia
         <div className="mt-3 flex flex-wrap gap-3">
           <button
             type="button"
+            onClick={() => void draftAll()}
+            disabled={busy !== null}
+            className="border border-ink bg-ink px-5 py-2 text-sm text-paper transition-opacity hover:opacity-90 disabled:opacity-50"
+          >
+            {busy === 'all' ? '整包生成中……约 5-10 分钟，别关页' : '一键生成整包（journey + 灯表 + 一签）'}
+          </button>
+          <button
+            type="button"
             onClick={() => void draft('journey')}
             disabled={busy !== null}
             className="border border-ink px-5 py-2 text-sm transition-colors hover:bg-ink hover:text-paper disabled:opacity-50"
           >
-            {busy === 'draft' ? '正在起草……约 1-3 分钟' : 'AI 起草 journey + 灯表'}
+            {busy === 'draft' ? '正在起草……约 1-3 分钟' : '只起草 journey + 灯表'}
           </button>
           <button
             type="button"
@@ -347,7 +377,7 @@ export default function BookEditor({ bookId, initial }: { bookId: string; initia
             disabled={busy !== null}
             className="border border-ink px-5 py-2 text-sm transition-colors hover:bg-ink hover:text-paper disabled:opacity-50"
           >
-            {busy === 'draft' ? '正在起草……' : 'AI 起草一签池（覆盖两池 ≥90 条，约 2-4 分钟）'}
+            {busy === 'draft' ? '正在起草……' : '只起草一签池（覆盖两池 ≥90 条，约 2-4 分钟）'}
           </button>
         </div>
       </div>

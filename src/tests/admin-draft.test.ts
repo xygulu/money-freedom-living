@@ -2,6 +2,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildDailyTaggingUser,
+  buildDailyUserNoMaterial,
+  buildJourneyUserNoMaterial,
   buildLampsUser,
   dailyCardErrors,
   draftToDaily,
@@ -223,5 +225,31 @@ describe('validateTagAssignments（存量打标校验，C4b）', () => {
     expect(user).toContain('0. [way] 签·甲');
     expect(user).toContain('问一句');
     expect(user).toContain('"tags"');
+  });
+});
+
+describe('无素材起草 prompt（后台新建书：只凭书名生成）', () => {
+  it('journey 无素材 user：带书名与作者，不带素材段，红线在场（原创标尺、不编造原文）', () => {
+    const user = buildJourneyUserNoMaterial('被讨厌的勇气', '岸见一郎');
+    expect(user).toContain('《被讨厌的勇气》');
+    expect(user).toContain('岸见一郎');
+    expect(user).not.toContain('素材如下');
+    expect(user).not.toContain('==========');
+    expect(user).toContain('不复述、不摘抄');
+    expect(user).toContain('不要编造');
+    expect(user).toContain('"stages"');
+  });
+
+  it('一签无素材 user：同样走红线，JSON 结构要求不变', () => {
+    const user = buildDailyUserNoMaterial('被讨厌的勇气');
+    expect(user).toContain('《被讨厌的勇气》');
+    expect(user).not.toContain('素材如下');
+    expect(user).toContain('不复述、不摘抄');
+    expect(user).toContain('"cards"');
+    expect(user).toContain('observation|practice|way');
+  });
+
+  it('作者缺省落「未知」（与素材路径同口径）', () => {
+    expect(buildJourneyUserNoMaterial('某书', '')).toContain('作者：未知');
   });
 });

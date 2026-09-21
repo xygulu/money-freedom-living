@@ -10,10 +10,12 @@ import { BOOKS_DIR, readAdminBook, writeAdminBook } from '@/lib/admin-content';
 import {
   buildDailySystem,
   buildDailyUser,
+  buildDailyUserNoMaterial,
   buildEnDailySystem,
   buildEnJourneySystem,
   buildJourneySystem,
   buildJourneyUser,
+  buildJourneyUserNoMaterial,
   buildLampsSystem,
   buildLampsUser,
   draftToDaily,
@@ -103,14 +105,17 @@ export async function POST(request: Request) {
     return Response.json({ ok: false, error: 'book_is_active', log: 'active 书的线上内容不许被 AI 覆盖；要重写先把 status 改回 draft（会先下线这本书）。' }, { status: 409 });
   }
 
-  // 素材随请求带过来就先存（避免「先保存再起草」的顺序坑）
-  const material = typeof body?.source === 'string' && body.source.trim() ? body.source : state.source;
-  if (material.trim().length < 50) {
-    return Response.json({ ok: false, error: 'material_too_short', log: '素材太少（<50 字符）——先把书的摘录/要点贴进素材框。' }, { status: 400 });
-  }
-
   const exemplars = v1Exemplars();
   const log: string[] = [];
+
+  // 素材随请求带过来就先存（避免「先保存再起草」的顺序坑）。
+  // 素材从必填改为可选（docs/02 §19）：≥50 字符走素材路径；不足则按书名 +
+  // AI 对本书的理解起草（无素材 prompt 红线：原创标尺、不编造原文）。
+  const material = typeof body?.source === 'string' && body.source.trim() ? body.source : state.source;
+  const useMaterial = material.trim().length >= 50;
+  if (!useMaterial) {
+    log.push('素材为空/过短——按书名 + AI 对本书的理解起草（知名书更贴；自编或小众书建议回素材框贴要点再起草）。');
+  }
 
   try {
     // ---- 一签池起草（C4b）：zh-CN 生成 ≥90 条 → en 翻译，meta/journey/灯表不动 ----
@@ -119,7 +124,9 @@ export async function POST(request: Request) {
         'admin_draft_daily', gate.email, 12000,
         () => ({
           system: buildDailySystem(exemplars.daily),
-          user: buildDailyUser(material, state.meta.title['zh-CN'] || bookId),
+          user: useMaterial
+            ? buildDailyUser(material, state.meta.title['zh-CN'] || bookId)
+            : buildDailyUserNoMaterial(state.meta.title['zh-CN'] || bookId),
         }),
         validateDraftDaily,
       );
@@ -155,7 +162,9 @@ export async function POST(request: Request) {
       'admin_draft_journey', gate.email, 8000,
       () => ({
         system: buildJourneySystem(exemplars.journey),
-        user: buildJourneyUser(material, state.meta.title['zh-CN'] || bookId, state.meta.author),
+        user: useMaterial
+          ? buildJourneyUser(material, state.meta.title['zh-CN'] || bookId, state.meta.author)
+          : buildJourneyUserNoMaterial(state.meta.title['zh-CN'] || bookId, state.meta.author),
       }),
       validateDraftJourney,
     );
