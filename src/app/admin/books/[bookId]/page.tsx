@@ -6,9 +6,17 @@ import { readAdminBook } from '@/lib/admin-content';
 
 export const dynamic = 'force-dynamic';
 
-export default async function AdminBookPage({ params }: { params: Promise<{ bookId: string }> }) {
+export default async function AdminBookPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ bookId: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const { bookId } = await params;
+  const sp = await searchParams;
   const state = readAdminBook(bookId);
   if (!state) notFound();
-  return <BookEditor bookId={bookId} initial={state} />;
+  // ?autodraft=1 只由「新建书」成功链路带过来：进工作台即自动整包生成
+  return <BookEditor bookId={bookId} initial={state} autodraft={sp.autodraft === '1'} />;
 }

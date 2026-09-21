@@ -1,8 +1,12 @@
-// 后台新建书（输入书名即可，V0.2 批 C4 后续）：书名必填，其余可选——
-// bookId 缺省自动生成，作者/出处/素材空着就先落 TODO，跳工作台 AI 起草再校正。
-// 只建骨架（status: draft），不触线上；发布仍走 PublishButton 的 C2/C3 闸。
+// 后台新建书（输入书名即可，V0.2 批 C4 后续）：书名必填，其余可选。
+// 识别闸（用户 2026-09-22 拍板「输入书名自动生成，除非 AI 找不到该书本」）：
+// 默认先 recognizeBook——AI 不认识 → 422 拒建（提示核对书名或勾选自编/小众）；
+// 认识 → 建骨架并让前端跳工作台自动起草（autodraft）。
+// skipUnknownCheck=true（自编/小众书）→ 跳过识别只建骨架，且不自动生成
+// （AI 不认识的书自动生成只会产出通用内容——那正是要避免的）。
 import { requireApiAdmin } from '@/lib/admin-auth';
 import { BOOKS_DIR, readAdminBook } from '@/lib/admin-content';
+import { recognizeBook } from '@/lib/admin-recognize';
 import { createBookSkeleton, isValidBookId, suggestBookId } from '@/lib/admin-scaffold';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
@@ -17,6 +21,7 @@ export async function POST(request: Request) {
     titleEn?: string;
     author?: string;
     source?: string;
+    skipUnknownCheck?: boolean;
   } | null;
 
   const titleZh = String(body?.titleZh ?? '').trim();
@@ -41,6 +46,25 @@ export async function POST(request: Request) {
     return Response.json({ ok: false, error: 'book_exists', log: [`已存在：${bookId}——不覆盖，换个 id 或直接进工作台。`] }, { status: 409 });
   }
 
+  // 识别闸：AI 不认识的书不建、不生成（fail-open 只在识别服务本身坏时发生）
+  const skipUnknownCheck = body?.skipUnknownCheck === true;
+  if (!skipUnknownCheck) {
+    const rec = await recognizeBook(titleZh, String(body?.author ?? '').trim(), gate.email);
+    if (!rec.known) {
+      return Response.json(
+        {
+          ok: false,
+          error: 'book_unknown',
+          log: [
+            `AI 不认识《${titleZh}》${rec.note ? `：${rec.note}` : ''}——拒绝凭空生成。`,
+            '两条路：① 核对书名（填上作者名有帮助）重试；② 勾选「自编/小众书」只建骨架，之后在素材框贴要点再起草。',
+          ],
+        },
+        { status: 422 },
+      );
+    }
+  }
+
   try {
     createBookSkeleton({
       bookId,
@@ -58,5 +82,5 @@ export async function POST(request: Request) {
     return Response.json({ ok: false, error: 'scaffold_failed', log: [msg] }, { status: 500 });
   }
 
-  return Response.json({ ok: true, bookId });
+  return Response.json({ ok: true, bookId, autodraft: !skipUnknownCheck });
 }

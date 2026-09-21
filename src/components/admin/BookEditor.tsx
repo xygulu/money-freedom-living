@@ -3,7 +3,7 @@
 // 书工作台（V0.2 C4）：贴素材 → AI 起草 → 人工逐项校正 → 保存。
 // 状态是整份 AdminBookState，整存整取（单人后台工具，不做协作编辑）。
 // 内容质量不在这里拦——发布闸（build-content）是硬闸，这里只管把源文件改对。
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { AdminBookState, AdminDailyCard, AdminLamp, AdminStage } from '@/lib/admin-content';
 
 const TOPICS: Array<{ id: string; zh: string }> = [
@@ -192,10 +192,29 @@ function CardForm({ card, onChange }: { card: AdminDailyCard; onChange: (patch: 
   );
 }
 
-export default function BookEditor({ bookId, initial }: { bookId: string; initial: AdminBookState }) {
+export default function BookEditor({
+  bookId,
+  initial,
+  autodraft = false,
+}: {
+  bookId: string;
+  initial: AdminBookState;
+  /** 由「新建书」成功链路带上（?autodraft=1）：进工作台即自动整包生成 */
+  autodraft?: boolean;
+}) {
   const [state, setState] = useState<AdminBookState>(initial);
   const [busy, setBusy] = useState<'draft' | 'all' | 'save' | 'tag' | null>(null);
   const [log, setLog] = useState<{ ok: boolean; text: string } | null>(null);
+
+  // 自动整包只跑一次（ref 守卫 StrictMode 双跑）；失败照常显示在日志区，
+  // 操作员可贴素材或核对书名后手动重跑
+  const autoRan = useRef(false);
+  useEffect(() => {
+    if (!autodraft || autoRan.current) return;
+    autoRan.current = true;
+    void draftAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autodraft]);
 
   const patchMeta = (patch: Partial<AdminBookState['meta']>) => setState((s) => ({ ...s, meta: { ...s.meta, ...patch } }));
   const patchStage = (locale: string, index: number, patch: Partial<AdminStage>) =>
@@ -350,7 +369,8 @@ export default function BookEditor({ bookId, initial }: { bookId: string; initia
       <div className={boxCls}>
         <h2 className="text-sm">AI 起草（覆盖现有内容，写回源文件）</h2>
         <p className="mt-1 text-xs leading-relaxed text-ink-soft/70">
-          每次校验不过自动重试一次；草稿写回源文件。{state.meta.status === 'active' && (
+          每次校验不过自动重试一次；草稿写回源文件。无素材起草时 AI 会先识别书名——
+          不认识就拒绝生成（贴素材或核对书名后再来）。{state.meta.status === 'active' && (
             <strong className="ml-1">这本书是 active：AI 不许覆盖线上内容，起草被拒（打标不受限）。</strong>
           )}
         </p>

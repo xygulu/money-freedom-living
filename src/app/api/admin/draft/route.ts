@@ -7,6 +7,7 @@ import { join } from 'node:path';
 import matter from 'gray-matter';
 import { requireApiAdmin } from '@/lib/admin-auth';
 import { BOOKS_DIR, readAdminBook, writeAdminBook } from '@/lib/admin-content';
+import { recognizeBook } from '@/lib/admin-recognize';
 import {
   buildDailySystem,
   buildDailyUser,
@@ -113,8 +114,26 @@ export async function POST(request: Request) {
   // AI 对本书的理解起草（无素材 prompt 红线：原创标尺、不编造原文）。
   const material = typeof body?.source === 'string' && body.source.trim() ? body.source : state.source;
   const useMaterial = material.trim().length >= 50;
+
+  // 识别闸（用户 2026-09-22 拍板「除非 AI 找不到该书本」）：无素材起草前先确认
+  // AI 真的认识这本书——不认识就拒绝（不硬编通用内容冒充那本书）。
   if (!useMaterial) {
-    log.push('素材为空/过短——按书名 + AI 对本书的理解起草（知名书更贴；自编或小众书建议回素材框贴要点再起草）。');
+    const rec = await recognizeBook(state.meta.title['zh-CN'] || bookId, state.meta.author, gate.email);
+    if (!rec.known) {
+      return Response.json(
+        {
+          ok: false,
+          error: 'book_unknown',
+          log: [
+            `AI 不认识《${state.meta.title['zh-CN'] || bookId}》${rec.note ? `：${rec.note}` : ''}——拒绝凭空生成。`,
+            '两条路：① 素材框贴这本书的摘录/要点再起草；② 核对 meta 里的书名/作者后重试。',
+          ],
+        },
+        { status: 422 },
+      );
+    }
+    const desc = [rec.author && `作者 ${rec.author}`, rec.note].filter(Boolean).join('，');
+    if (desc) log.push(`AI 识别：${desc}`);
   }
 
   try {

@@ -1,6 +1,7 @@
 'use client';
 
-// 后台新建书表单（输入书名即可，其余可选）：建骨架 → 直接跳工作台 AI 起草。
+// 后台新建书表单（输入书名即可，其余可选）：AI 识别书名 → 认识就建骨架并跳
+// 工作台自动生成整包；不认识 422 提示（可勾「自编/小众书」跳过识别只建骨架）。
 // 后台不进 i18n，文案固定中文。
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -13,6 +14,7 @@ export default function NewBookForm() {
   const [titleEn, setTitleEn] = useState('');
   const [author, setAuthor] = useState('');
   const [bookId, setBookId] = useState('');
+  const [skipCheck, setSkipCheck] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,11 +27,17 @@ export default function NewBookForm() {
       const res = await fetch('/api/admin/books', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ titleZh, titleEn: titleEn || undefined, author: author || undefined, bookId: bookId || undefined }),
+        body: JSON.stringify({
+          titleZh,
+          titleEn: titleEn || undefined,
+          author: author || undefined,
+          bookId: bookId || undefined,
+          skipUnknownCheck: skipCheck || undefined,
+        }),
       });
-      const data = (await res.json()) as { ok: boolean; bookId?: string; log?: string[] };
+      const data = (await res.json()) as { ok: boolean; bookId?: string; autodraft?: boolean; log?: string[] };
       if (data.ok && data.bookId) {
-        router.push(`/admin/books/${data.bookId}`);
+        router.push(`/admin/books/${data.bookId}${data.autodraft ? '?autodraft=1' : ''}`);
         return;
       }
       setError((data.log ?? ['创建失败']).join('\n'));
@@ -58,7 +66,7 @@ export default function NewBookForm() {
         />
         <input
           className={`${inputCls} w-40`}
-          placeholder="作者（可选）"
+          placeholder="作者（可选，帮助识别）"
           value={author}
           onChange={(e) => setAuthor(e.target.value)}
           aria-label="作者"
@@ -68,19 +76,25 @@ export default function NewBookForm() {
           disabled={busy || !titleZh.trim()}
           className="border border-line bg-ink px-3 py-1 text-sm text-white disabled:opacity-40"
         >
-          {busy ? '创建中……' : '建书并进入工作台'}
+          {busy ? (skipCheck ? '建书中……' : '识别并建书中……') : '建书并自动生成内容包'}
         </button>
       </div>
-      <input
-        className={`${inputCls} w-56 text-xs`}
-        placeholder="bookId（留空自动生成）"
-        value={bookId}
-        onChange={(e) => setBookId(e.target.value)}
-        aria-label="bookId"
-      />
+      <div className="flex flex-wrap items-center gap-4">
+        <input
+          className={`${inputCls} w-56 text-xs`}
+          placeholder="bookId（留空自动生成）"
+          value={bookId}
+          onChange={(e) => setBookId(e.target.value)}
+          aria-label="bookId"
+        />
+        <label className="flex items-center gap-1.5 text-xs text-ink-soft">
+          <input type="checkbox" checked={skipCheck} onChange={(e) => setSkipCheck(e.target.checked)} />
+          自编/小众书（AI 可能不认识）——跳过识别只建骨架，之后贴素材再起草
+        </label>
+      </div>
       <p className="text-xs leading-relaxed text-ink-soft/70">
-        只填书名即可：自动建草稿骨架 → 跳工作台 → 「一键生成整包」让 AI 起草 journey/灯表/一签，再人工校正。
-        素材框贴了摘录会更贴书；不贴就按书名生成（知名书更贴）。
+        只填书名即可：AI 先识别这本书——认识就自动生成整包（journey/灯表/一签，约 5-10 分钟），
+        不认识会拒绝并提示（不硬编通用内容冒充那本书）。素材框贴了摘录会更贴书。
       </p>
       {error && <pre className="text-xs leading-relaxed text-red-600">{error}</pre>}
     </form>
