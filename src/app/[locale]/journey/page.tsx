@@ -18,14 +18,14 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { getDict } from '@/i18n/get-dict';
 import { enabledLocales, isLocale } from '@/i18n/config';
-import { DEFAULT_BOOK_ID, getJourneyStages, pickDaily, pickExercise } from '@/lib/content';
+import { DEFAULT_BOOK_ID, getJourneyStages, localizedText, pickDaily, pickExercise } from '@/lib/content';
 import { requireSignedIn } from '@/lib/identity';
 import { activeBookId, getProfile, recordDailySeen, type StageAssessment } from '@/lib/profile';
 import { isAnchorDay } from '@/lib/anchor';
 import { timeZoneFrom } from '@/lib/time';
 import { track } from '@/lib/analytics';
 import { buildTimeline, formatTimelineDay } from '@/lib/timeline';
-import { computeStageProgress, MAX_STAGE } from '@/lib/stage';
+import { computeStageProgress, lampsFor, MAX_STAGE } from '@/lib/stage';
 import { isVerdictNode } from '@/lib/cognition';
 import { nodeQuestion } from '@/lib/touch';
 import { baselineFor, countMaterialSince, shouldPropose, saveEvolution, listPortraitVersions } from '@/lib/evolution';
@@ -108,6 +108,13 @@ export default async function journeyPage({
       .map((l) => [l.kind, l.evidence])
   );
   const nextStage = stages.find((s) => s.id === stage + 1) ?? null;
+
+  // 评估卡的灯名（V0.2 批 A 回归修复）：AssessCard 是客户端组件，不能运行时
+  // import content/stage（node:fs 进浏览器 chunk → Turbopack panic）——灯名
+  // 在服务端按 locale 解析成 kind→文案 再传入。
+  const lampNames = Object.fromEntries(
+    lampsFor(bookId, stage).map((r) => [r.kind, localizedText(r.label, locale, r.kind)]),
+  );
 
   // 「旅程中的我」预览（M9 需求①）：画像/足迹下钻入口 + 最近三步。
   // 无档案（还没体检）不显示——足迹从旅程第一步开始才有东西可看
@@ -222,7 +229,7 @@ export default async function journeyPage({
           nextTitle={nextStage?.title ?? ''}
           actualTitle={stages.find((s) => s.id === (assessPending?.actualStage ?? stage))?.title ?? ''}
           pending={assessPending}
-          bookId={bookId}
+          lampNames={lampNames}
         />
       )}
 

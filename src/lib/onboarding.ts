@@ -7,25 +7,11 @@ import { DEFAULT_TZ, nowBlock } from '@/lib/time';
 import type { Locale } from '@/i18n/config';
 
 // ---------- 问卷（docs/02 §2①：收集具体的事，不是量表分数） ----------
-
-export interface QuestionDef {
-  id: 'moment_when' | 'balance_feeling' | 'childhood' | 'payday_action' | 'aspiration' | 'recent_worry';
-  /** choice=四选一，free=开放题 */
-  kind: 'choice' | 'free';
-  /** choice 题的选项值（文案在 messages.onboarding.questions.<id>.options） */
-  options?: string[];
-  /** 进档案的字段（portrait.questionnaire 的键） */
-  field: string;
-}
-
-export const QUESTIONS: QuestionDef[] = [
-  { id: 'moment_when', kind: 'choice', options: ['week', 'month', 'cant_remember', 'dare_not'], field: 'specific_moments' },
-  { id: 'balance_feeling', kind: 'choice', options: ['calm', 'avoid', 'panic', 'whatever'], field: 'money_feeling' },
-  { id: 'childhood', kind: 'free', field: 'script_source' },
-  { id: 'payday_action', kind: 'choice', options: ['repay', 'save', 'treat', 'nothing'], field: 'payday_habit' },
-  { id: 'aspiration', kind: 'choice', options: ['relaxed', 'dare_spend', 'earn_well', 'free_of_money'], field: 'aspiration' },
-  { id: 'recent_worry', kind: 'free', field: 'concerns_seed' },
-];
+// 定义在 ./onboarding-questions（叶子模块）——OnboardingWizard（客户端组件）
+// 只能引纯数据，不能经由本文件连坐 content.ts 的 node:fs（见该文件头注）。
+import { QUESTIONS } from './onboarding-questions';
+export { QUESTIONS };
+export type { QuestionDef } from './onboarding-questions';
 
 /** 问卷答案 → 档案 payday 结构（Q4 只反映习惯，锚点本体走 Q7 可跳过；MVP 不猜默认） */
 export function paydayFromAnswers(_answers: Record<string, string>): null {

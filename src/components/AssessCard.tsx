@@ -10,8 +10,6 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Dict } from '@/i18n/get-dict';
 import type { StageAssessment } from '@/lib/profile';
-import { DEFAULT_BOOK_ID, localizedText } from '@/lib/content';
-import { lampsFor } from '@/lib/stage';
 
 type AssessAction = 'generate' | 'confirm' | 'advance' | 'dismiss';
 
@@ -22,7 +20,7 @@ export default function AssessCard({
   nextTitle,
   actualTitle,
   pending,
-  bookId,
+  lampNames,
 }: {
   locale: string;
   dict: Dict;
@@ -30,7 +28,10 @@ export default function AssessCard({
   nextTitle: string; // 下一阶段名（「走进{stage}」按钮文案）
   actualTitle: string; // 评估出的位置的阶段名（结果行文案）
   pending: StageAssessment | null; // null = offer 模式
-  bookId?: string; // 当前这本书的灯表（缺省 = v1 那本）
+  /** 灯名 kind→文案，服务端按 locale 从当前书的灯表解析好再传入（灯名属于书，V0.2 B4）。
+   *  本组件是客户端组件，不得运行时 import content/stage——node:fs 会进浏览器 chunk
+   *  让 Turbopack panic（解析点在经典 /journey 页） */
+  lampNames: Record<string, string>;
 }) {
   const t = dict.assess;
   const router = useRouter();
@@ -86,11 +87,8 @@ export default function AssessCard({
 
   // review 模式：它看到的你——位置 + 灯 + 依据 + 总结，确认才作数
   const canAdvance = pending.actualStage > stage;
-  // 灯名属于书（V0.2 B4）：从内容层灯表取，按 locale 解析（缺失回落 en，再回落 kind）
-  const lampNames = new Map(
-    lampsFor(bookId ?? DEFAULT_BOOK_ID, stage).map((r) => [r.kind, localizedText(r.label, locale, r.kind)]),
-  );
-  const lampName = (kind: string) => lampNames.get(kind) ?? kind;
+  // 灯名已在服务端按 locale 解析好传入（灯名属于书，V0.2 B4；认不出的 kind 回落原样显示）
+  const lampName = (kind: string) => lampNames[kind] ?? kind;
 
   return (
     <div className="mt-6 border border-accent/50 bg-white/70 p-6">

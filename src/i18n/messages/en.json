@@ -12,7 +12,7 @@
     "journeyHref": ""
   },
   "landing": {
-    "hero": "Way of living without money worry",
+    "hero": "A quiet path for easing what money puts you through",
     "sub": "A room of your own, for everything money makes you feel. Not budgeting. Not investing tips. A quiet companion that helps you slowly ease the strain between you and money.",
     "cta": "See your money portrait",
     "hook": "You don't have to retell your money story every time.",
@@ -429,18 +429,28 @@
       "noQuestion": "Nothing left to ask.",
       "choiceRequired": "All four choices + at least one line of text"
     },
+    "book": {
+      "title": "Which one did you finish reading?",
+      "hint": "Pick one and I'll walk with you through it. You can also skip for now.",
+      "selected": "Selected",
+      "mine": "I read a book you don't have",
+      "minePlaceholder": "Write the title here",
+      "mineSubmit": "Save it",
+      "wishReply": "We don't have that book yet. Noted — you'll be the first to know when we do.",
+      "next": "See my portrait"
+    },
     "talk": {
       "title": "A short talk",
       "hint": "I'll ask about one thing only, and go deeper. You can stop any time.",
       "done": "Ready to see your portrait?",
-      "doneHint": "I've heard what you said. Let's see your portrait.",
+      "doneHint": "I've heard what you said.",
       "generate": "Draw my portrait"
     },
     "echo": {
       "title": "Here's what I heard",
       "loading": "Letting me say back what I heard…",
       "hint": "This is the first thing you get, after your portrait is drawn. From here you can see the portrait, or keep talking.",
-      "next": "See my portrait",
+      "next": "Continue",
       "amend": "Not quite right? You can fix it in the next step",
       "fallback": "I didn't catch it clearly yet. Let's talk a little first — no rush.",
       "chatCTA": "Want to keep talking?",

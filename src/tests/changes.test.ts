@@ -57,6 +57,7 @@ const profile = (
     total_active_days: 3,
     last_active_date: daysAgo(1),
     books: [],
+    wished_books: [],
     threads: {},
     touch: {},
     ...rest,

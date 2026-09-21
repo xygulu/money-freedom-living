@@ -191,6 +191,9 @@ async function doMigrate(): Promise<void> {
   // books：读过/在读的书 [{bookId,status:'active'|'paused'|'done',startedAt,stage,stageStartedAt,finishedAt?}]
   // 「当前书」= status='active' 那本，不另设 active_book 列（两处真源必然打架）
   await sql`ALTER TABLE growth_profiles ADD COLUMN IF NOT EXISTS books JSONB NOT NULL DEFAULT '[]'`;
+  // wished_books：不在册书的愿望（V0.2 A4）[{title,at}]——不许诺时间、不陈列、只回显一次；
+  // 读回靠导出（export 白名单显式带出）。行内列 = 删号/游客迁移天然覆盖（同 books 的理由）
+  await sql`ALTER TABLE growth_profiles ADD COLUMN IF NOT EXISTS wished_books JSONB NOT NULL DEFAULT '[]'`;
   // threads：命题线（用户 × 命题，跨书累加，永不重置）
   // { [topicId]: { firstSeenAt, lastSeenAt, depth:'seen'|'replaced'|'mastered', evidence:[{at,bookId,source,quote,ref}] } }
   await sql`ALTER TABLE growth_profiles ADD COLUMN IF NOT EXISTS threads JSONB NOT NULL DEFAULT '{}'`;

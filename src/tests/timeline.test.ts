@@ -34,6 +34,7 @@ const profile = (over: Partial<GrowthProfile> = {}): GrowthProfile => ({
   total_active_days: 3,
   last_active_date: '2026-09-10',
   books: [],
+  wished_books: [],
   threads: {},
   touch: {},
   ...over,

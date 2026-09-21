@@ -15,8 +15,8 @@
 // 即可），阶段 4 无灯不画图（行动列表在页内单独给）。
 import { useState } from 'react';
 import type { Dict } from '@/i18n/get-dict';
-import type { StageCheck } from '@/lib/stage';
-import { lampChartPoints } from '@/lib/stage';
+import type { StageCheck } from '@/lib/stage'; // 仅类型，编译期擦除，不把 content.ts 拉进浏览器 chunk
+import { lampChartPoints } from '@/lib/lamp-geometry';
 import RecordForm from '@/components/RecordForm';
 import ActionRecordList from '@/components/ActionRecordList';
 

@@ -3,7 +3,11 @@
 // 体检向导（P0-3 首启重排 v2 · 2026-09-17）：
 //   首页按钮 → /onboarding → 直接进 form 第一题（无 welcome 步、无中间页）
 //   form → reflect（问卷答案本地复述 + 同意区）→ generating → echo（画像完成礼物）
-//   echo 步三个 CTA：看画像（跳 /portrait）/ 想多聊聊（创建 session 进 talk）/ 保存（注册 nudge）
+//   echo 步三个 CTA：继续（进选书步）/ 想多聊聊（创建 session 进 talk）/ 保存（注册 nudge）
+//   book 步（V0.2 A2 · 2026-09-21）：「你读完的是哪一本？」只列在册 active 书；
+//   不在册 → 「我提到过这本书」记愿望（不许诺时间、不陈列、只回显一次）。
+//   不设死闸（docs/02 §20.1）：不选书也能继续（「看画像」常亮）。
+//   选完接选命题是批 B 的事——本批选完书照旧去 /portrait。
 //
 // 两条红线没动：
 // - 顺序铁律（docs/05 §7）：先被说中 → 再注册 / 同意 / 定价。同意区仍在"被说中"**之后**。
@@ -12,7 +16,7 @@
 //
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { QUESTIONS } from '@/lib/onboarding';
+import { QUESTIONS } from '@/lib/onboarding-questions';
 import { readSse } from '@/lib/sse-client';
 import type { Dict } from '@/i18n/get-dict';
 import type { Locale } from '@/i18n/config';
@@ -20,6 +24,8 @@ import type { Locale } from '@/i18n/config';
 interface Props {
   locale: Locale;
   dict: Dict;
+  /** 在册 active 书（服务端按当前语言取好书名；V0.2 A2） */
+  books: { id: string; title: string }[];
 }
 
 interface Turn {
@@ -27,9 +33,9 @@ interface Turn {
   content: string;
 }
 
-type Step = 'form' | 'reflect' | 'generating' | 'echo' | 'talk';
+type Step = 'form' | 'reflect' | 'generating' | 'echo' | 'book' | 'talk';
 
-export default function OnboardingWizard({ locale, dict }: Props) {
+export default function OnboardingWizard({ locale, dict, books }: Props) {
   // 首启直接 form（设计决策 #6：welcome 步彻底删除）
   const [step, setStep] = useState<Step>('form');
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -64,6 +70,12 @@ export default function OnboardingWizard({ locale, dict }: Props) {
   const [softHint, setSoftHint] = useState<string | null>(null);
   // 多 provider 切换提示
   const [switchedHint, setSwitchedHint] = useState(false);
+  // 选书步（V0.2 A2/A4）：选中的书 / 愿望入口展开 / 愿望已记（回显一次后不再出现）
+  const [selectedBook, setSelectedBook] = useState<string | null>(null);
+  const [wishOpen, setWishOpen] = useState(false);
+  const [wishTitle, setWishTitle] = useState('');
+  const [wishDone, setWishDone] = useState(false);
+  const [bookBusy, setBookBusy] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   // 首次"说中了"耗时的起点：进到这个页面的那一刻（指标见 docs/05 §7）。
   // 首启重排 v2 后起点仍是落地那一刻——问卷/复述/画像/echo 都算在这 3 分钟里
@@ -284,6 +296,47 @@ export default function OnboardingWizard({ locale, dict }: Props) {
     }
   }
 
+  /** 选书落库（V0.2 A3）。失败静默（产品口径：不展示红字），不拦「看画像」。 */
+  async function selectBook(bookId: string) {
+    if (bookBusy) return;
+    setBookBusy(true);
+    try {
+      const response = await fetch('/api/me/books', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookId, locale }),
+      });
+      if (!response.ok) throw new Error(String(response.status));
+      setSelectedBook(bookId);
+    } catch (err) {
+      console.warn('[onboarding/book] select failed:', err);
+    } finally {
+      setBookBusy(false);
+    }
+  }
+
+  /** 记一条书愿望（V0.2 A4）。成功后回显一次「记下了」，输入框收起。失败静默。 */
+  async function submitWish() {
+    const title = wishTitle.trim();
+    if (!title || bookBusy) return;
+    setBookBusy(true);
+    try {
+      const response = await fetch('/api/me/wishes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, locale }),
+      });
+      if (!response.ok) throw new Error(String(response.status));
+      setWishDone(true);
+      setWishOpen(false);
+      setWishTitle('');
+    } catch (err) {
+      console.warn('[onboarding/book] wish failed:', err);
+    } finally {
+      setBookBusy(false);
+    }
+  }
+
   // ---------- 各步渲染 ----------
 
   // form 步：6 题拆成多段，一次一件
@@ -491,13 +544,14 @@ export default function OnboardingWizard({ locale, dict }: Props) {
         {(echo || echoFailed) && (
           <>
             <p className="mt-6 text-sm leading-relaxed text-ink-soft">{o.echo.hint}</p>
-            {/* 主 CTA：看画像（已有 /portrait 页面） */}
-            <Link
-              href={`/${locale}/portrait`}
+            {/* 主 CTA：继续 → 选书步（V0.2 A2：选书在 echo 之后；选完才见画像） */}
+            <button
+              type="button"
+              onClick={() => setStep('book')}
               className="mt-8 inline-block self-start rounded-full bg-accent px-8 py-3 text-base text-paper transition-opacity hover:opacity-90"
             >
               {o.echo.next} →
-            </Link>
+            </button>
             {/* 次 CTA：想多聊聊（创建 onboarding_talk session，进 talk 步） */}
             <button
               type="button"
@@ -515,6 +569,78 @@ export default function OnboardingWizard({ locale, dict }: Props) {
             </Link>
           </>
         )}
+      </div>
+    );
+  }
+
+  // book 步（V0.2 A2）：「你读完的是哪一本？」——只列在册 active 书；不在册走愿望入口。
+  // 不设死闸：不选也能继续（主 CTA 常亮）。愿望只回显一次，不做书单陈列（docs/02 §20.1 A4）。
+  if (step === 'book') {
+    return (
+      <div className="flex flex-col pt-12" data-step="book">
+        <h2 className="text-xl font-medium">{o.book.title}</h2>
+        <p className="mt-2 text-sm leading-relaxed text-ink-soft">{o.book.hint}</p>
+        <div className="mt-6 flex flex-col gap-2">
+          {books.map((b) => {
+            const selected = selectedBook === b.id;
+            return (
+              <button
+                key={b.id}
+                type="button"
+                data-book-option={b.id}
+                aria-pressed={selected}
+                disabled={bookBusy}
+                onClick={() => selectBook(b.id)}
+                className={`rounded border px-4 py-3 text-left text-sm leading-relaxed transition-colors ${
+                  selected ? 'border-accent bg-accent/10 text-ink' : 'border-line bg-white/60 text-ink-soft hover:text-ink'
+                }`}
+              >
+                {b.title}
+                {selected && <span className="ml-2 text-xs text-accent">{o.book.selected}</span>}
+              </button>
+            );
+          })}
+        </div>
+        {/* 不在册 → 愿望入口（同屏；记一条就回显一次，没有书单页） */}
+        <div className="mt-6" data-book-wish>
+          {wishDone ? (
+            <p className="text-sm leading-relaxed text-ink-soft" data-wish-reply>{o.book.wishReply}</p>
+          ) : wishOpen ? (
+            <div className="flex gap-2">
+              <input
+                value={wishTitle}
+                onChange={(e) => setWishTitle(e.target.value)}
+                placeholder={o.book.minePlaceholder}
+                maxLength={100}
+                className="flex-1 rounded border border-line bg-white/60 p-3 text-sm outline-none focus:border-accent"
+              />
+              <button
+                type="button"
+                disabled={!wishTitle.trim() || bookBusy}
+                onClick={submitWish}
+                className="rounded border border-line px-4 text-sm text-ink-soft hover:text-ink disabled:opacity-40"
+              >
+                {o.book.mineSubmit}
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setWishOpen(true)}
+              className="text-sm text-ink-soft underline underline-offset-4 hover:text-ink"
+            >
+              {o.book.mine}
+            </button>
+          )}
+        </div>
+        {softHint && <p className="mt-4 text-sm text-ink-soft">{softHint}</p>}
+        {/* 主 CTA：看画像——不设死闸，没选书也照常走 */}
+        <Link
+          href={`/${locale}/portrait`}
+          className="mt-8 inline-block self-start rounded-full bg-accent px-8 py-3 text-base text-paper transition-opacity hover:opacity-90"
+        >
+          {o.book.next} →
+        </Link>
       </div>
     );
   }
@@ -543,12 +669,13 @@ export default function OnboardingWizard({ locale, dict }: Props) {
       {talkFinished ? (
         <div className="mt-6 flex flex-col gap-2" data-talk-finished>
           <p className="text-sm text-ink-soft">{o.talk.doneHint}</p>
-          <Link
-            href={`/${locale}/portrait`}
+          <button
+            type="button"
+            onClick={() => setStep('book')}
             className="self-start rounded-full bg-accent px-8 py-3 text-base text-paper transition-opacity hover:opacity-90"
           >
             {o.talk.done} →
-          </Link>
+          </button>
         </div>
       ) : (
         userTurns >= 1 && !streaming && (

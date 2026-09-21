@@ -38,20 +38,10 @@ export interface StageProgress {
   litCount: number;
 }
 
-/**
- * 灯图顶点布局：n 盏灯在单位圆上均布（顶部起始、顺时针）——3 盏=三角、2 盏=
- * 上下两点。返回 0..1 的单位圆坐标（圆心 0.5/0.5、半径 0.5），渲染层再乘尺寸；
- * 外圈即「这个阶段应达的程度」（标准），点亮顶点的连线范围 = 用户现在的位置。
- * 纯函数，便于单测；n=0（阶段 4 无灯）返回空。
- */
-export function lampChartPoints(n: number): { x: number; y: number }[] {
-  if (n <= 0) return [];
-  const start = -Math.PI / 2;
-  return Array.from({ length: n }, (_, i) => {
-    const angle = start + (i * 2 * Math.PI) / n;
-    return { x: 0.5 + 0.5 * Math.cos(angle), y: 0.5 + 0.5 * Math.sin(angle) };
-  });
-}
+// 灯图顶点布局在 ./lamp-geometry（叶子模块）——StageLampChart（客户端组件）
+// 不能经由本文件连坐 content.ts 的 node:fs（见该文件头注）；这里 re-export
+// 保持测试侧既有 import 不动。
+export { lampChartPoints } from './lamp-geometry';
 
 /**
  * 一盏灯的判定规则（V0.2 B4 起：形状与文案属于书，来源 content/books/<id>/lamps.md，

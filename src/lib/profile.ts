@@ -190,6 +190,13 @@ export interface BookEntry {
   finishedAt?: string;
 }
 
+/** 一条书愿望（V0.2 A4 wished_books）：他提到过一本我们还没有的书。
+ *  只记书名与时刻——不许诺时间、不陈列、只回显一次；读回靠数据导出。 */
+export interface WishEntry {
+  title: string;
+  at: string; // ISO
+}
+
 /** 命题上的程度（跨书累加，永不重置——书可以换，走过的程度不会退回，docs/05 §3.2） */
 export type ThreadDepth = 'seen' | 'replaced' | 'mastered';
 
@@ -254,6 +261,8 @@ export interface GrowthProfile {
   last_active_date: string | null;
   /** M11-A：读过/在读的书。存量档案读时归位成一条 v1 书，不写迁移脚本 */
   books: BookEntry[];
+  /** 不在册书的愿望（V0.2 A4；行内 JSONB 列，导出/删号/游客迁移随行覆盖） */
+  wished_books: WishEntry[];
   /** M11-A：命题线（用户 × 命题），跨书累加 */
   threads: Partial<Record<TopicId, ThreadState>>;
   /** M11-E：触达层状态 */
@@ -300,6 +309,17 @@ export function parseBooks(value: unknown, stage: number, stageStartedAt: string
   return entries;
 }
 
+/** wished_books 归位：老档案无此列/坏数据一律按空数组（不报错、不静默丢——丢只发生在写入侧） */
+export function parseWishedBooks(value: unknown): WishEntry[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((w) => {
+      const e = (w ?? {}) as Partial<WishEntry>;
+      return { title: typeof e.title === 'string' ? e.title : '', at: typeof e.at === 'string' ? e.at : '' };
+    })
+    .filter((w) => w.title !== '' && w.at !== '');
+}
+
 function parseThreads(value: unknown): GrowthProfile['threads'] {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
   const out: GrowthProfile['threads'] = {};
@@ -330,6 +350,38 @@ export function activeBookId(profile: Pick<GrowthProfile, 'books'>): string {
   return activeBook(profile)?.bookId ?? DEFAULT_BOOK_ID;
 }
 
+/**
+ * 选书落库（V0.2 A3 纯函数）：目标书 active，其余 paused。
+ * - done 保留（读过的书不因换书变成「没读过」）；重新选一本 done 的书 = 重读，
+ *   从 now 重新起算并清 finishedAt；
+ * - 已有条目保留 startedAt（第一次读的时刻不因暂停/重启而丢）；
+ * - 书内进度不在这里写——行级 stage / stage_started_at 是唯一真源（parseBooks 读时覆盖）。
+ */
+export function mergeBookSelection(existing: BookEntry[], bookId: string, now: string): BookEntry[] {
+  const rest = existing
+    .filter((b) => b.bookId !== bookId)
+    .map((b): BookEntry => ({ ...b, status: b.status === 'done' ? 'done' : 'paused' }));
+  const prev = existing.find((b) => b.bookId === bookId);
+  const fresh = !prev || prev.status === 'done';
+  const target: BookEntry = {
+    bookId,
+    status: 'active',
+    startedAt: fresh ? now : prev!.startedAt,
+    stage: prev?.stage ?? 1,
+    stageStartedAt: prev?.stageStartedAt ?? now,
+  };
+  return [target, ...rest];
+}
+
+/** 愿望追加（V0.2 A4 纯函数）：同名去重（不重复记）、封顶 50 条（防灌水）、新的在后。 */
+export function appendWish(existing: WishEntry[], title: string, now: string): WishEntry[] {
+  const t = title.trim();
+  if (!t) return existing;
+  if (existing.some((w) => w.title === t)) return existing;
+  const next = [...existing, { title: t, at: now }];
+  return next.length > 50 ? next.slice(next.length - 50) : next;
+}
+
 function rowToProfile(row: Record<string, unknown>): GrowthProfile {
   const stage = row.stage as number;
   const stageStartedAt = iso(row.stage_started_at);
@@ -354,6 +406,7 @@ function rowToProfile(row: Record<string, unknown>): GrowthProfile {
     total_active_days: row.total_active_days as number,
     last_active_date: dateColumnToISO(row.last_active_date),
     books: parseBooks(row.books, stage, stageStartedAt, createdAt),
+    wished_books: parseWishedBooks(row.wished_books),
     threads: parseThreads(row.threads),
     touch: parseTouch(row.touch),
   };
@@ -365,7 +418,7 @@ export async function getProfile(userKey: string): Promise<GrowthProfile | null>
     sql`SELECT user_key, locale, portrait, concerns, stage, stage_started_at,
                pinned, memories, experiments, letters, stamps, portrait_evolution,
                stage_assessment, created_at, daily_seen, payday, total_active_days, last_active_date,
-               books, threads, touch
+               books, wished_books, threads, touch
         FROM growth_profiles WHERE user_key = ${userKey}`
   );
   const profile = rows[0] ? rowToProfile(rows[0]) : null;
@@ -394,7 +447,7 @@ export async function ensureProfile(userKey: string, locale: string): Promise<Gr
       RETURNING user_key, locale, portrait, concerns, stage, stage_started_at,
                 pinned, memories, experiments, letters, stamps, portrait_evolution,
                 stage_assessment, created_at, daily_seen, payday, total_active_days, last_active_date,
-                books, threads, touch
+                books, wished_books, threads, touch
     `
   );
   if (rows[0]) return rowToProfile(rows[0]);
@@ -775,6 +828,15 @@ export async function saveBooks(userKey: string, books: BookEntry[]): Promise<vo
   await execWithFailover((sql: SqlClient) =>
     sql`UPDATE growth_profiles
         SET books = ${JSON.stringify(books)}::jsonb, updated_at = now()
+        WHERE user_key = ${userKey}`
+  );
+}
+
+/** 记一条书愿望（V0.2 A4）：wished_books 整体覆盖写（追加语义由 appendWish 纯函数保证）。 */
+export async function saveWishes(userKey: string, wishes: WishEntry[]): Promise<void> {
+  await execWithFailover((sql: SqlClient) =>
+    sql`UPDATE growth_profiles
+        SET wished_books = ${JSON.stringify(wishes)}::jsonb, updated_at = now()
         WHERE user_key = ${userKey}`
   );
 }
