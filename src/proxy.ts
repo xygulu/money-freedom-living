@@ -3,11 +3,12 @@ import { defaultLocale, enabledLocales, isLocale, type Locale } from '@/i18n/con
 
 const LOCALE_COOKIE = 'mfl_locale';
 
-/** 只放行 API、Next 内部资源与带扩展名的静态文件 */
+/** 只放行 API、Next 内部资源、带扩展名的静态文件与运营后台（/admin 不参与 locale 分流） */
 function isPassthrough(pathname: string): boolean {
   return (
     pathname.startsWith('/api') ||
     pathname.startsWith('/_next') ||
+    pathname.startsWith('/admin') ||
     pathname.includes('.') ||
     pathname === '/favicon.ico'
   );

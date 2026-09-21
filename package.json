@@ -11,6 +11,7 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "build-content": "node scripts/build-content.mjs",
+    "new-book": "node scripts/new-book.mjs",
     "check-content": "pnpm build-content && pnpm test -- content"
   },
   "dependencies": {

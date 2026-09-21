@@ -85,7 +85,7 @@ function readJourney(bookId, locale) {
     });
 }
 
-function validateJourney(bookId, locale, stages) {
+function validateJourney(bookId, locale, stages, status) {
   const byId = new Map();
   const at0 = `books/${bookId}/${locale}/journey`;
   for (const { file, data, body } of stages) {
@@ -100,7 +100,8 @@ function validateJourney(bookId, locale, stages) {
     if (!Array.isArray(data.exercises) || data.exercises.length === 0) fail(`${at0}/${file}: exercises 不能为空`);
     if (!Array.isArray(data.advance_when) || data.advance_when.length === 0) fail(`${at0}/${file}: advance_when 不能为空`);
     if (!data.ai_stance?.do?.length || !data.ai_stance?.dont?.length) fail(`${at0}/${file}: ai_stance.do/dont 不能为空`);
-    if (body.length < 100) fail(`${at0}/${file}: 正文太短（<100 字符），它是 AI system prompt 的原料`);
+    // 发布闸（C2）：正文长度只在 active 时强制（它是 AI system prompt 的原料）；draft 骨架期豁免
+    if (status === 'active' && body.length < 100) fail(`${at0}/${file}: 正文太短（<100 字符），它是 AI system prompt 的原料`);
     // M10 可选字段：0 元替代版 / 可跳过 / 命题标签（枚举见 src/lib/content.ts TOPICS，六命题 docs/02 §10）
     if (data.free_alt !== undefined && (typeof data.free_alt !== 'string' || data.free_alt.trim() === ''))
       fail(`${at0}/${file}: free_alt 若提供必须是非空字符串`);
@@ -115,7 +116,7 @@ function validateJourney(bookId, locale, stages) {
   return byId;
 }
 
-function validateDaily(bookId, locale) {
+function validateDaily(bookId, locale, status) {
   const path = join(booksDir, bookId, locale, 'daily', 'pool.json');
   const at0 = `books/${bookId}/${locale}/daily/pool.json`;
   let pool;
@@ -126,7 +127,8 @@ function validateDaily(bookId, locale) {
     return [];
   }
   if (!Array.isArray(pool)) return fail(`${at0} 必须是数组`) && [];
-  if (pool.length < MIN_DAILY) fail(`${at0} 只有 ${pool.length} 条，MVP 备量须 ≥${MIN_DAILY}`);
+  // 发布闸（C2）：≥MIN_DAILY 只拦 active（发布）；draft 骨架期允许空池，结构校验照旧
+  if (status === 'active' && pool.length < MIN_DAILY) fail(`${at0} 只有 ${pool.length} 条，发布闸：active 书须 ≥${MIN_DAILY} 条（MVP 备量）`);
 
   const seen = new Set();
   pool.forEach((card, i) => {
@@ -258,14 +260,27 @@ for (const bookId of bookIds) {
   const journeyIds = [];
   for (const locale of ENABLED_LOCALES) {
     const stages = readJourney(bookId, locale);
-    const byId = validateJourney(bookId, locale, stages);
+    const byId = validateJourney(bookId, locale, stages, meta?.status);
     journeyIds.push([...byId.keys()].sort());
     journeyByBook[bookId][locale] = stages
       .map(({ file, data, body }) => ({ id: data.id, file, ...data, body }))
       .sort((a, b) => a.id - b.id);
-    dailyByBook[bookId][locale] = validateDaily(bookId, locale);
+    dailyByBook[bookId][locale] = validateDaily(bookId, locale, meta?.status);
   }
   lampsByBook[bookId] = readLamps(bookId, new Set(journeyIds.flat()), globalLampKinds);
+  // 发布闸（C2，docs/02 §20.3）：active = 上线。**非末段**必须每段有灯——没灯的段
+  // 推进不了下一段（stageAdvanceTarget 恒 null），那是把读者关死在第一段；
+  // 末段豁免：v1 的「活法」就是无灯无终点线（产品定案，stage.test.ts 同款语义）。
+  // draft 豁免（骨架期）。
+  if (meta?.status === 'active' && lampsByBook[bookId]) {
+    const stageIds = [...new Set(journeyIds.flat())].sort((a, b) => a - b);
+    const lastStage = stageIds[stageIds.length - 1];
+    for (const id of stageIds) {
+      if (id !== lastStage && !lampsByBook[bookId][id]?.length) {
+        fail(`books/${bookId}: 段 ${id} 没有灯（发布闸 C2：非末段每段 ≥1 盏灯，否则该段永远无法推进；末段无灯合法）`);
+      }
+    }
+  }
   // 语言间结构对齐（同一本书内）：journey 阶段集合一致、一签条数一致
   if (journeyIds.length > 1 && !journeyIds.every((ids) => JSON.stringify(ids) === JSON.stringify(journeyIds[0]))) {
     fail(`books/${bookId}: 各语言 journey 阶段集合不一致: ${JSON.stringify(journeyIds)}`);
