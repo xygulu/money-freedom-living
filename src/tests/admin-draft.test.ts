@@ -1,12 +1,17 @@
-// C4 起草纯函数测试：校验闸（镜像发布闸语义）+ LLM JSON → 编辑态转换 + kind 前缀规则。
+// C4 起草纯函数测试：校验闸（镜像发布闸语义）+ LLM JSON → 编辑态转换 + kind 前缀规则 + 一签起草/打标（C4b）。
 import { describe, expect, it } from 'vitest';
 import {
+  buildDailyTaggingUser,
   buildLampsUser,
+  dailyCardErrors,
+  draftToDaily,
   draftToLamps,
   draftToStages,
   kindPrefix,
+  validateDraftDaily,
   validateDraftJourney,
   validateDraftLamps,
+  validateTagAssignments,
   type DraftStage,
 } from '@/lib/admin-draft';
 
@@ -134,5 +139,89 @@ describe('kindPrefix 与转换', () => {
     expect(user).toContain('myprefix_');
     expect(user).toContain('段 1「段1」');
     expect(user).toContain('能说出自己的旧脚本');
+  });
+});
+
+describe('validateDraftDaily / dailyCardErrors（一签闸，C4b）', () => {
+  const card = (i: number, over: Record<string, unknown> = {}) => ({
+    text: `签 ${i}`,
+    type: 'observation',
+    stages: [(i % 4) + 1],
+    reflection: `问 ${i}`,
+    topics: ['self-worth'],
+    ...over,
+  });
+  const pool = (n: number, over: Record<string, unknown> = {}) => ({ cards: Array.from({ length: n }, (_, i) => card(i, over)) });
+
+  it('90 条全型全覆盖通过', () => {
+    const cards = Array.from({ length: 90 }, (_, i) => card(i, { type: ['observation', 'practice', 'way'][i % 3] }));
+    expect(validateDraftDaily({ cards })).toEqual([]);
+  });
+
+  it('不足 90 条 / 缺 type / 缺段覆盖被拦', () => {
+    const errors = validateDraftDaily(pool(89));
+    expect(errors.some((e) => e.includes('只有 89 条'))).toBe(true);
+
+    const badType = validateDraftDaily({ cards: [card(0, { type: 'quote' }), ...Array.from({ length: 92 }, (_, i) => card(i))] });
+    expect(badType.some((e) => e.includes('type 必须是'))).toBe(true);
+
+    const onlyStage1 = validateDraftDaily({ cards: Array.from({ length: 90 }, (_, i) => card(i, { stages: [1] })) });
+    expect(onlyStage1.some((e) => e.includes('没有覆盖第 2 段'))).toBe(true);
+  });
+
+  it('topics 不是 1-2 个 / 未知命题被拦（发布闸硬拦缺标签的镜像）', () => {
+    expect(dailyCardErrors(card(0, { topics: [] }), 'c')).toEqual([expect.stringContaining('topics 必须是 1-2 个')]);
+    expect(dailyCardErrors(card(0, { topics: ['self-worth', 'allowing', 'parents'] }), 'c').length).toBe(1);
+    expect(dailyCardErrors(card(0, { topics: ['nope'] }), 'c')[0]).toContain('未知命题');
+  });
+
+  it('cards 不是数组直接报缺（不抛异常）', () => {
+    expect(validateDraftDaily(null)).toEqual(['一签草稿缺少 cards 数组']);
+    expect(validateDraftDaily({ cards: 'x' })).toEqual(['一签草稿缺少 cards 数组']);
+  });
+
+  it('draftToDaily：字段归一化（非法 type 落 observation、stages/topics 保形）', () => {
+    const cards = draftToDaily([card(0, { type: 'bogus' }) as never]);
+    expect(cards[0]?.type).toBe('observation');
+    expect(cards[0]?.topics).toEqual(['self-worth']);
+  });
+});
+
+describe('validateTagAssignments（存量打标校验，C4b）', () => {
+  it('0..N-1 每条恰好一行、topics 1-2 合法 → 通过且按 i 排序', () => {
+    const raw = { tags: [{ i: 1, topics: ['allowing'] }, { i: 0, topics: ['self-worth', 'parents'] }] };
+    const { errors, assignments } = validateTagAssignments(raw, 2);
+    expect(errors).toEqual([]);
+    expect(assignments).toEqual([
+      { i: 0, topics: ['self-worth', 'parents'] },
+      { i: 1, topics: ['allowing'] },
+    ]);
+  });
+
+  it('缺行 / 重复 i / 越界 / topics 0 个或 3 个 / 未知命题全被点名', () => {
+    const { errors } = validateTagAssignments({ tags: [{ i: 0, topics: ['self-worth'] }] }, 2);
+    expect(errors.some((e) => e.includes('缺第 1 条'))).toBe(true);
+
+    const dup = validateTagAssignments({ tags: [{ i: 0, topics: ['self-worth'] }, { i: 0, topics: ['allowing'] }] }, 2);
+    expect(dup.errors.some((e) => e.includes('重复'))).toBe(true);
+
+    const range = validateTagAssignments({ tags: [{ i: 5, topics: ['self-worth'] }] }, 2);
+    expect(range.errors.some((e) => e.includes('越界'))).toBe(true);
+
+    const badTopics = validateTagAssignments({ tags: [{ i: 0, topics: [] }, { i: 1, topics: ['a', 'b', 'c'] }, { i: 2, topics: ['nope'] }] }, 3);
+    expect(badTopics.errors.filter((e) => e.includes('1-2 个')).length).toBe(2);
+    expect(badTopics.errors.some((e) => e.includes('未知命题'))).toBe(true);
+  });
+
+  it('非对象 / 缺 tags 数组直接报缺（不抛异常）', () => {
+    expect(validateTagAssignments(null, 1).errors).toEqual(['打标输出缺少 tags 数组']);
+    expect(validateTagAssignments({}, 1).errors).toEqual(['打标输出缺少 tags 数组']);
+  });
+
+  it('buildDailyTaggingUser 带序号、type 与反思', () => {
+    const user = buildDailyTaggingUser([{ text: '签·甲', type: 'way', reflection: '问一句' }]);
+    expect(user).toContain('0. [way] 签·甲');
+    expect(user).toContain('问一句');
+    expect(user).toContain('"tags"');
   });
 });

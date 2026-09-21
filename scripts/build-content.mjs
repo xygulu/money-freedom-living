@@ -146,6 +146,12 @@ function validateDaily(bookId, locale, status) {
     if (!Array.isArray(card.stages) || card.stages.length === 0 || card.stages.some((s) => !STAGES.includes(s))) {
       fail(`${at}: stages 必须是 1-4 的非空数组`);
     }
+    // B3（docs/02 §20.2）：每条 1-2 个命题标签，缺标签报错到条目——pick 按命题调度（B5）的硬前置
+    if (!Array.isArray(card.topics) || card.topics.length < 1 || card.topics.length > 2) {
+      fail(`${at}: topics 必须是 1-2 个命题标签（B3 全量打标），得到 ${JSON.stringify(card.topics ?? null)}`);
+    } else {
+      for (const t of card.topics) if (!TOPICS.includes(t)) fail(`${at}: topics 含未知命题 ${t}（允许：${TOPICS.join('/')}）`);
+    }
     const key = card.text?.trim();
     if (key && seen.has(key)) fail(`${at}: 一签文案重复「${key}」`);
     seen.add(key);
@@ -220,7 +226,13 @@ function readPractices(bookIds) {
       if (!STAGES.includes(data.stage)) fail(`practices/${file}: stage 必须是 1-4，得到 ${data.stage}`);
       const bookId = data.bookId ?? DEFAULT_BOOK_ID;
       if (!bookIds.includes(bookId)) fail(`practices/${file}: bookId ${bookId} 在 content/books/ 下不存在`);
-      return { file, bookId, date: String(data.date ?? '').slice(0, 10), type: data.type, stage: data.stage, tags: data.tags ?? [], body: content.trim() };
+      // B3（docs/02 §20.2）：practices 也全量打标（1-2 个命题）；自由 tags 是内容关键词，与命题 topics 并存、语义不同
+      if (!Array.isArray(data.topics) || data.topics.length < 1 || data.topics.length > 2) {
+        fail(`practices/${file}: topics 必须是 1-2 个命题标签（B3 全量打标），得到 ${JSON.stringify(data.topics ?? null)}`);
+      } else {
+        for (const t of data.topics) if (!TOPICS.includes(t)) fail(`practices/${file}: topics 含未知命题 ${t}（允许：${TOPICS.join('/')}）`);
+      }
+      return { file, bookId, date: String(data.date ?? '').slice(0, 10), type: data.type, stage: data.stage, tags: data.tags ?? [], topics: data.topics ?? [], body: content.trim() };
     });
 }
 

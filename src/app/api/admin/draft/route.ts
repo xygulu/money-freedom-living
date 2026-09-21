@@ -8,15 +8,21 @@ import matter from 'gray-matter';
 import { requireApiAdmin } from '@/lib/admin-auth';
 import { BOOKS_DIR, readAdminBook, writeAdminBook } from '@/lib/admin-content';
 import {
+  buildDailySystem,
+  buildDailyUser,
+  buildEnDailySystem,
   buildEnJourneySystem,
   buildJourneySystem,
   buildJourneyUser,
   buildLampsSystem,
   buildLampsUser,
+  draftToDaily,
   draftToLamps,
   draftToStages,
+  validateDraftDaily,
   validateDraftJourney,
   validateDraftLamps,
+  type DraftDailyCard,
   type DraftLamp,
   type DraftStage,
 } from '@/lib/admin-draft';
@@ -56,8 +62,8 @@ async function generateWithRetry<T>(
 }
 
 /** v1 书的范例（学口吻不抄内容） */
-function v1Exemplars(): { journey: string; lamps: string } {
-  const fallback = { journey: '（范例缺失）', lamps: '（范例缺失）' };
+function v1Exemplars(): { journey: string; lamps: string; daily: string } {
+  const fallback = { journey: '（范例缺失）', lamps: '（范例缺失）', daily: '（范例缺失）' };
   try {
     const journeyDir = join(BOOKS_DIR, 'money-freedom', 'zh-CN', 'journey');
     const first = `1-看见.md`;
@@ -72,7 +78,9 @@ function v1Exemplars(): { journey: string; lamps: string } {
           .map(([k, v]) => [k, Array.isArray(v) ? v.slice(0, 2) : v]),
       ),
     };
-    return { journey, lamps: matter.stringify('', sample) };
+    const pool: unknown = JSON.parse(readFileSync(join(BOOKS_DIR, 'money-freedom', 'zh-CN', 'daily', 'pool.json'), 'utf8'));
+    const daily = Array.isArray(pool) ? pool.slice(0, 4) : [];
+    return { journey, lamps: matter.stringify('', sample), daily: JSON.stringify(daily, null, 1) };
   } catch {
     return fallback;
   }
@@ -82,8 +90,9 @@ export async function POST(request: Request) {
   const gate = await requireApiAdmin();
   if (!gate.ok) return gate.response;
 
-  const body = (await request.json().catch(() => null)) as { bookId?: string; source?: string } | null;
+  const body = (await request.json().catch(() => null)) as { bookId?: string; source?: string; kind?: string } | null;
   const bookId = String(body?.bookId ?? '');
+  const kind = body?.kind === 'daily' ? 'daily' : 'journey';
   if (!bookId || bookId.includes('..') || bookId.includes('/')) {
     return Response.json({ ok: false, error: 'bad_book_id' }, { status: 400 });
   }
@@ -104,6 +113,43 @@ export async function POST(request: Request) {
   const log: string[] = [];
 
   try {
+    // ---- 一签池起草（C4b）：zh-CN 生成 ≥90 条 → en 翻译，meta/journey/灯表不动 ----
+    if (kind === 'daily') {
+      const zhResult = await generateWithRetry<{ cards: DraftDailyCard[] }>(
+        'admin_draft_daily', gate.email, 12000,
+        () => ({
+          system: buildDailySystem(exemplars.daily),
+          user: buildDailyUser(material, state.meta.title['zh-CN'] || bookId),
+        }),
+        validateDraftDaily,
+      );
+      if (zhResult.errors.length > 0) {
+        return Response.json({ ok: false, error: 'draft_invalid', stage: 'daily', log: zhResult.errors }, { status: 502 });
+      }
+      const cardsZh = zhResult.value.cards;
+      log.push(`一签池 zh-CN：${cardsZh.length} 条 ✅`);
+
+      const enResult = await generateWithRetry<{ cards: DraftDailyCard[] }>(
+        'admin_draft_daily_translate', gate.email, 12000,
+        () => ({
+          system: buildEnDailySystem(),
+          user: 'Translate this daily-card pool to English. Output the full JSON with "cards":\n' + JSON.stringify({ cards: cardsZh }),
+        }),
+        validateDraftDaily,
+      );
+      if (enResult.errors.length > 0) {
+        return Response.json({ ok: false, error: 'draft_invalid', stage: 'daily-en', log: enResult.errors }, { status: 502 });
+      }
+      log.push(`一签池 en：${enResult.value.cards.length} 条 ✅`);
+
+      const next = readAdminBook(bookId);
+      if (!next) return Response.json({ ok: false, error: 'book_not_found' }, { status: 404 });
+      next.daily = { 'zh-CN': draftToDaily(cardsZh), en: draftToDaily(enResult.value.cards) };
+      writeAdminBook(bookId, next);
+      return Response.json({ ok: true, log, state: next });
+    }
+
+    // ---- journey + 灯表起草（C4a）----
     // ① zh-CN journey
     const journeyResult = await generateWithRetry<{ stages: DraftStage[] }>(
       'admin_draft_journey', gate.email, 8000,

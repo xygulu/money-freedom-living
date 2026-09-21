@@ -2,7 +2,7 @@
 // 纯函数模块：prompt 组装 / 草稿校验 / LLM JSON → 编辑态。文件读写归 admin-content.ts，
 // LLM 调用归路由（这里不 import llm.ts，方便单测）。
 import { TOPICS, TOPICS_ZH } from '@/lib/content';
-import type { AdminLamp, AdminStage } from '@/lib/admin-content';
+import type { AdminDailyCard, AdminLamp, AdminStage } from '@/lib/admin-content';
 
 /** LLM 草稿 JSON 里的一段 journey */
 export interface DraftStage {
@@ -29,6 +29,15 @@ export interface DraftLamp {
   promptHint: string;
   label: Record<string, string>;
   hint: Record<string, string>;
+}
+
+/** LLM 草稿 JSON 里的一条一签 */
+export interface DraftDailyCard {
+  text: string;
+  type: string;
+  stages: number[];
+  reflection: string;
+  topics: string[];
 }
 
 export interface DraftPayload {
@@ -155,7 +164,168 @@ export function buildEnJourneySystem(): string {
   ].join('\n');
 }
 
+// ---- 一签池起草（C4b）----
+
+export const DAILY_TYPES = ['observation', 'practice', 'way'] as const;
+const DAILY_TYPE_ZH: Record<string, string> = {
+  observation: 'observation——看见式观察：一句戳中金钱关系真相的话，让读者「被看见」',
+  practice: 'practice——练习引导：邀请读者今天做一件小事并观察自己',
+  way: 'way——活法式提醒：一种更松的活法/花钱方式，示范而非要求',
+};
+
+/** 起草 zh-CN 一签池（一次给齐 ≥90 条）的 system */
+export function buildDailySystem(exemplar: string): string {
+  return [
+    '你是金钱关系陪伴产品的内容编辑。任务：为一本书起草「每日一签」池子（zh-CN）。',
+    '一签 = 读者每天抽到的一张卡片：一句正文 + 一个开放的反思提问。按读者当前所在阶段（stages）抽取。',
+    '',
+    '三型（type 枚举）：',
+    ...Object.entries(DAILY_TYPE_ZH).map(([k, v]) => `- ${v}`),
+    '',
+    '六命题（topics 枚举，每条 1-2 个）：',
+    topicBlock(),
+    '',
+    '范例（v1 书的几条一签，学口吻与长度，不要抄内容）：',
+    '---',
+    EXCERPT(exemplar, 2500),
+    '---',
+    '',
+    '硬性要求：',
+    '- 输出 JSON，不要输出 JSON 以外的内容',
+    '- 至少 90 条；四段都要覆盖（stages 是数组，一条可挂 1-2 段）；三种 type 都要有，observation 约占一半',
+    '- text：一句话（≤40 个汉字），直接对读者说（用「你」），不说教不引用书中术语',
+    '- reflection：一个开放的反思提问（≤35 个汉字），问状态/感受/发现，不问是非题，不问「今天做了没」',
+    '- topics：每条 1-2 个，从六命题枚举里选这条签的主轴',
+  ].join('\n');
+}
+
+/** 起草 zh-CN 一签池的 user（素材） */
+export function buildDailyUser(material: string, bookTitle: string): string {
+  return [
+    `书名：《${bookTitle}》。素材如下（书的摘录/要点/转述）：`,
+    '==========',
+    EXCERPT(material, 12000),
+    '==========',
+    '请输出一签池草稿 JSON：{"cards": [...]}，每条字段：text, type(observation|practice|way), stages(数字数组), reflection, topics(1-2 个)。',
+  ].join('\n');
+}
+
+/** en 版一签池翻译的 system */
+export function buildEnDailySystem(): string {
+  return [
+    'You are a translator for a money-relationship companion product. Translate the given zh-CN daily-card pool into natural, warm English.',
+    '- Keep the JSON structure, field names, type values, stages arrays and topics enums exactly; only translate "text" and "reflection".',
+    '- text: one sentence, second person, gentle and direct; reflection: one open question.',
+  ].join('\n');
+}
+
+// ---- 存量批量打标（C4b，销 docs/02 §20.2 B3 的数据面）----
+
+/** 打标 LLM 的输出行 */
+export interface TagAssignment {
+  i: number;
+  topics: string[];
+}
+
+/** 给存量一签池打标的 system（只补 topics，不动文字） */
+export function buildTaggingSystem(): string {
+  return [
+    '你是金钱关系陪伴产品的内容编辑。任务：给已有的「每日一签」条目补命题标签（topics）。',
+    '每条选 1-2 个六命题：这条签的主轴是什么，读者被它触动的痛点属于哪个命题。',
+    '',
+    '六命题枚举：',
+    topicBlock(),
+    '',
+    '硬性要求：',
+    '- 输出 JSON，不要输出 JSON 以外的内容',
+    '- 每条输入都要有输出行（i = 输入的序号，从 0 开始，不许漏不许重）',
+    '- topics 每行 1-2 个，只能从枚举选',
+  ].join('\n');
+}
+
+/** 给存量一签打标的 user（只给必要字段，省 token） */
+export function buildDailyTaggingUser(cards: Array<Pick<DraftDailyCard, 'text' | 'type' | 'reflection'>>): string {
+  const lines = cards.map((c, i) => `${i}. [${c.type}] ${c.text} ｜ 反思：${c.reflection}`);
+  return ['待打标的一签（i. [type] 正文 ｜ 反思）：', ...lines, '', '输出 JSON：{"tags": [{"i": 0, "topics": ["..."]}, ...]}，每条一行，行数必须与输入一致。'].join('\n');
+}
+
+/** 给存量 practices（创造者笔记）打标的 user */
+export function buildPracticeTaggingUser(notes: Array<{ file: string; stage: number; body: string }>): string {
+  const lines = notes.map((n, i) => `${i}. [段 ${n.stage}] ${n.file}\n   摘要：${EXCERPT(n.body, 300)}`);
+  return ['待打标的笔记（i. [段号] 文件名 + 摘要）：', ...lines, '', '输出 JSON：{"tags": [{"i": 0, "topics": ["..."]}, ...]}，每篇一行。'].join('\n');
+}
+
+/** 校验打标输出：0..count-1 每个恰好一次、topics 1-2 个合法 */
+export function validateTagAssignments(raw: unknown, count: number): { errors: string[]; assignments: TagAssignment[] } {
+  const errors: string[] = [];
+  if (!raw || typeof raw !== 'object' || !Array.isArray((raw as { tags?: unknown }).tags)) {
+    return { errors: ['打标输出缺少 tags 数组'], assignments: [] };
+  }
+  const seen = new Map<number, string[]>();
+  for (const [i, row] of ((raw as { tags: unknown[] }).tags).entries()) {
+    const at = `tags[${i}]`;
+    const idx = row && typeof row === 'object' ? Number((row as { i?: unknown }).i) : NaN;
+    if (!Number.isInteger(idx) || idx < 0 || idx >= count) {
+      errors.push(`${at}.i 越界（应为 0-${count - 1}，得到 ${row && typeof row === 'object' ? String((row as { i?: unknown }).i) : '缺'}）`);
+      continue;
+    }
+    if (seen.has(idx)) errors.push(`${at}.i ${idx} 重复`);
+    const topics = (row as { topics?: unknown }).topics;
+    if (!Array.isArray(topics) || topics.length < 1 || topics.length > 2) {
+      errors.push(`${at}.topics 必须是 1-2 个`);
+      continue;
+    }
+    const bad = topics.filter((t) => !(TOPICS as readonly string[]).includes(String(t)));
+    if (bad.length > 0) errors.push(`${at}.topics 未知命题 ${bad.join('/')}`);
+    else seen.set(idx, topics.map(String));
+  }
+  for (let i = 0; i < count; i++) {
+    if (!seen.has(i)) errors.push(`缺第 ${i} 条的打标行`);
+  }
+  return { errors, assignments: [...seen.entries()].sort(([a], [b]) => a - b).map(([i, topics]) => ({ i, topics })) };
+}
+
 // ---- 校验（镜像 build-content 的发布闸，草稿期就拦，省得发布时才发现） ----
+
+const isDailyType = (v: unknown): v is string => (DAILY_TYPES as readonly string[]).includes(String(v));
+const validStages = (v: unknown): v is number[] =>
+  Array.isArray(v) && v.length > 0 && v.every((s) => Number.isInteger(s) && s >= 1 && s <= 4);
+
+/** 一签草稿/编辑态共用的行校验（发布闸语义：topics 必填 1-2 个合法） */
+export function dailyCardErrors(card: unknown, at: string): string[] {
+  const errors: string[] = [];
+  if (!card || typeof card !== 'object') return [`${at} 不是对象`];
+  const c = card as Record<string, unknown>;
+  if (!isStr(c.text)) errors.push(`${at}.text 缺或空`);
+  if (!isDailyType(c.type)) errors.push(`${at}.type 必须是 ${DAILY_TYPES.join('/')}，得到 ${String(c.type)}`);
+  if (!validStages(c.stages)) errors.push(`${at}.stages 必须是 1-4 的非空数字数组`);
+  if (!isStr(c.reflection)) errors.push(`${at}.reflection 缺或空`);
+  if (!Array.isArray(c.topics) || c.topics.length < 1 || c.topics.length > 2) {
+    errors.push(`${at}.topics 必须是 1-2 个（发布闸硬拦缺标签）`);
+  } else {
+    for (const t of c.topics) if (!(TOPICS as readonly string[]).includes(String(t))) errors.push(`${at}.topics 未知命题 ${String(t)}`);
+  }
+  return errors;
+}
+
+export function validateDraftDaily(raw: unknown): DraftErrors {
+  const errors: DraftErrors = [];
+  if (!raw || typeof raw !== 'object' || !Array.isArray((raw as { cards?: unknown }).cards)) {
+    return ['一签草稿缺少 cards 数组'];
+  }
+  const cards = (raw as { cards: unknown[] }).cards;
+  if (cards.length < 90) errors.push(`只有 ${cards.length} 条，发布闸要求 ≥90（MVP 备量）`);
+  cards.forEach((c, i) => errors.push(...dailyCardErrors(c, `cards[${i}]`)));
+  const types = new Set(cards.map((c) => (c && typeof c === 'object' ? String((c as { type?: unknown }).type) : '')));
+  for (const t of DAILY_TYPES) if (!types.has(t)) errors.push(`缺 ${t} 型（三种 type 都要有）`);
+  const stagesSeen = new Set<number>();
+  for (const c of cards) {
+    const st = (c as { stages?: unknown }).stages;
+    if (validStages(st)) for (const s of st) stagesSeen.add(s);
+  }
+  for (const need of [1, 2, 3, 4]) if (!stagesSeen.has(need)) errors.push(`没有覆盖第 ${need} 段的一签`);
+  return errors;
+}
 
 export type DraftErrors = string[];
 
@@ -269,4 +439,15 @@ export function draftToLamps(stages: Record<string, DraftLamp[]>): Record<string
     }));
   }
   return out;
+}
+
+/** LLM 一签草稿 → 编辑态 */
+export function draftToDaily(cards: DraftDailyCard[]): AdminDailyCard[] {
+  return cards.map((c) => ({
+    text: String(c.text ?? ''),
+    type: isDailyType(c.type) ? c.type : 'observation',
+    stages: validStages(c.stages) ? c.stages.map(Number) : [],
+    reflection: String(c.reflection ?? ''),
+    topics: Array.isArray(c.topics) ? c.topics.map(String) : [],
+  }));
 }

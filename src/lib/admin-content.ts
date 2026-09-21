@@ -7,8 +7,11 @@ import matter from 'gray-matter';
 import { TOPICS, type TopicId } from '@/lib/content';
 
 export const BOOKS_DIR = join(process.cwd(), 'content', 'books');
+export const PRACTICES_DIR = join(process.cwd(), 'content', 'practices');
 export const TITLE_LOCALES = ['en', 'zh-CN', 'zh-TW', 'ja'] as const;
 export type TitleLocale = (typeof TITLE_LOCALES)[number];
+/** 池子只有这两语（zh-TW/ja 内容层暂缓，docs/02 §13.3 转正前置另议） */
+export const DAILY_LOCALES = ['zh-CN', 'en'] as const;
 
 /** 后台书列表行（/admin 首页的选书清单） */
 export interface AdminBookRow {
@@ -49,6 +52,26 @@ export interface AdminLamp {
   hint: Record<string, string>;
 }
 
+/** 一条一签的编辑态（与 DailyCard 同构 + topics；池子只有 zh-CN/en 两语） */
+export interface AdminDailyCard {
+  text: string;
+  type: string;
+  stages: number[];
+  reflection: string;
+  topics: string[];
+}
+
+/** 一篇创造者笔记的编辑态（content/practices/，书外、中文单一事实源） */
+export interface AdminPracticeNote {
+  file: string;
+  date: string;
+  type: string;
+  stage: number;
+  tags: string[];
+  topics: string[];
+  body: string;
+}
+
 /** 书工作台的全量编辑态（保存接口的原样往返单位） */
 export interface AdminBookState {
   meta: {
@@ -63,6 +86,7 @@ export interface AdminBookState {
   source: string;
   journey: Record<string, AdminStage[]>;
   lamps: Record<string, AdminLamp[]>;
+  daily: Record<'zh-CN' | 'en', AdminDailyCard[]>;
 }
 
 const str = (v: unknown): string => (typeof v === 'string' ? v : '');
@@ -179,6 +203,62 @@ function readLamps(bookId: string, root: string): Record<string, AdminLamp[]> {
   return out;
 }
 
+function readDaily(bookId: string, locale: 'zh-CN' | 'en', root: string): AdminDailyCard[] {
+  const path = join(root, bookId, locale, 'daily', 'pool.json');
+  if (!existsSync(path)) return [];
+  try {
+    const pool: unknown = JSON.parse(readFileSync(path, 'utf8'));
+    if (!Array.isArray(pool)) return [];
+    return pool.map((c) => {
+      const card = (c ?? {}) as Record<string, unknown>;
+      return {
+        text: str(card.text),
+        type: str(card.type),
+        stages: Array.isArray(card.stages) ? card.stages.map(Number) : [],
+        reflection: str(card.reflection),
+        topics: strList(card.topics),
+      };
+    });
+  } catch {
+    return []; // 坏池子按空展示（计数 0），发布闸会拦
+  }
+}
+
+/** 创造者笔记（content/practices/，书外共享；README.md 不是笔记） */
+export function readPracticeNotes(root: string = PRACTICES_DIR): AdminPracticeNote[] {
+  if (!existsSync(root)) return [];
+  return readdirSync(root)
+    .filter((f) => f.endsWith('.md') && f !== 'README.md')
+    .sort()
+    .map((file) => {
+      const { data, content } = matter(readFileSync(join(root, file), 'utf8'));
+      return {
+        file,
+        date: String(data.date ?? '').slice(0, 10),
+        type: str(data.type),
+        stage: typeof data.stage === 'number' ? data.stage : 0,
+        tags: strList(data.tags),
+        topics: strList(data.topics),
+        body: content.trim(),
+      };
+    });
+}
+
+/** 给一篇笔记补/改 topics：字符串手术只动 frontmatter 里的 topics 行，其余字节原样
+ *  （gray-matter 重序列化会把 date 变 Date→ISO 串等副作用，不走）。 */
+export function writePracticeTopics(file: string, topics: string[], root: string = PRACTICES_DIR): void {
+  const path = join(root, file);
+  if (!existsSync(path)) throw new Error(`笔记不存在：${file}`);
+  const raw = readFileSync(path, 'utf8');
+  const end = raw.indexOf('\n---', 3); // frontmatter 结束（首个 --- 在 0）
+  if (end < 0) throw new Error(`笔记缺 frontmatter：${file}`);
+  const fm = raw.slice(0, end);
+  const rest = raw.slice(end);
+  const line = `topics: [${topics.join(', ')}]`;
+  const next = /^topics:.*$/m.test(fm) ? fm.replace(/^topics:.*$/m, line) : `${fm}\n${line}`;
+  writeFileSync(path, next + rest);
+}
+
 /** 书工作台数据（编辑器的初始态）。书不存在返回 null。 */
 export function readAdminBook(bookId: string, root: string = BOOKS_DIR): AdminBookState | null {
   const meta = readMeta(bookId, root);
@@ -192,6 +272,10 @@ export function readAdminBook(bookId: string, root: string = BOOKS_DIR): AdminBo
       en: readStages(bookId, 'en', root),
     },
     lamps: readLamps(bookId, root),
+    daily: {
+      'zh-CN': readDaily(bookId, 'zh-CN', root),
+      en: readDaily(bookId, 'en', root),
+    },
   };
 }
 
@@ -299,7 +383,39 @@ export function validateSaveShape(state: unknown): string[] {
       }
     }
   }
+  if (!s.daily || typeof s.daily !== 'object') errors.push('缺 daily');
+  for (const locale of DAILY_LOCALES) {
+    const pool = s.daily?.[locale];
+    if (!Array.isArray(pool)) {
+      errors.push(`daily.${locale} 必须是数组`);
+      continue;
+    }
+    for (const [i, card] of pool.entries()) {
+      const at = `daily.${locale}[${i}]`;
+      if (!card || typeof card !== 'object') {
+        errors.push(`${at} 不是对象`);
+        continue;
+      }
+      if (typeof card.text !== 'string') errors.push(`${at}.text 必须是字符串`);
+      if (typeof card.reflection !== 'string') errors.push(`${at}.reflection 必须是字符串`);
+      if (!['observation', 'practice', 'way'].includes(String(card.type))) errors.push(`${at}.type 必须是 observation|practice|way`);
+      if (!Array.isArray(card.stages) || !card.stages.every((n) => Number.isInteger(n) && n >= 1 && n <= 4)) {
+        errors.push(`${at}.stages 必须是 1-4 的数字数组`);
+      }
+      for (const t of Array.isArray(card.topics) ? card.topics : ['(非数组)']) {
+        if (!(TOPICS as readonly string[]).includes(t)) errors.push(`${at}.topics 未知命题 ${String(t)}`);
+      }
+    }
+  }
   return errors;
+}
+
+/** pool.json 保持「每条一行内联 JSON、2 空格缩进」的既有格式（diff 干净） */
+function writeDaily(bookId: string, locale: 'zh-CN' | 'en', pool: AdminDailyCard[], root: string): void {
+  const dir = join(root, bookId, locale, 'daily');
+  mkdirSync(dir, { recursive: true });
+  const body = pool.length === 0 ? '[]' : '[\n' + pool.map((c) => '  ' + JSON.stringify(c)).join(',\n') + '\n]';
+  writeFileSync(join(dir, 'pool.json'), body + '\n');
 }
 
 /** 保存工作台：整份状态写回源文件（后台是单人工具，粗粒度整存）。书不存在抛错。 */
@@ -317,9 +433,14 @@ export function writeAdminBook(bookId: string, state: AdminBookState, root: stri
       status: meta.status === 'active' ? 'active' : 'draft',
     }),
   );
-  writeFileSync(join(root, bookId, 'source.md'), state.source.trimEnd() + '\n');
+  // 素材保真：原本没有 source.md 且素材为空 → 不凭空造文件（v1 就没有这个文件）
+  const sourcePath = join(root, bookId, 'source.md');
+  if (state.source.trim() || existsSync(sourcePath)) {
+    writeFileSync(sourcePath, state.source.trimEnd() + '\n');
+  }
   for (const [locale, stages] of Object.entries(state.journey)) {
     writeStages(bookId, locale, stages, root);
   }
   writeLamps(bookId, state.lamps, root);
+  for (const locale of DAILY_LOCALES) writeDaily(bookId, locale, state.daily[locale] ?? [], root);
 }

@@ -4,7 +4,7 @@
 // 状态是整份 AdminBookState，整存整取（单人后台工具，不做协作编辑）。
 // 内容质量不在这里拦——发布闸（build-content）是硬闸，这里只管把源文件改对。
 import { useState } from 'react';
-import type { AdminBookState, AdminLamp, AdminStage } from '@/lib/admin-content';
+import type { AdminBookState, AdminDailyCard, AdminLamp, AdminStage } from '@/lib/admin-content';
 
 const TOPICS: Array<{ id: string; zh: string }> = [
   { id: 'self-worth', zh: '我不配' },
@@ -24,6 +24,7 @@ const LANGS: Array<{ id: string; zh: string }> = [
 const inputCls = 'w-full border border-line bg-white px-2 py-1.5 text-sm';
 const labelCls = 'block text-xs text-ink-soft';
 const boxCls = 'border border-line bg-white/60 p-4';
+const DAILY_TYPES = ['observation', 'practice', 'way'] as const;
 
 function LinesField({ label, value, onChange, rows = 3 }: { label: string; value: string[]; onChange: (v: string[]) => void; rows?: number }) {
   return (
@@ -132,9 +133,68 @@ function LampForm({ lamp, onChange }: { lamp: AdminLamp; onChange: (patch: Parti
   );
 }
 
+function CardForm({ card, onChange }: { card: AdminDailyCard; onChange: (patch: Partial<AdminDailyCard>) => void }) {
+  return (
+    <div className="mt-2 flex flex-col gap-2 border-l-2 border-line pl-3">
+      <label className="block">
+        <span className={labelCls}>正文（text，一句话 ≤40 字）</span>
+        <textarea className={inputCls} rows={2} value={card.text} onChange={(e) => onChange({ text: e.target.value })} />
+      </label>
+      <label className="block">
+        <span className={labelCls}>反思提问（reflection，开放式，不问是非题）</span>
+        <textarea className={inputCls} rows={2} value={card.reflection} onChange={(e) => onChange({ reflection: e.target.value })} />
+      </label>
+      <div className="flex flex-wrap items-end gap-4">
+        <label>
+          <span className={labelCls}>type</span>
+          <select className={`${inputCls} w-36`} value={card.type} onChange={(e) => onChange({ type: e.target.value })}>
+            {DAILY_TYPES.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div>
+          <span className={labelCls}>stages（可挂 1-2 段）</span>
+          <div className="mt-1 flex gap-3">
+            {[1, 2, 3, 4].map((s) => (
+              <label key={s} className="flex items-center gap-1 text-xs">
+                <input
+                  type="checkbox"
+                  checked={card.stages.includes(s)}
+                  onChange={(e) => onChange({ stages: e.target.checked ? [...card.stages, s] : card.stages.filter((x) => x !== s) })}
+                />
+                段 {s}
+              </label>
+            ))}
+          </div>
+        </div>
+        <div>
+          <span className={labelCls}>topics（1-2 个，发布闸硬拦缺失）</span>
+          <div className="mt-1 flex flex-wrap gap-3">
+            {TOPICS.map((t) => (
+              <label key={t.id} className="flex items-center gap-1 text-xs">
+                <input
+                  type="checkbox"
+                  checked={card.topics.includes(t.id)}
+                  onChange={(e) =>
+                    onChange({ topics: e.target.checked ? [...card.topics, t.id] : card.topics.filter((x) => x !== t.id) })
+                  }
+                />
+                {t.zh}
+              </label>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function BookEditor({ bookId, initial }: { bookId: string; initial: AdminBookState }) {
   const [state, setState] = useState<AdminBookState>(initial);
-  const [busy, setBusy] = useState<'draft' | 'save' | null>(null);
+  const [busy, setBusy] = useState<'draft' | 'save' | 'tag' | null>(null);
   const [log, setLog] = useState<{ ok: boolean; text: string } | null>(null);
 
   const patchMeta = (patch: Partial<AdminBookState['meta']>) => setState((s) => ({ ...s, meta: { ...s.meta, ...patch } }));
@@ -147,6 +207,11 @@ export default function BookEditor({ bookId, initial }: { bookId: string; initia
     setState((s) => ({
       ...s,
       lamps: { ...s.lamps, [stageKey]: (s.lamps[stageKey] ?? []).map((lp, i) => (i === index ? { ...lp, ...patch } : lp)) },
+    }));
+  const patchCard = (locale: 'zh-CN' | 'en', index: number, patch: Partial<AdminDailyCard>) =>
+    setState((s) => ({
+      ...s,
+      daily: { ...s.daily, [locale]: s.daily[locale].map((c, i) => (i === index ? { ...c, ...patch } : c)) },
     }));
 
   async function save(): Promise<void> {
@@ -166,20 +231,39 @@ export default function BookEditor({ bookId, initial }: { bookId: string; initia
     setBusy(null);
   }
 
-  async function draft(): Promise<void> {
+  async function draft(kind: 'journey' | 'daily'): Promise<void> {
     setBusy('draft');
     setLog(null);
     try {
       const res = await fetch('/api/admin/draft', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bookId, source: state.source }), // 素材随请求先落盘，免得忘保存
+        body: JSON.stringify({ bookId, source: state.source, kind }), // 素材随请求先落盘，免得忘保存
       });
       const data = (await res.json()) as { ok: boolean; log?: string[]; state?: AdminBookState };
-      if (data.ok && data.state) setState(data.state); // 草稿只覆盖 journey+lamps，本地其他编辑不动
+      if (data.ok && data.state) setState(data.state); // 草稿只覆盖对应区块，本地其他编辑不动
       setLog({ ok: Boolean(data.ok), text: data.ok ? (data.log ?? []).join('\n') : (data.log ?? ['起草失败']).join('\n') });
     } catch {
       setLog({ ok: false, text: '网络错误，起草没跑成' });
+    }
+    setBusy(null);
+  }
+
+  // 存量批量打标：只补缺 topics 的条目（一签两池 + practices），已校正过的不动
+  async function tag(): Promise<void> {
+    setBusy('tag');
+    setLog(null);
+    try {
+      const res = await fetch('/api/admin/tag', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookId }),
+      });
+      const data = (await res.json()) as { ok: boolean; log?: string[]; state?: AdminBookState };
+      if (data.ok && data.state) setState(data.state);
+      setLog({ ok: Boolean(data.ok), text: data.ok ? (data.log ?? []).join('\n') : (data.log ?? ['打标失败']).join('\n') });
+    } catch {
+      setLog({ ok: false, text: '网络错误，打标没跑成' });
     }
     setBusy(null);
   }
@@ -242,19 +326,30 @@ export default function BookEditor({ bookId, initial }: { bookId: string; initia
       </div>
 
       <div className={boxCls}>
-        <h2 className="text-sm">AI 起草（journey zh-CN + en、灯表四语——覆盖现有 journey 与灯表）</h2>
+        <h2 className="text-sm">AI 起草（覆盖现有内容，写回源文件）</h2>
         <p className="mt-1 text-xs leading-relaxed text-ink-soft/70">
-          跑三次 LLM（起草 → 灯表 → 英文翻译），每次校验不过自动重试一次；草稿写回源文件，一签池与 meta 不动。
-          {state.meta.status === 'active' && <strong className="ml-1">这本书是 active：AI 不许覆盖线上内容，起草被拒。</strong>}
+          每次校验不过自动重试一次；草稿写回源文件。{state.meta.status === 'active' && (
+            <strong className="ml-1">这本书是 active：AI 不许覆盖线上内容，起草被拒（打标不受限）。</strong>
+          )}
         </p>
-        <button
-          type="button"
-          onClick={() => void draft()}
-          disabled={busy !== null}
-          className="mt-3 border border-ink px-5 py-2 text-sm transition-colors hover:bg-ink hover:text-paper disabled:opacity-50"
-        >
-          {busy === 'draft' ? '正在起草……约 1-3 分钟' : 'AI 起草 journey + 灯表'}
-        </button>
+        <div className="mt-3 flex flex-wrap gap-3">
+          <button
+            type="button"
+            onClick={() => void draft('journey')}
+            disabled={busy !== null}
+            className="border border-ink px-5 py-2 text-sm transition-colors hover:bg-ink hover:text-paper disabled:opacity-50"
+          >
+            {busy === 'draft' ? '正在起草……约 1-3 分钟' : 'AI 起草 journey + 灯表'}
+          </button>
+          <button
+            type="button"
+            onClick={() => void draft('daily')}
+            disabled={busy !== null}
+            className="border border-ink px-5 py-2 text-sm transition-colors hover:bg-ink hover:text-paper disabled:opacity-50"
+          >
+            {busy === 'draft' ? '正在起草……' : 'AI 起草一签池（覆盖两池 ≥90 条，约 2-4 分钟）'}
+          </button>
+        </div>
       </div>
 
       <div className={boxCls}>
@@ -298,8 +393,44 @@ export default function BookEditor({ bookId, initial }: { bookId: string; initia
       </div>
 
       <div className={boxCls}>
-        <h2 className="text-sm">一签池（每日一签，发布闸要求 ≥90 条）</h2>
-        <p className="mt-1 text-xs text-ink-soft">AI 起草一签池是 C4b，暂未开放；本批先做 journey + 灯表。</p>
+        <div className="flex flex-wrap items-baseline gap-3">
+          <h2 className="text-sm">一签池（每日一签，发布闸要求 ≥90 条 + 每条 1-2 个命题标签）</h2>
+          <button
+            type="button"
+            onClick={() => void tag()}
+            disabled={busy !== null}
+            className="border border-line px-3 py-1 text-xs transition-colors hover:bg-ink hover:text-paper disabled:opacity-50"
+          >
+            {busy === 'tag' ? '正在打标……' : 'AI 批量打标（只补缺 topics：两池 + practices）'}
+          </button>
+        </div>
+        {(['zh-CN', 'en'] as const).map((locale) => {
+          const pool = state.daily[locale] ?? [];
+          const missing = pool.filter((c) => c.topics.length === 0).length;
+          return (
+            <div key={locale} className="mt-4">
+              <h3 className="text-xs tracking-widest text-ink-soft">
+                {locale}（{pool.length} 条{missing > 0 ? `，缺 topics ${missing} 条` : '，标签齐'}）
+              </h3>
+              {pool.length ? (
+                pool.map((c, i) => (
+                  <details key={i} className="mt-1">
+                    <summary className="cursor-pointer text-sm">
+                      <span className="mr-2 text-xs text-ink-soft">
+                        #{i + 1} {c.type} · 段{c.stages.join('/')} · {c.topics.length ? c.topics.join('/') : <span className="text-red-500">缺标</span>}
+                      </span>
+                      {c.text.slice(0, 24)}
+                      {c.text.length > 24 ? '……' : ''}
+                    </summary>
+                    <CardForm card={c} onChange={(patch) => patchCard(locale, i, patch)} />
+                  </details>
+                ))
+              ) : (
+                <p className="mt-1 text-xs text-ink-soft">还没有一签——点上面「AI 起草一签池」。</p>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       <div className={boxCls}>

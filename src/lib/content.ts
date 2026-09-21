@@ -52,6 +52,8 @@ export interface DailyCard {
   type: DailyType;
   stages: number[];
   reflection: string;
+  /** B3 全量打标（docs/02 §20.2）：1-2 个命题，pick 按命题调度（B5）的数据前置；发布闸硬拦缺失 */
+  topics: TopicId[];
 }
 
 export interface PracticeNote {
@@ -62,6 +64,8 @@ export interface PracticeNote {
   type: 'fact' | 'opinion';
   stage: number;
   tags: string[];
+  /** B3 全量打标：命题标签（与自由 tags 并存——tags 是内容关键词，topics 是六命题调度标签） */
+  topics: TopicId[];
   body: string;
 }
 
