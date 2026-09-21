@@ -96,7 +96,7 @@ describe('隐私政策四语完整性（P§9 合规清单）', () => {
   it.each(enabledLocales)('%s：结构完整，含数据流/权利/删除时间线/18+', (locale) => {
     const text = PRIVACY[locale];
     expect(text.title.length).toBeGreaterThan(0);
-    expect(text.updated).toMatch(/2026-09-v1/);
+    expect(text.updated).toMatch(/2026-09-v2/);
     expect(text.intro.length).toBeGreaterThanOrEqual(2);
     expect(text.sections.length).toBeGreaterThanOrEqual(6);
     for (const section of text.sections) {
@@ -121,7 +121,7 @@ describe('隐私政策四语完整性（P§9 合规清单）', () => {
 
 describe('同意政策版本（P§9：同意记录带政策版本号）', () => {
   it('版本号与隐私政策标注一致', () => {
-    expect(POLICY_VERSION).toBe('2026-09-v1');
+    expect(POLICY_VERSION).toBe('2026-09-v2');
   });
 });
 

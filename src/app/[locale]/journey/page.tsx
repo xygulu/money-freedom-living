@@ -28,6 +28,7 @@ import { buildTimeline, formatTimelineDay } from '@/lib/timeline';
 import { computeStageProgress, lampsFor, MAX_STAGE } from '@/lib/stage';
 import { isVerdictNode } from '@/lib/cognition';
 import { nodeQuestion } from '@/lib/touch';
+import { getSttProviders } from '@/lib/stt';
 import { baselineFor, countMaterialSince, shouldPropose, saveEvolution, listPortraitVersions } from '@/lib/evolution';
 import { shouldOfferAssess, saveAssessmentState, ASSESS_PENDING_TTL_DAYS } from '@/lib/assess';
 import { getUiVersion } from '@/lib/ui-version';
@@ -300,6 +301,7 @@ export default async function journeyPage({
             dict={dict}
             node={nodeParam}
             from={query?.from === 'touch' ? 'touch' : undefined}
+            speechEnabled={getSttProviders().length > 0}
           />
         </div>
       </section>

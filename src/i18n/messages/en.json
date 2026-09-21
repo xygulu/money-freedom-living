@@ -234,6 +234,9 @@
     "closeQ3": "The first line in your head",
     "closeOptional": "Leave it blank if you'd rather",
     "closeCantRecall": "Can't recall",
+    "closeSpeech": "Tap to speak",
+    "closeSpeechStop": "Done — tap to stop",
+    "closeSpeechFailed": "Didn't catch that — typing works too.",
     "closeSubmit": "Today ends here",
     "closeMore": "Want to say more",
     "closeMigrateLead": "That line sounds different from the ones before. Keep it?",
@@ -483,7 +486,7 @@
     "error": "Something went wrong. Please try again.",
     "consent": {
       "adultLabel": "I am 18 years of age or older",
-      "sensitiveLabel": "I agree that money worries, childhood memories and similar sensitive information may be used to draw my money portrait. This is highly private and is never used for model training.",
+      "sensitiveLabel": "I agree that money worries, childhood memories and similar sensitive information — including text transcribed from my voice notes — may be used to draw my money portrait. This is highly private and is never used for model training.",
       "sensitiveHint": "You can also continue without agreeing: the questionnaire and journal still work — there just won't be a portrait or an AI deep-talk."
     }
   },

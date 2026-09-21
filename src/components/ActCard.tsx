@@ -23,6 +23,7 @@
 // 行为证据（写了 = 灯有记录可依，M10 行为证据硬闸）。
 import { useState } from 'react';
 import type { Dict } from '@/i18n/get-dict';
+import SpeechButton from './SpeechButton';
 import styles from './ActCard.module.css';
 
 export type DidChoice = 'done' | 'partial' | 'missed';
@@ -40,11 +41,18 @@ interface Props {
   locale: string;
   dict: Dict;
   exercise: string | null;
+  /**
+   * 服务端配置了 STT provider 才为 true（journey-new 页 SSR 时用 getSttProviders() 判断）。
+   * 未配置时「按一下说」整个不渲染——不把用户引向一个永远按不响的东西。
+   */
+  speechEnabled?: boolean;
   onSubmitted: (payload: SubmittedPayload) => void;
 }
 
-export default function ActCard({ locale, dict, exercise, onSubmitted }: Props) {
+export default function ActCard({ locale, dict, exercise, speechEnabled = false, onSubmitted }: Props) {
   const t = dict.newJourney;
+  // 「按一下说」的三条文案与经典版「合」同源（dict.journey），不另起一套键
+  const speech = { startLabel: dict.journey.closeSpeech, stopLabel: dict.journey.closeSpeechStop, failedLabel: dict.journey.closeSpeechFailed };
   const [pick, setPick] = useState<ActPick | null>(null);
   const [showCommit, setShowCommit] = useState(false);
   const [did, setDid] = useState<DidChoice | null>(null);
@@ -245,6 +253,14 @@ export default function ActCard({ locale, dict, exercise, onSubmitted }: Props) 
                 >
                   {firstLineSkipped ? '✓ ' : ''}{t.commitWrittenHint}
                 </button>
+                {/* 「按一下说」（V0.2 批 D1）：转写文本追加进 ②，提交仍走 /api/journey/close 既有路径 */}
+                {speechEnabled && (
+                  <SpeechButton
+                    {...speech}
+                    disabled={firstLineSkipped}
+                    onText={(text) => setFirstLine((v) => (v ? `${v} ${text}` : text).slice(0, 300))}
+                  />
+                )}
               </div>
             </div>
 
@@ -261,6 +277,12 @@ export default function ActCard({ locale, dict, exercise, onSubmitted }: Props) 
                 placeholder={t.commitQ3Placeholder}
                 className={styles.commitTextarea}
               />
+              {speechEnabled && (
+                <SpeechButton
+                  {...speech}
+                  onText={(text) => setThought((v) => (v ? `${v} ${text}` : text).slice(0, 300))}
+                />
+              )}
             </div>
 
             <p className={styles.commitHint}>{t.commitAllEmptyHint}</p>

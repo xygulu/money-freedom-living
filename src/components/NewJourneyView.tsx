@@ -32,6 +32,8 @@ interface Props {
   stageNames: string[];
   userKey: string;
   stage: number;
+  /** 服务端配置了 STT provider 才为 true——「按一下说」落 commitSheet ②③（批 D1） */
+  speechEnabled?: boolean;
 }
 
 export interface MirrorState {
@@ -47,7 +49,7 @@ export interface MirrorState {
   receipt: string | null;
 }
 
-export default function NewJourneyView({ locale, dict, daily, exercise, progress, stageNames, userKey, stage }: Props) {
+export default function NewJourneyView({ locale, dict, daily, exercise, progress, stageNames, userKey, stage, speechEnabled = false }: Props) {
   // 提交后的镜像状态（用户原话 + echo）；null = 未提交，仍在 act 段
   const [mirror, setMirror] = useState<MirrorState | null>(null);
 
@@ -65,6 +67,7 @@ export default function NewJourneyView({ locale, dict, daily, exercise, progress
             locale={locale}
             dict={dict}
             exercise={exercise}
+            speechEnabled={speechEnabled}
             onSubmitted={(payload) => setMirror(payload)}
           />
         </section>

@@ -22,6 +22,7 @@ import { requireSignedIn } from '@/lib/identity';
 import { activeBookId, getProfile, recordDailySeen } from '@/lib/profile';
 import { getUiVersion } from '@/lib/ui-version';
 import { computeStageProgress } from '@/lib/stage';
+import { getSttProviders } from '@/lib/stt';
 import NewJourneyView from '@/components/NewJourneyView';
 
 export const dynamic = 'force-dynamic';
@@ -131,6 +132,7 @@ export default async function journeyNewPage({
         stageNames={stageNames}
         userKey={identity.key}
         stage={stage}
+        speechEnabled={getSttProviders().length > 0}
       />
     </div>
   );

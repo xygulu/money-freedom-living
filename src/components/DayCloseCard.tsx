@@ -11,8 +11,9 @@
 // - 提交后先给一句回应（用他自己的话回，不评价不给结论），再出现「今天到这里」。
 // - **不出现**进度条、连续天数、红色提醒、未读点。这里一个数字都没有。
 // - AI 认出"这句话和以前不一样"时只**提议**记一笔，记不记他说了算，记完还能真删。
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { Dict } from '@/i18n/get-dict';
+import SpeechButton from './SpeechButton';
 
 type Did = 'done' | 'partial' | 'missed';
 
@@ -21,6 +22,7 @@ export default function DayCloseCard({
   dict,
   node,
   from,
+  speechEnabled = false,
 }: {
   locale: string;
   dict: Dict;
@@ -32,6 +34,11 @@ export default function DayCloseCard({
    * 信叫回来的那次能说明"这封信起作用了"，自己走完的那次不能，混在一起就再也分不开。
    */
   from?: 'touch';
+  /**
+   * 服务端配置了 STT provider 才为 true（journey 页 SSR 时用 getSttProviders() 判断）。
+   * 未配置时按钮整个不渲染——不把用户引向一个永远按不响的东西。
+   */
+  speechEnabled?: boolean;
 }) {
   const t = dict.journey;
   const [did, setDid] = useState<Did | null>(null);
@@ -182,6 +189,14 @@ export default function DayCloseCard({
         maxLength={300}
         className="mt-2 w-full border border-line bg-white/60 p-3 text-sm leading-relaxed outline-none focus:border-ink"
       />
+      {speechEnabled && (
+        <SpeechButton
+          startLabel={t.closeSpeech}
+          stopLabel={t.closeSpeechStop}
+          failedLabel={t.closeSpeechFailed}
+          onText={(text) => setThought((v) => (v ? `${v} ${text}` : text).slice(0, 300))}
+        />
+      )}
 
       <label className="mt-5 block text-sm text-ink-soft" htmlFor="close-first-line">
         {t.closeQ3}
@@ -206,6 +221,15 @@ export default function DayCloseCard({
       >
         {t.closeCantRecall}
       </button>
+      {speechEnabled && (
+        <SpeechButton
+          startLabel={t.closeSpeech}
+          stopLabel={t.closeSpeechStop}
+          failedLabel={t.closeSpeechFailed}
+          disabled={cantRecall}
+          onText={(text) => setFirstLine((v) => (v ? `${v} ${text}` : text).slice(0, 300))}
+        />
+      )}
 
       <div className="mt-6">
         <button

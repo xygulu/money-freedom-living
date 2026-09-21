@@ -234,6 +234,9 @@
     "closeQ3": "脑子里的第一句话",
     "closeOptional": "想留空就留空",
     "closeCantRecall": "想不起来",
+    "closeSpeech": "按一下说",
+    "closeSpeechStop": "说完了，停",
+    "closeSpeechFailed": "没听清——打字也可以。",
     "closeSubmit": "今天到这里",
     "closeMore": "想多说两句",
     "closeMigrateLead": "这句话和你以前说的不太一样。记下来吗？",
@@ -483,7 +486,7 @@
     "error": "出了点问题，请重试",
     "consent": {
       "adultLabel": "我已年满 18 周岁",
-      "sensitiveLabel": "我同意把金钱困扰、童年记忆等敏感信息用于生成我的金钱画像。这些内容高度私密，默认不用于任何模型训练。",
+      "sensitiveLabel": "我同意把金钱困扰、童年记忆等敏感信息（包括语音口述转写成的文字）用于生成我的金钱画像。这些内容高度私密，默认不用于任何模型训练。",
       "sensitiveHint": "不勾选也能继续使用：问卷和日记照常可用，只是不生成画像、不进行 AI 深谈。"
     }
   },

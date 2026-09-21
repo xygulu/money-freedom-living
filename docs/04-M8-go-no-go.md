@@ -69,6 +69,8 @@
 - 上线后保留 `[llm] usage` 日志观察真实分布，一个月后用实测均值替换本表估算并收敛配额参数。
 - 当前参数确认不变：`GUEST 1/天、FREE 3/天、VIP 100/天`、`CHAT_MAX_MESSAGES=40`、`SYSTEM_BUDGET=12_000`、`HISTORY_BUDGET=6_000`。
 
+语音转写（ASR，V0.2 批 D4）：「按一下说」单次录音 60 秒封顶，按 whisper 级公开价 $0.006/分钟参考，**单次成本封顶 ≤$0.006（≈0.04 元）**；且服务端 8MB 上限、未配置 STT provider 时功能整体关闭（零成本）。真实 provider（`STT_PROVIDER_*`）定了以后用其刊例单价回填本行。
+
 ## 5. Creem 确认
 
 沙箱全链路（checkout → verify → webhook → VIP 门禁）18 断言通过（`scripts/smoke-m8.mjs`）。

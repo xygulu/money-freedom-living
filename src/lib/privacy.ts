@@ -20,7 +20,7 @@ export interface PrivacyText {
 
 const en: PrivacyText = {
   title: 'Privacy Policy',
-  updated: 'Last updated: September 2026 · Policy version 2026-09-v1',
+  updated: 'Last updated: September 2026 · Policy version 2026-09-v2',
   intro: [
     'This is a private space for your relationship with money. This policy explains, in plain language, what we collect, why, how long we keep it, and what you can do about it.',
     'The short version: your words belong to you. We never use them to train AI models, and you can export or delete everything at any time.',
@@ -41,6 +41,7 @@ const en: PrivacyText = {
         'Your device → our server → the AI model provider → back to your device. That is the whole journey of a sentence you write.',
         'The AI model provider processes your text solely to generate a response for you, under a zero-data-retention arrangement: it does not store your conversations, does not use them for training, and returns nothing to any third party.',
         'Our server logs contain only metadata (event names, counts), never the content of your conversations, journal or portrait.',
+        'If you use "tap to speak", your recording travels from your device to our server and is turned into text by a speech-to-text provider — only so your words can be filled in for you. The audio is discarded as soon as transcription completes: what remains is the editable, deletable text alone. Transcription is never analyzed, labeled, or used to infer anything about you. Voice input is optional; typing works exactly the same.',
       ],
     },
     {
@@ -83,7 +84,7 @@ const en: PrivacyText = {
 
 const zhCN: PrivacyText = {
   title: '隐私政策',
-  updated: '最近更新：2026 年 9 月 · 政策版本 2026-09-v1',
+  updated: '最近更新：2026 年 9 月 · 政策版本 2026-09-v2',
   intro: [
     '这里是一个关于你和钱的关系的私密空间。这份政策用平实的话说明：我们收集什么、为什么、存多久，以及你可以做什么。',
     '一句话版本：你写下的每句话都属于你。我们绝不把它们用于训练 AI 模型；你随时可以导出或删除全部数据。',
@@ -104,6 +105,7 @@ const zhCN: PrivacyText = {
         '你的设备 → 本站服务器 → AI 模型服务商 → 回到你的设备。你写下的每句话，路径只有这一条。',
         '模型服务商只为给你生成回应而处理你的文字，按零数据保留约定接入：不存储你的对话、不用于训练、不提供给任何第三方。',
         '本站服务器日志只存元数据（事件名、次数），绝不存你的对话、日记或画像的原文。',
+        '如果你使用「按一下说」：录音会从你的设备传到本站服务器，由语音转写服务商转成文字——只为帮你把话说进来。转写完成音频即被丢弃，留下的只有你可以编辑、可以删除的文字；转写不做分析、不打标签、不据以推断你。语音是可选项，打字一直都在。',
       ],
     },
     {
@@ -146,7 +148,7 @@ const zhCN: PrivacyText = {
 
 const zhTW: PrivacyText = {
   title: '隱私政策',
-  updated: '最近更新：2026 年 9 月 · 政策版本 2026-09-v1',
+  updated: '最近更新：2026 年 9 月 · 政策版本 2026-09-v2',
   intro: [
     '這裡是一個關於你和錢的關係的私密空間。這份政策用平實的話說明：我們蒐集什麼、為什麼、存多久，以及你可以做什麼。',
     '一句話版本：你寫下的每句話都屬於你。我們絕不把它們用於訓練 AI 模型；你隨時可以匯出或刪除全部資料。',
@@ -167,6 +169,7 @@ const zhTW: PrivacyText = {
         '你的裝置 → 本站伺服器 → AI 模型服務商 → 回到你的裝置。你寫下的每句話，路徑只有這一條。',
         '模型服務商只為給你生成回應而處理你的文字，按零資料保留約定接入：不儲存你的對話、不用於訓練、不提供給任何第三方。',
         '本站伺服器日誌只存中繼資料（事件名、次數），絕不存你的對話、日記或畫像的原文。',
+        '如果你使用「按一下說」：錄音會從你的裝置傳到本站伺服器，由語音轉寫服務商轉成文字——只為幫你把話說進來。轉寫完成音訊即被丟棄，留下的只有你可以編輯、可以刪除的文字；轉寫不做分析、不打標籤、不據以推斷你。語音是可選項，打字一直都在。',
       ],
     },
     {
@@ -209,7 +212,7 @@ const zhTW: PrivacyText = {
 
 const ja: PrivacyText = {
   title: 'プライバシーポリシー',
-  updated: '最終更新：2026 年 9 月 · ポリシー版 2026-09-v1',
+  updated: '最終更新：2026 年 9 月 · ポリシー版 2026-09-v2',
   intro: [
     'ここは、お金との関係に向き合うためのプライベートな空間です。このポリシーでは、何を収集し、なぜ収集し、どのくらい保管し、あなたは何ができるのかを、平易な言葉で説明します。',
     'ひとことで言えば：あなたの言葉はあなたのものです。AI モデルの学習に使うことは決してなく、いつでも書き出しも削除もできます。',
@@ -230,6 +233,7 @@ const ja: PrivacyText = {
         'あなたのデバイス → 当サーバー → AI モデル提供元 → あなたのデバイスへ。あなたの言葉がたどる道は、この一本だけです。',
         'モデル提供元は、あなたへの応答を生成するためにだけテキストを処理し、ゼロデータリテンション（保持しない）の約束のもとで接続されています。対話を保存せず、学習に使わず、第三者に提供しません。',
         '当サーバーのログはメタデータ（イベント名や回数）のみで、対話・日記・肖像の本文は一切保存しません。',
+        '「タップして話す」を使った場合：録音はあなたのデバイスから当サーバーへ送られ、音声文字起こしの提供元によって文字に変換されます。これはあなたの言葉を入力するためだけのものです。文字起こしが完了したら音声はすぐに破棄され、残るのはあなたが編集・削除できる文字だけです。文字起こしを分析したり、ラベルを付けたり、そこからあなたを推測したりすることはありません。音声入力は任意で、直接入力もこれまで通り使えます。',
       ],
     },
     {

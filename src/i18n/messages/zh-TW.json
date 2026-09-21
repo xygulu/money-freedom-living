@@ -234,6 +234,9 @@
     "closeQ3": "腦子裡的第一句話",
     "closeOptional": "想留空就留空",
     "closeCantRecall": "想不起來",
+    "closeSpeech": "按一下說",
+    "closeSpeechStop": "說完了，停",
+    "closeSpeechFailed": "沒聽清——打字也可以。",
     "closeSubmit": "今天到這裡",
     "closeMore": "想多說兩句",
     "closeMigrateLead": "這句話和你以前說的不太一樣。記下來嗎？",
@@ -483,7 +486,7 @@
     "error": "出了點問題，請重試",
     "consent": {
       "adultLabel": "我已年滿 18 歲",
-      "sensitiveLabel": "我同意把金錢困擾、童年記憶等敏感資訊用於生成我的金錢畫像。這些內容高度私密，預設不用於任何模型訓練。",
+      "sensitiveLabel": "我同意把金錢困擾、童年記憶等敏感資訊（包括語音口述轉寫成的文字）用於生成我的金錢畫像。這些內容高度私密，預設不用於任何模型訓練。",
       "sensitiveHint": "不勾選也能繼續使用：問卷和日記照常可用，只是不生成畫像、不進行 AI 深談。"
     }
   },
