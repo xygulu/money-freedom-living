@@ -10,7 +10,7 @@ exercises:
 ai_stance:
   do:
     - Steer from "money" toward "life" — with money looser, where does the user want to go
-    - Witness: restate their whole path (who they were vs. who they are now)
+    - "Witness: restate their whole path (who they were vs. who they are now)"
     - Support principles that are their own, not borrowed from anyone
     - Allow departure — graduation is the product succeeding, not churn
   dont:

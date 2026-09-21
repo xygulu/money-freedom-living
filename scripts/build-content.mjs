@@ -100,6 +100,13 @@ function validateJourney(bookId, locale, stages, status) {
     if (!Array.isArray(data.exercises) || data.exercises.length === 0) fail(`${at0}/${file}: exercises 不能为空`);
     if (!Array.isArray(data.advance_when) || data.advance_when.length === 0) fail(`${at0}/${file}: advance_when 不能为空`);
     if (!data.ai_stance?.do?.length || !data.ai_stance?.dont?.length) fail(`${at0}/${file}: ai_stance.do/dont 不能为空`);
+    // 列表元素必须是字符串：YAML 里「单词: 空格」开头的未加引号行会被解析成单键映射
+    // （v1 en 第 4 段曾因此让线上 prompt 吃到 "- DO: [object Object]"）
+    for (const [key, list] of [['exercises', data.exercises], ['ai_stance.do', data.ai_stance?.do], ['ai_stance.dont', data.ai_stance?.dont], ['advance_when', data.advance_when]]) {
+      if (Array.isArray(list)) for (const [i, item] of list.entries()) {
+        if (typeof item !== 'string' || !item.trim()) fail(`${at0}/${file}: ${key}[${i}] 必须是非空字符串（未加引号的「xxx: 」行会被 YAML 当成映射）`);
+      }
+    }
     // 发布闸（C2）：正文长度只在 active 时强制（它是 AI system prompt 的原料）；draft 骨架期豁免
     if (status === 'active' && body.length < 100) fail(`${at0}/${file}: 正文太短（<100 字符），它是 AI system prompt 的原料`);
     // M10 可选字段：0 元替代版 / 可跳过 / 命题标签（枚举见 src/lib/content.ts TOPICS，六命题 docs/02 §10）
