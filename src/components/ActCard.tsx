@@ -70,6 +70,7 @@ export default function ActCard({ locale, dict, exercise, speechEnabled = false,
 
   function handlePick(p: ActPick) {
     if (state === 'saving') return;
+    const prev = pick;
     setPick(p);
     if (p === 'did') {
       setShowCommit(true);
@@ -78,6 +79,16 @@ export default function ActCard({ locale, dict, exercise, speechEnabled = false,
       // 书写位已写的内容带入 ③（可改可留空跳过）——用户在卡片上写的字不丢
       setFirstLine(actWrite.trim());
       setFirstLineSkipped(false);
+    }
+    // O8（docs/02 §19.2）：绕开也是记录——进跳过/换一个时记一笔枚举事件（不收文本），
+    // fire-and-forget，成败都不打扰这一格；重复点同一个不重复记。
+    if ((p === 'skip' || p === 'swap') && prev !== p) {
+      void fetch('/api/journey/act-avoided', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind: p, locale }),
+        keepalive: true,
+      }).catch(() => null);
     }
     // swap / skip 不弹 commitSheet —— ActCard 内文本/折叠各自处理
   }

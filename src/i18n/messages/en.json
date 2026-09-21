@@ -270,7 +270,10 @@
     "experimentFeeling": "How it felt",
     "kindPortrait": "Money portrait",
     "portraitCurrent": "Your current portrait",
-    "viewPortrait": "View this version"
+    "viewPortrait": "View this version",
+    "avoidSkip": "Skipped the step that day.",
+    "avoidSwap": "Tried a different step that day.",
+    "avoidThought": "Checked in, but left the third question blank."
   },
   "road": {
     "title": "The road you've walked",

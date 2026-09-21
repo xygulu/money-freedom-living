@@ -91,6 +91,20 @@ export default function TimelineItemView({
           </Link>
         </>
       )}
+
+      {/* 「他绕开的」（V0.2 尾批 O8）：事实表述不是评估——不评价、不催、不欠账化，
+          一行一句轻事实，垫在同日各项之后 */}
+      {item.kind === 'avoided' && (
+        <div data-timeline-avoided="">
+          <ul className="flex flex-col gap-1">
+            {item.facts.includes('skip') && <li className="text-sm leading-relaxed text-ink-soft">{dict.timeline.avoidSkip}</li>}
+            {item.facts.includes('swap') && <li className="text-sm leading-relaxed text-ink-soft">{dict.timeline.avoidSwap}</li>}
+            {item.facts.includes('thought') && (
+              <li className="text-sm leading-relaxed text-ink-soft">{dict.timeline.avoidThought}</li>
+            )}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

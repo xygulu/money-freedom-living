@@ -270,7 +270,10 @@
     "experimentFeeling": "当时的感受",
     "kindPortrait": "金钱画像",
     "portraitCurrent": "你现在的画像",
-    "viewPortrait": "看这一版"
+    "viewPortrait": "看这一版",
+    "avoidSkip": "这天跳过了练习",
+    "avoidSwap": "这天换了一个练习再做",
+    "avoidThought": "这天交了格子，第③问留了空"
   },
   "road": {
     "title": "你走过的路",

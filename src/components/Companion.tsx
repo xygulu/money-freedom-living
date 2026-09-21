@@ -11,8 +11,9 @@
 //   /chat?start=1&door=1&quote=<urlencoded nudge.text>——把"想说的那句话"接进
 //   对话里（用户原话："点击了之后这句话就看不见了…能不能放到对话里"）。
 //   fallback 文案（source==='fallback'）走老路径：弹 CompanionChat 弹层。
-// - nudge：组件 mount 时 fetch /api/companion/nudge 一次，命中即触发晃 + 写 seen cookie
-//   频次闸：24h 内不重（cookie `mfl_nudge_seen`，document.cookie 写读）
+// - nudge：mount 后安静 8 秒（O5′ 动效限量）才 fetch /api/companion/nudge 一次，
+//   命中即触发晃 + 写 seen cookie
+//   频次闸：24h 内不重（cookie `mfl_nudge_seen`，document.cookie 写读）= 每日至多一晃
 // - 递归防呆：/chat 路由内 display:none（layout 端 + 本组件 usePathname 双保险）
 //
 // 70-2 加固（A/K/L 项）：
@@ -93,14 +94,15 @@ export default function Companion({ todayStepDone = false, dict }: Props) {
   }, []);
 
   useEffect(() => {
-    // 24h 闸：今天已经看过 → 不再 fetch
+    // 24h 闸：今天已经看过 → 不再 fetch（即每日上限：真 nudge 命中就落 seen，一天至多一晃）
     if (readNudgeSeen()) return;
-    // 给服务端 hydrate + 直访用户 100ms 缓冲再请求（避免首屏抖动）
+    // O5′ 球动效限量（docs/02 §19.2）：进页面先安静 8 秒——第一屏是用户自己的，
+    // 球的招呼只在用户停留时才出现。取 nudge 与晃一起延到 8s。
     const timer = window.setTimeout(() => {
       if (animationDone.current) return;
       animationDone.current = true;
       void fetchNudge();
-    }, 1500);
+    }, 8000);
     return () => window.clearTimeout(timer);
   }, [fetchNudge]);
 

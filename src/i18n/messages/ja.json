@@ -270,7 +270,10 @@
     "experimentFeeling": "そのときの感覚",
     "kindPortrait": "お金の肖像",
     "portraitCurrent": "いまのあなたの肖像",
-    "viewPortrait": "この版を見る"
+    "viewPortrait": "この版を見る",
+    "avoidSkip": "この日はステップをスキップした",
+    "avoidSwap": "この日は別のステップに変えて取り組んだ",
+    "avoidThought": "この日は記入したけど、3つ目の問いは空欄のままだった"
   },
   "road": {
     "title": "あなたが歩いてきた道",

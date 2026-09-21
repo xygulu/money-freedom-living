@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mergeTimelineItems, itemsFromProfile, type TimelineItem } from '@/lib/timeline';
+import { avoidedItemsFromEvents, mergeTimelineItems, itemsFromProfile, type TimelineItem } from '@/lib/timeline';
 import type { GrowthProfile, Portrait } from '@/lib/profile';
 
 const portrait = (over: Partial<Portrait> = {}): Portrait => ({
@@ -130,5 +130,58 @@ describe('itemsFromProfile（档案 → 节点）', () => {
 
   it('空档案 → 空数组', () => {
     expect(itemsFromProfile(profile())).toEqual([]);
+  });
+});
+
+describe('avoidedItemsFromEvents（「他绕开的」V0.2 尾批 O8）', () => {
+  const ev = (name: string, metadata: Record<string, unknown> | null, day: string) => ({ name, metadata, day });
+
+  it('同日 skip+swap+thought 合并成一个节点，facts 按稳定序', () => {
+    const items = avoidedItemsFromEvents([
+      ev('day_close_saved', { did: 'done', thought: false, pause: false }, '2026-09-20'),
+      ev('act_avoided', { kind: 'swap' }, '2026-09-20'),
+      ev('act_avoided', { kind: 'skip' }, '2026-09-20'),
+    ]);
+    expect(items).toEqual([{ kind: 'avoided', date: '2026-09-20', facts: ['skip', 'swap', 'thought'] }]);
+  });
+
+  it('同日重复同款事件去重——一天一行轻事实，不陈列次数', () => {
+    const items = avoidedItemsFromEvents([
+      ev('act_avoided', { kind: 'skip' }, '2026-09-20'),
+      ev('act_avoided', { kind: 'skip' }, '2026-09-20'),
+    ]);
+    expect(items).toEqual([{ kind: 'avoided', date: '2026-09-20', facts: ['skip'] }]);
+  });
+
+  it('thought 只认显式 false（boolean 或 jsonb 文本），true/缺失不入', () => {
+    const items = avoidedItemsFromEvents([
+      ev('day_close_saved', { did: 'done', thought: true }, '2026-09-19'),
+      ev('day_close_saved', { did: 'done', thought: false }, '2026-09-18'),
+      ev('day_close_saved', { did: 'done', thought: 'false' }, '2026-09-17'),
+      ev('day_close_saved', { did: 'done' }, '2026-09-16'),
+    ]);
+    expect(items.map((i) => i.date)).toEqual(['2026-09-18', '2026-09-17']);
+  });
+
+  it('非法 kind / 无关事件名丢弃；不同日各成一行', () => {
+    const items = avoidedItemsFromEvents([
+      ev('act_avoided', { kind: 'other' }, '2026-09-20'),
+      ev('companion_nudge', { source: 'L1' }, '2026-09-20'),
+      ev('act_avoided', { kind: 'swap' }, '2026-09-19'),
+    ]);
+    expect(items).toEqual([{ kind: 'avoided', date: '2026-09-19', facts: ['swap'] }]);
+  });
+
+  it('空输入 → 空数组', () => {
+    expect(avoidedItemsFromEvents([])).toEqual([]);
+  });
+
+  it('同日排序里 avoided 垫底（最轻）', () => {
+    const items = mergeTimelineItems([
+      { kind: 'avoided', date: '2026-09-10', facts: ['skip'] },
+      { kind: 'stamp', date: '2026-09-10', stampKind: 'stage1_story', earnedAt: '2026-09-10T08:00:00Z' },
+    ]);
+    expect(items[0].kind).toBe('stamp');
+    expect(items[1].kind).toBe('avoided');
   });
 });
