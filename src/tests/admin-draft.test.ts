@@ -1,6 +1,7 @@
 // C4 起草纯函数测试：校验闸（镜像发布闸语义）+ LLM JSON → 编辑态转换 + kind 前缀规则 + 一签起草/打标（C4b）。
 import { describe, expect, it } from 'vitest';
 import {
+  buildDailyBatchNote,
   buildDailyTaggingUser,
   buildDailyUserNoMaterial,
   buildJourneyUserNoMaterial,
@@ -11,6 +12,7 @@ import {
   draftToStages,
   kindPrefix,
   validateDraftDaily,
+  validateDraftDailyChunk,
   validateDraftJourney,
   validateDraftLamps,
   validateTagAssignments,
@@ -251,5 +253,39 @@ describe('无素材起草 prompt（后台新建书：只凭书名生成）', () 
 
   it('作者缺省落「未知」（与素材路径同口径）', () => {
     expect(buildJourneyUserNoMaterial('某书', '')).toContain('作者：未知');
+  });
+});
+
+describe('一签分批起草（2026-09-22：90 条一次给不出，拆 3 批×30）', () => {
+  const chunkCard = (text: string) => ({ text, type: 'observation', stages: [1], reflection: '此刻什么感受？', topics: ['self-worth'] });
+
+  it('单批 30 条合法 → 通过（不查总量/覆盖，合并后由全量校验兜底）', () => {
+    expect(validateDraftDailyChunk({ cards: Array.from({ length: 30 }, (_, i) => chunkCard(`第 ${i} 条`)) })).toEqual([]);
+  });
+
+  it('单批少于 20 条被拦；坏行照样点名', () => {
+    const few = validateDraftDailyChunk({ cards: Array.from({ length: 19 }, (_, i) => chunkCard(`第 ${i} 条`)) });
+    expect(few.some((e) => e.includes('这批只有 19 条'))).toBe(true);
+
+    const bad = validateDraftDailyChunk({ cards: [chunkCard('ok'), { text: '缺其余字段' }] });
+    expect(bad.some((e) => e.includes('cards[1].type'))).toBe(true);
+  });
+
+  it('缺 cards 数组与全量校验同口径报错', () => {
+    expect(validateDraftDailyChunk(null)).toEqual(['一签草稿缺少 cards 数组']);
+    expect(validateDraftDailyChunk({ cards: 'x' })).toEqual(['一签草稿缺少 cards 数组']);
+  });
+
+  it('buildDailyBatchNote：第 1 批不带防重样例；后续批带批号与已有开头', () => {
+    const first = buildDailyBatchNote(0, []);
+    expect(first).toContain('第 1 批');
+    expect(first).toContain('恰好 30 条');
+    expect(first).toContain('{"cards"');
+    expect(first).not.toContain('不许与它们重复');
+
+    const later = buildDailyBatchNote(1, ['钱不是从我这里漏掉的，是从我心里漏掉的']);
+    expect(later).toContain('第 2 批');
+    expect(later).toContain('不许与它们重复');
+    expect(later).toContain('「钱不是从我这里漏掉的，是…」'); // 样例截到 12 字防 prompt 膨胀
   });
 });

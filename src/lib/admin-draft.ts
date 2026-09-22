@@ -327,6 +327,33 @@ export function dailyCardErrors(card: unknown, at: string): string[] {
   return errors;
 }
 
+/** 分批起草（每批 ~30 条）的单批校验：只查结构与条数下限；总量/覆盖由合并后的 validateDraftDaily 兜底。
+ *  （2026-09-22 实测：一次要 90 条模型只能吐 ~30 条就收尾，单次全量生成必挂，拆批是硬需求。） */
+export function validateDraftDailyChunk(raw: unknown): DraftErrors {
+  const errors: DraftErrors = [];
+  if (!raw || typeof raw !== 'object' || !Array.isArray((raw as { cards?: unknown }).cards)) {
+    return ['一签草稿缺少 cards 数组'];
+  }
+  const cards = (raw as { cards: unknown[] }).cards;
+  if (cards.length < 20) errors.push(`这批只有 ${cards.length} 条（每批要求约 30 条）`);
+  cards.forEach((c, i) => errors.push(...dailyCardErrors(c, `cards[${i}]`)));
+  return errors;
+}
+
+/** 分批指令（拼在 user prompt 尾部）：本批只生成 30 条 + 已有条目开头示例防重复 */
+export function buildDailyBatchNote(batch: number, sampleTexts: string[]): string {
+  const avoid = sampleTexts.length
+    ? `池子里已有条目的开头（不许与它们重复或换皮）：${sampleTexts.map((t) => `「${t.slice(0, 12)}…」`).join('')}`
+    : '';
+  return [
+    `本次只生成第 ${batch + 1} 批，恰好 30 条（整池 ≥90 条，共分三批生成，前面批次已另行生成）。`,
+    avoid,
+    '仍然输出完整 JSON：{"cards": [...]}，只含这一批的 30 条。',
+  ]
+    .filter(Boolean)
+    .join('\n');
+}
+
 export function validateDraftDaily(raw: unknown): DraftErrors {
   const errors: DraftErrors = [];
   if (!raw || typeof raw !== 'object' || !Array.isArray((raw as { cards?: unknown }).cards)) {

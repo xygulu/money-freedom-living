@@ -250,15 +250,50 @@ export default function BookEditor({
     setBusy(null);
   }
 
-  /** 跑一次起草请求（不碰 UI 态，供单键与整包键共用） */
+  /** 跑一次起草（后台任务 + 轮询，不碰 UI 态，供单键与整包键共用）。
+   *  起草要 2-8 分钟，同步请求过 Cloudflare Tunnel 会在 100 秒被掐（524→「网络错误」），
+   *  2026-09-22 起改为：POST 立刻拿 jobId，前端轮询 GET 取进度并实时刷日志区。 */
   async function runDraft(kind: 'journey' | 'daily'): Promise<{ ok: boolean; text: string; state?: AdminBookState }> {
-    const res = await fetch('/api/admin/draft', {
+    const start = await fetch('/api/admin/draft-job', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ bookId, source: state.source, kind }), // 素材随请求先落盘，免得忘保存
+      body: JSON.stringify({ bookId, source: state.source, kind }), // 素材随请求带上，免得忘保存
     });
-    const data = (await res.json()) as { ok: boolean; log?: string[]; state?: AdminBookState };
-    return { ok: Boolean(data.ok), text: (data.log ?? (data.ok ? [] : ['起草失败'])).join('\n'), state: data.state };
+    const s = (await start.json().catch(() => null)) as { ok?: boolean; jobId?: string; error?: string; log?: string[] } | null;
+    if (!start.ok || !s?.ok || !s.jobId) {
+      return { ok: false, text: (s?.log ?? []).join('\n') || `任务启动失败（${s?.error ?? `HTTP ${start.status}`}）` };
+    }
+    // 轮询：3s 一次；running 时实时刷日志；瞬时网络错误容忍（连丢 10 次才放弃——
+    // 任务在服务端继续跑，放弃了也不丢结果）；总时长 30 分钟封顶。
+    const deadline = Date.now() + 30 * 60_000;
+    let missed = 0;
+    for (;;) {
+      await new Promise((r) => setTimeout(r, 3000));
+      if (Date.now() > deadline) {
+        return { ok: false, text: '等了 30 分钟还没结束，不再等待（后台任务多半还在跑，几分钟后刷新页面看结果）。' };
+      }
+      let d: { status?: string; log?: string[]; error?: string | null; state?: AdminBookState | null } | null = null;
+      try {
+        const r = await fetch(`/api/admin/draft-job?id=${s.jobId}`, { cache: 'no-store' });
+        d = r.ok ? ((await r.json()) as { status?: string; log?: string[]; error?: string | null; state?: AdminBookState | null }) : null;
+      } catch {
+        d = null;
+      }
+      if (!d?.status) {
+        missed += 1;
+        if (missed > 10) {
+          return { ok: false, text: '进度查询连续失败（网络断了？）。后台任务仍在跑，稍后刷新页面看结果。' };
+        }
+        continue;
+      }
+      missed = 0;
+      const text = (d.log ?? []).join('\n') || '……';
+      if (d.status === 'running') {
+        setLog({ ok: true, text: `${text}\n……（进行中）` });
+        continue;
+      }
+      return { ok: d.status === 'done', text, state: d.state ?? undefined };
+    }
   }
 
   async function draft(kind: 'journey' | 'daily'): Promise<void> {
@@ -269,7 +304,7 @@ export default function BookEditor({
       if (r.state) setState(r.state); // 草稿只覆盖对应区块，本地其他编辑不动
       setLog({ ok: r.ok, text: r.text });
     } catch {
-      setLog({ ok: false, text: '网络错误，起草没跑成' });
+      setLog({ ok: false, text: '任务没能启动（网络错误）——重试一次。' });
     }
     setBusy(null);
   }
@@ -285,7 +320,7 @@ export default function BookEditor({
       if (b.state) setState(b.state);
       setLog({ ok: a.ok && b.ok, text: `── journey + 灯表 ──\n${a.text || '（成功）'}\n── 一签池 ──\n${b.text || '（成功）'}` });
     } catch {
-      setLog({ ok: false, text: '网络错误，整包没跑成' });
+      setLog({ ok: false, text: '任务没能启动（网络错误）——重试一次；若反复失败，直接在本机访问 :3000 排查。' });
     }
     setBusy(null);
   }
@@ -369,8 +404,9 @@ export default function BookEditor({
       <div className={boxCls}>
         <h2 className="text-sm">AI 起草（覆盖现有内容，写回源文件）</h2>
         <p className="mt-1 text-xs leading-relaxed text-ink-soft/70">
-          每次校验不过自动重试一次；草稿写回源文件。无素材起草时 AI 会先识别书名——
-          不认识就拒绝生成（贴素材或核对书名后再来）。{state.meta.status === 'active' && (
+          生成在后台跑：中途关页也没关系，文件照写，回来刷新就能看到。每次校验不过自动重试一次；
+          无素材起草时 AI 会先识别书名——不认识就拒绝生成（贴素材或核对书名后再来）。
+          {state.meta.status === 'active' && (
             <strong className="ml-1">这本书是 active：AI 不许覆盖线上内容，起草被拒（打标不受限）。</strong>
           )}
         </p>
@@ -381,7 +417,7 @@ export default function BookEditor({
             disabled={busy !== null}
             className="border border-ink bg-ink px-5 py-2 text-sm text-paper transition-opacity hover:opacity-90 disabled:opacity-50"
           >
-            {busy === 'all' ? '整包生成中……约 5-10 分钟，别关页' : '一键生成整包（journey + 灯表 + 一签）'}
+            {busy === 'all' ? '整包生成中……约 5-10 分钟（可关页，稍后刷新看结果）' : '一键生成整包（journey + 灯表 + 一签）'}
           </button>
           <button
             type="button"
