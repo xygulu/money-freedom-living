@@ -14,11 +14,20 @@
   color: var(--scene-soft);
 }
 
+/* 点行：4 个分段（flex-grow 4/4/3/3，内联在 TSX），段内点均匀铺开。
+   与 .stages 共用同一组分段比例——两行分组宽度逐像素一致，阶段节点永远
+   对准自己那串点的正中央（2026-09-22 对齐修复）。 */
 .row {
   display: flex;
-  gap: 6px;
   align-items: center;
-  flex-wrap: wrap;
+}
+
+.dotGroup {
+  flex-basis: 0;
+  display: flex;
+  justify-content: space-evenly;
+  align-items: center;
+  min-width: 0;
 }
 
 .dot {
@@ -48,19 +57,20 @@
   50% { opacity: 0.8; transform: scale(1.05); }
 }
 
+/* 阶段行：与点行同一组分段比例（flex-grow 4/4/3/3 内联），分组宽度一致 */
 .stages {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
+  display: flex;
   margin-top: 4px;
 }
 
 .stage {
+  flex-basis: 0;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  padding: 8px 4px;
+  padding: 8px 0; /* 水平 padding 会让 flex 分配偏离与点行共享的比例（base 不再是 0） */
   border-radius: 8px;
   font-size: 12px;
   color: var(--scene-soft);
