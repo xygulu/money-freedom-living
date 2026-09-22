@@ -41,6 +41,9 @@ export default async function loginPage({
       <Link href={`/${locale}/recover`} className="mt-4 text-sm text-ink-soft underline underline-offset-4">
         {dict.login.recoverLink}
       </Link>
+      <Link href={`/${locale}/forgot-password`} className="mt-2 text-sm text-ink-soft underline underline-offset-4">
+        {dict.login.forgotLink}
+      </Link>
     </div>
   );
 }
