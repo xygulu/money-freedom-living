@@ -307,7 +307,7 @@ export default function OnboardingWizard({ locale, dict, books }: Props) {
       const response = await fetch('/api/me/books', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bookId, locale }),
+        body: JSON.stringify({ bookId, locale, mode: 'select' }),
       });
       if (!response.ok) throw new Error(String(response.status));
       setSelectedBook(bookId);
@@ -327,7 +327,7 @@ export default function OnboardingWizard({ locale, dict, books }: Props) {
       const response = await fetch('/api/me/books', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bookId: selectedBook, focusTopic: topic, locale }),
+        body: JSON.stringify({ bookId: selectedBook, focusTopic: topic, locale, mode: 'select' }),
       });
       if (!response.ok) throw new Error(String(response.status));
       setSelectedTopic(topic);

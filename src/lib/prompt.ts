@@ -201,6 +201,8 @@ const THREAD_QUOTES = 2;
 export function buildThreadBlock(
   threads: Partial<Record<TopicId, ThreadState>> | undefined,
   currentBookId: string,
+  /** 汇入制（V0.2 批 C）：这些书也在这人手上（active），证据出自它们不算「上一本书」 */
+  ownBookIds: string[] = [],
 ): string | null {
   const entries = Object.entries(threads ?? {}) as [TopicId, ThreadState][];
   const usable = entries.filter(([, t]) => t && (t.evidence?.length ?? 0) > 0);
@@ -209,7 +211,7 @@ export function buildThreadBlock(
   for (const [topic, t] of usable) {
     lines.push(`- ${TOPICS_ZH[topic]}：${DEPTH_ZH[t.depth]}`);
     for (const e of t.evidence.slice(-THREAD_QUOTES)) {
-      const from = e.bookId && e.bookId !== currentBookId ? '（上一本书里）' : '';
+      const from = e.bookId && e.bookId !== currentBookId && !ownBookIds.includes(e.bookId) ? '（上一本书里）' : '';
       lines.push(`  · ${from}「${clipped(e.quote, 140)}」`);
     }
   }
@@ -233,6 +235,9 @@ export interface ChatContextInput {
   now?: Date;
   /** 当前在读的书（M11-A）：路线图的出处，不是身份 */
   bookId?: string;
+  /** 汇入制（V0.2 批 C）：同时在这人手上的全部 active 书（含 bookId 本身，主线在前）——
+   *  practices 块按它 union；命题线证据出自这些书不算「上一本书」 */
+  activeBookIds?: string[];
   /** 命题线：这个人在六个命题上走到的程度与他自己的原话（跨书累加） */
   threads?: Partial<Record<TopicId, ThreadState>>;
 }
@@ -291,7 +296,9 @@ export function buildChatContext(input: ChatContextInput): ChatContext {
         ...stage.ai_stance.dont.map((d) => `- DON'T: ${d}`),
       ].join('\n')
     );
-    const practices = getPracticesForStage(input.stage, bookId);
+    // practices union 所有 active 书（汇入制）；阶段引导仍只出自主线
+    const ownIds = input.activeBookIds?.length ? input.activeBookIds : [bookId];
+    const practices = ownIds.flatMap((id) => getPracticesForStage(input.stage, id));
     if (practices.length > 0) {
       blocks.push(
         [
@@ -317,7 +324,11 @@ export function buildChatContext(input: ChatContextInput): ChatContext {
 
   // 命题线（M11-A）：跨书累加的程度 + 他自己的原话。
   // 同一命题再次出现时不要重讲一遍——把他上次的原话调出来做交叉印证（docs/05 §3.3）。
-  const threadBlock = buildThreadBlock(input.threads, bookId);
+  const threadBlock = buildThreadBlock(
+    input.threads,
+    bookId,
+    input.activeBookIds?.length ? input.activeBookIds : [bookId],
+  );
   if (threadBlock) blocks.push(threadBlock);
 
   // 画像（优先级 5）

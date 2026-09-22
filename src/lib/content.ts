@@ -244,27 +244,53 @@ function hash(str: string): number {
   return h >>> 0;
 }
 
+/** 多书入参（汇入制，V0.2 批 C）：一本书 = { bookId, focusTopic? }；**主线在前**。 */
+export type DailyBookRef = { bookId: string; focusTopic?: TopicId | null };
+
 /**
  * 今日一签：确定性抽取——同一天同一阶段看到同一条（共时感），同一用户 90 天不重复。
  * seenTexts 由调用方从用户档案传入；某阶段候选耗尽后自动回落全阶段池。
  * focusTopic（V0.2 B5 焦点调度）：设了焦点命题，先在「该命题线的未看候选」里抽
  * （候选自带 topics，B3 打标）；该线在这本书里没有候选/已被看干时回落原逻辑——
  * 焦点只是优先级，绝不让它变成返回 null 的理由。
+ * 汇入制多书（V0.2 批 C）：第 5 参可传书条目数组（主线在前）——合并各书 per-locale 池
+ * （按 text 去重，同一句两本书都有算第一次遇见的那本）；focused 层按**各书自己的
+ * focusTopic 落在各自的池片上**（焦点是书级的，忠于 B5）。传字符串 = 旧单书路径，
+ * 行为与旧版逐字节一致（第 6 参 focusTopic 只在字符串路径生效）。
  */
 export function pickDaily(
   locale: Locale,
   dateISO: string,
   stage: number,
   seenTexts: string[] = [],
-  bookId: string = DEFAULT_BOOK_ID,
+  bookIdOrBooks: string | DailyBookRef[] = DEFAULT_BOOK_ID,
   focusTopic?: TopicId | null,
 ): DailyCard | null {
-  const pool = getDailyPool(locale, bookId);
-  if (pool.length === 0) return null;
+  const refs: DailyBookRef[] = typeof bookIdOrBooks === 'string' ? [{ bookId: bookIdOrBooks, focusTopic }] : bookIdOrBooks;
 
   const seen = new Set(seenTexts);
+  const slices: DailyCard[][] = [];
+  const pool: DailyCard[] = [];
+  const poolTexts = new Set<string>();
+  for (const ref of refs) {
+    const slice: DailyCard[] = [];
+    for (const c of getDailyPool(locale, ref.bookId)) {
+      if (poolTexts.has(c.text)) continue;
+      poolTexts.add(c.text);
+      slice.push(c);
+      pool.push(c);
+    }
+    slices.push(slice);
+  }
+  if (pool.length === 0) return null;
+
+  const focused: DailyCard[] = [];
+  for (let i = 0; i < refs.length; i++) {
+    const ft = refs[i]?.focusTopic;
+    if (!ft) continue;
+    focused.push(...slices[i].filter((c) => c.stages.includes(stage) && !seen.has(c.text) && c.topics.includes(ft)));
+  }
   const candidates = pool.filter((c) => c.stages.includes(stage) && !seen.has(c.text));
-  const focused = focusTopic ? candidates.filter((c) => c.topics.includes(focusTopic)) : [];
   const fallback = pool.filter((c) => !seen.has(c.text));
   const finalPool = focused.length > 0 ? focused : candidates.length > 0 ? candidates : fallback.length > 0 ? fallback : pool;
 
@@ -274,10 +300,20 @@ export function pickDaily(
 /**
  * 今日微行动：按当前阶段练习确定性抽取（同一天同一用户同一条，docs/02 §5）。
  * 练习只提议不指派——卡上永远给"随便聊聊/只看看签"的替代出口，可跳过。
+ * 汇入制多书（V0.2 批 C）：第 5 参可传 bookId 数组（主线在前），union 各书该阶段
+ * 练习（按文本去重）；传字符串 = 旧单书路径，行为不变。
  */
-export function pickExercise(locale: Locale, dateISO: string, stage: number, userKey: string, bookId: string = DEFAULT_BOOK_ID): string | null {
-  const stageContent = getJourneyStage(locale, stage, bookId);
-  const exercises = stageContent?.exercises ?? [];
+export function pickExercise(locale: Locale, dateISO: string, stage: number, userKey: string, bookIdOrIds: string | string[] = DEFAULT_BOOK_ID): string | null {
+  const ids = typeof bookIdOrIds === 'string' ? [bookIdOrIds] : bookIdOrIds;
+  const exercises: string[] = [];
+  const seen = new Set<string>();
+  for (const id of ids) {
+    for (const ex of getJourneyStage(locale, stage, id)?.exercises ?? []) {
+      if (seen.has(ex)) continue;
+      seen.add(ex);
+      exercises.push(ex);
+    }
+  }
   if (exercises.length === 0) return null;
   return exercises[hash(`${dateISO}#${userKey}`) % exercises.length];
 }

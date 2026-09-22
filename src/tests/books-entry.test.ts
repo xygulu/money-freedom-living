@@ -5,8 +5,21 @@ import en from '@/i18n/messages/en.json';
 import zhCN from '@/i18n/messages/zh-CN.json';
 import zhTW from '@/i18n/messages/zh-TW.json';
 import ja from '@/i18n/messages/ja.json';
-import { TOPICS, getBooks } from '@/lib/content';
-import { appendWish, mergeBookSelection, parseBooks, parseWishedBooks, type BookEntry, type WishEntry } from '@/lib/profile';
+import { TOPICS, DEFAULT_BOOK_ID, getBooks } from '@/lib/content';
+import {
+  activeBook,
+  activeBookEntries,
+  activeBookId,
+  addBookSelection,
+  appendWish,
+  mainBookEntry,
+  mainBookId,
+  mergeBookSelection,
+  parseBooks,
+  parseWishedBooks,
+  type BookEntry,
+  type WishEntry,
+} from '@/lib/profile';
 
 const NOW = '2026-09-21T05:00:00.000Z';
 
@@ -134,6 +147,108 @@ describe('focusTopic（V0.2 B2：焦点命题，老档案无该字段读出不�
   });
 });
 
+describe('addBookSelection（V0.2 批 C：汇入制加书）', () => {
+  it('全新加书：末尾插入 active、stage 1；**已有 active 一律不被暂停**（头条案例）', () => {
+    const existing = [entry('money-freedom', 'active'), entry('book-a', 'paused')];
+    const books = addBookSelection(existing, 'book-b', NOW);
+    expect(books).toHaveLength(3);
+    expect(books[2]).toEqual({
+      bookId: 'book-b',
+      status: 'active',
+      startedAt: NOW,
+      stage: 1,
+      stageStartedAt: NOW,
+    });
+    // 汇入制核心：别人的 status/startedAt/stage 原样
+    expect(books[0]).toEqual(entry('money-freedom', 'active'));
+    expect(books[1]).toEqual(entry('book-a', 'paused'));
+  });
+
+  it('暂停的书重新加回：恢复 active，startedAt/stage/stageStartedAt 全保留', () => {
+    const existing = [
+      entry('book-a', 'paused', { startedAt: '2026-08-01T00:00:00.000Z', stage: 3, stageStartedAt: '2026-08-20T00:00:00.000Z' }),
+      entry('money-freedom', 'active'),
+    ];
+    const books = addBookSelection(existing, 'book-a', NOW);
+    expect(books.find((b) => b.bookId === 'book-a')).toEqual({
+      bookId: 'book-a',
+      status: 'active',
+      startedAt: '2026-08-01T00:00:00.000Z',
+      stage: 3,
+      stageStartedAt: '2026-08-20T00:00:00.000Z',
+    });
+    expect(books.find((b) => b.bookId === 'money-freedom')?.status).toBe('active');
+  });
+
+  it('done 的书再加 = 重读：active、清 finishedAt、startedAt 重新起算', () => {
+    const existing = [entry('book-c', 'done', { finishedAt: '2026-09-10T00:00:00.000Z' })];
+    const books = addBookSelection(existing, 'book-c', NOW);
+    expect(books).toHaveLength(1);
+    expect(books[0]).toMatchObject({ status: 'active', startedAt: NOW });
+    expect(books[0]?.finishedAt).toBeUndefined();
+  });
+
+  it('重复加已是 active 的书：no-op（同一数组原样返回），不 bump startedAt', () => {
+    const existing = [entry('money-freedom', 'active'), entry('book-b', 'active', { startedAt: NOW })];
+    expect(addBookSelection(existing, 'book-b', '2026-09-22T00:00:00.000Z')).toBe(existing);
+    expect(existing.find((b) => b.bookId === 'book-b')?.startedAt).toBe(NOW);
+  });
+
+  it('focusTopic：加书时带上；恢复/重读时不带则沿用已有的；active 时传新的则更新', () => {
+    const added = addBookSelection([], 'book-b', NOW, 'parents');
+    expect(added[0]?.focusTopic).toBe('parents');
+    const paused = addBookSelection([{ ...added[0]!, status: 'paused' as const }], 'book-b', NOW);
+    expect(paused[0]?.focusTopic).toBe('parents');
+    const arr = [added[0]!];
+    expect(addBookSelection(arr, 'book-b', NOW)).toBe(arr); // active 且无新焦点 → 原样 no-op
+    const updated = addBookSelection(arr, 'book-b', NOW, 'allowing');
+    expect(updated[0]?.focusTopic).toBe('allowing');
+  });
+});
+
+describe('parseBooks 行级真源覆盖（V0.2 批 C：两本 active 时覆盖主线）', () => {
+  it('数组序第一个 active 不是主线时，行级 stage 落到最早 startedAt 的那条', () => {
+    // 故意让数组序在前的那本 startedAt 更晚（加书是末尾插入，但坏序数据也要对）
+    const books = parseBooks(
+      [
+        { bookId: 'book-b', status: 'active', startedAt: '2026-09-20T00:00:00.000Z', stage: 1, stageStartedAt: NOW },
+        { bookId: 'money-freedom', status: 'active', startedAt: '2026-09-01T00:00:00.000Z', stage: 1, stageStartedAt: NOW },
+      ],
+      3,
+      '2026-09-15T00:00:00.000Z',
+      '2026-08-01T00:00:00.000Z',
+    );
+    expect(books.find((b) => b.bookId === 'money-freedom')).toMatchObject({ stage: 3, stageStartedAt: '2026-09-15T00:00:00.000Z' });
+    expect(books.find((b) => b.bookId === 'book-b')).toMatchObject({ stage: 1, stageStartedAt: NOW }); // 非主线不被覆盖
+  });
+});
+
+describe('mainBook helpers（V0.2 批 C：主线 = 最早 startedAt 的 active）', () => {
+  const profileOf = (books: BookEntry[]) => ({ books });
+
+  it('activeBookEntries 按 startedAt 升序；平局保持数组序', () => {
+    const books = [
+      entry('book-b', 'active', { startedAt: '2026-09-20T00:00:00.000Z' }),
+      entry('book-a', 'active', { startedAt: '2026-09-01T00:00:00.000Z' }),
+      entry('book-c', 'paused'),
+      entry('book-d', 'active', { startedAt: '2026-09-01T00:00:00.000Z' }),
+    ];
+    expect(activeBookEntries(profileOf(books)).map((b) => b.bookId)).toEqual(['book-a', 'book-d', 'book-b']);
+  });
+
+  it('mainBookId：空/无 active 回落 v1 书；activeBookId === mainBookId；activeBook === mainBookEntry', () => {
+    expect(mainBookId(profileOf([]))).toBe(DEFAULT_BOOK_ID);
+    expect(mainBookId(profileOf([entry('book-a', 'paused')]))).toBe(DEFAULT_BOOK_ID);
+    const books = [entry('book-b', 'active', { startedAt: '2026-09-20T00:00:00.000Z' }), entry('book-a', 'active')];
+    const profile = profileOf(books);
+    expect(mainBookId(profile)).toBe('book-a');
+    expect(activeBookId(profile)).toBe('book-a');
+    expect(activeBook(profile)).toEqual(mainBookEntry(profile));
+    expect(mainBookEntry(profile)?.bookId).toBe('book-a');
+  });
+});
+
+
 describe('B1 判据：选命题屏', () => {
   it('四语 onboarding.topic 键齐全且同构', () => {
     const dicts = [en, zhCN, zhTW, ja] as { onboarding: { topic: Record<string, string> } }[];
@@ -183,6 +298,16 @@ describe('A1 判据：落地页主文案不再是书名', () => {
       for (const d of dicts) {
         expect(typeof d.onboarding.book[key], `onboarding.book.${key} 缺`).toBe('string');
         expect((d.onboarding.book[key] ?? '').length).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('加书入口文案四语同构（V0.2 批 C：addBook.* 键齐全）', () => {
+    const dicts = [en, zhCN, zhTW, ja] as { addBook: Record<string, string> }[];
+    for (const key of ['entry', 'close', 'topicsLead', 'confirm', 'added']) {
+      for (const d of dicts) {
+        expect(typeof d.addBook[key], `addBook.${key} 缺`).toBe('string');
+        expect((d.addBook[key] ?? '').length).toBeGreaterThan(0);
       }
     }
   });

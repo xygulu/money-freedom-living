@@ -270,6 +270,13 @@
     "money-safety": "錢與安全感",
     "allowing": "允許自己"
   },
+  "addBook": {
+    "entry": "把另一本書的內容帶進來",
+    "close": "收起",
+    "topicsLead": "會落在：",
+    "confirm": "帶進來",
+    "added": "好了。從下一次起，它的內容會一起出現在你的一天裡。"
+  },
   "timeline": {
     "title": "成長足跡",
     "sub": "改變不是一瞬間，是回頭才看見的一步步。",

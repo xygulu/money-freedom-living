@@ -17,13 +17,14 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { getDict } from '@/i18n/get-dict';
 import { enabledLocales, isLocale } from '@/i18n/config';
-import { DEFAULT_BOOK_ID, getJourneyStages, pickDaily, pickExercise } from '@/lib/content';
+import { DEFAULT_BOOK_ID, bookTitle, getBooks, getJourneyStages, pickDaily, pickExercise } from '@/lib/content';
 import { requireSignedIn } from '@/lib/identity';
-import { activeBookId, getProfile, recordDailySeen } from '@/lib/profile';
+import { activeBookEntries, activeBookId, getProfile, recordDailySeen } from '@/lib/profile';
 import { getUiVersion } from '@/lib/ui-version';
 import { computeStageProgress } from '@/lib/stage';
 import { getSttProviders } from '@/lib/stt';
 import NewJourneyView from '@/components/NewJourneyView';
+import AddBookEntry from '@/components/AddBookEntry';
 
 export const dynamic = 'force-dynamic';
 
@@ -54,18 +55,19 @@ export default async function journeyNewPage({
 
   const stage = profile?.stage ?? 1;
   const today = todayISO();
+  // 主线书（汇入制下 = 最早开始的 active）：阶段进度、段名跟它——行级 stage 真源只覆盖主线
   const bookId = profile ? activeBookId(profile) : DEFAULT_BOOK_ID;
 
-  // 今日一签（去重档案里的 seenTexts）；与经典版共用同一池子。
-  // 焦点命题（V0.2 B5）：当前书条目的 focusTopic，设了就优先该线
-  const focusTopic = profile?.books.find((b) => b.bookId === bookId)?.focusTopic ?? null;
+  // 今日一签（去重档案里的 seenTexts）。汇入制：所有 active 书的池子合并（主线在前，
+  // 跨书按文本去重）；各书自己的焦点命题落在各自的池片上（V0.2 B5 忠于书级焦点）
+  const activeEntries = profile ? activeBookEntries(profile) : [];
+  const dailyRefs = activeEntries.map((b) => ({ bookId: b.bookId, focusTopic: b.focusTopic ?? null }));
   const daily = pickDaily(
     locale,
     today,
     stage,
     (profile?.dailySeen ?? []).map((s) => s.text),
-    bookId,
-    focusTopic,
+    dailyRefs.length > 0 ? dailyRefs : [{ bookId: DEFAULT_BOOK_ID }],
   );
 
   // 看过即记（幂等：同一天只记一条）
@@ -77,8 +79,14 @@ export default async function journeyNewPage({
     }
   }
 
-  // 今日微行动（按当前阶段练习确定性抽取）
-  const exercise = pickExercise(locale, today, stage, identity.key, bookId);
+  // 今日微行动（按当前阶段练习确定性抽取；union 所有 active 书，主线在前）
+  const exercise = pickExercise(
+    locale,
+    today,
+    stage,
+    identity.key,
+    activeEntries.length > 0 ? activeEntries.map((b) => b.bookId) : [DEFAULT_BOOK_ID],
+  );
 
   // 阶段进度（14 格里的"已走"格数；用于 PathBar 渲染）
   const progress = profile
@@ -88,6 +96,12 @@ export default async function journeyNewPage({
   // 阶段名属于书（U6：i18n 里不得留单本书的阶段语汇）——从内容层按当前书取，
   // 路上的节点名随书替换（title 就是各语言 journey md 里的短名，如「看见」）
   const stageNames = getJourneyStages(locale, bookId).map((s) => s.title);
+
+  // 加书候选（汇入制）：catalog 里已上线（status==='active'）且档案里还没有的书。
+  // draft 不列（红线 1：不陈列还没上线的书）；全部已加则整个入口不渲染。
+  const candidates = getBooks().filter(
+    (b) => b.status === 'active' && !activeEntries.some((e) => e.bookId === b.id),
+  );
 
   return (
     <div className="flex flex-col pt-12" data-step="root">
@@ -134,6 +148,16 @@ export default async function journeyNewPage({
         stage={stage}
         speechEnabled={getSttProviders().length > 0}
       />
+
+      {/* 加书入口（汇入制）：只列已上线且还没加的书，没有候选整个不渲染（红线 1：不陈列）。
+          书在这里只以「内容会落进哪些场景」的身份露面，不做书架、无进度无红点（红线 8）。 */}
+      {candidates.length > 0 && (
+        <AddBookEntry
+          locale={locale}
+          dict={dict}
+          books={candidates.map((b) => ({ id: b.id, title: bookTitle(b.id, locale), topics: b.topics }))}
+        />
+      )}
     </div>
   );
 }

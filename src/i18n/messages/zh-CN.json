@@ -270,6 +270,13 @@
     "money-safety": "钱与安全感",
     "allowing": "允许自己"
   },
+  "addBook": {
+    "entry": "把另一本书的内容带进来",
+    "close": "收起",
+    "topicsLead": "会落在：",
+    "confirm": "带进来",
+    "added": "好了。从下一次起，它的内容会一起出现在你的一天里。"
+  },
   "timeline": {
     "title": "成长足迹",
     "sub": "改变不是一瞬间，是回头才看见的一步步。",

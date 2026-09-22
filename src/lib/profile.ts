@@ -306,12 +306,24 @@ export function parseBooks(value: unknown, stage: number, stageStartedAt: string
   if (entries.length === 0) {
     entries.push({ bookId: DEFAULT_BOOK_ID, status: 'active', startedAt: createdAt, stage, stageStartedAt });
   }
-  const active = entries.find((b) => b.status === 'active');
-  if (active) {
-    active.stage = stage;
-    active.stageStartedAt = stageStartedAt;
+  // 行级真源覆盖打到主线书（最早 startedAt 的 active，平局取数组序）——
+  // 汇入制下可能有多本 active（加书不暂停别人），覆盖「数组序第一个 active」会打错对象。
+  const main = mainActiveIndex(entries);
+  if (main !== -1) {
+    entries[main].stage = stage;
+    entries[main].stageStartedAt = stageStartedAt;
   }
   return entries;
+}
+
+/** active 条目里的主线下标：最早 startedAt 在前，平局取数组序；没有 active 返回 -1。 */
+function mainActiveIndex(entries: BookEntry[]): number {
+  let best = -1;
+  for (let i = 0; i < entries.length; i++) {
+    if (entries[i].status !== 'active') continue;
+    if (best === -1 || entries[i].startedAt < entries[best].startedAt) best = i;
+  }
+  return best;
 }
 
 /** wished_books 归位：老档案无此列/坏数据一律按空数组（不报错、不静默丢——丢只发生在写入侧） */
@@ -346,13 +358,36 @@ function parseTouch(value: unknown): TouchState {
   return value as TouchState;
 }
 
-/** 当前书（docs/05 §4.1：status==='active' 那本；存量/异常一律回落 v1 书） */
+/**
+ * active 条目按主线序排列：最早 startedAt 在前（平局保持数组序），第一本即主线书。
+ * 汇入制（V0.2 批 C 追加）：加一本书不暂停已有书，所以可能同时有多本 active——
+ * 阶段叙事/灯表/评估/对话的阶段块跟主线（单槽评估、行级 stage 真源都不动），
+ * 内容面（一签池/练习/practices）则应从全部 active 合并。
+ */
+export function activeBookEntries(profile: Pick<GrowthProfile, 'books'>): BookEntry[] {
+  return profile.books
+    .map((b, i) => ({ b, i }))
+    .filter(({ b }) => b.status === 'active')
+    .sort((x, y) => (x.b.startedAt === y.b.startedAt ? x.i - y.i : x.b.startedAt < y.b.startedAt ? -1 : 1))
+    .map(({ b }) => b);
+}
+
+/** 主线书：多本 active 里最早开始的那本；存量/异常一律回落 v1 书（mainBookId）。 */
+export function mainBookEntry(profile: Pick<GrowthProfile, 'books'>): BookEntry | null {
+  return activeBookEntries(profile)[0] ?? null;
+}
+
+export function mainBookId(profile: Pick<GrowthProfile, 'books'>): string {
+  return mainBookEntry(profile)?.bookId ?? DEFAULT_BOOK_ID;
+}
+
+/** 当前书 = 主线书（旧名薄别名，调用点语义随主线定义自动正确） */
 export function activeBook(profile: Pick<GrowthProfile, 'books'>): BookEntry | null {
-  return profile.books.find((b) => b.status === 'active') ?? null;
+  return mainBookEntry(profile);
 }
 
 export function activeBookId(profile: Pick<GrowthProfile, 'books'>): string {
-  return activeBook(profile)?.bookId ?? DEFAULT_BOOK_ID;
+  return mainBookId(profile);
 }
 
 /**
@@ -380,6 +415,43 @@ export function mergeBookSelection(existing: BookEntry[], bookId: string, now: s
     ...(focus ? { focusTopic: focus } : {}),
   };
   return [target, ...rest];
+}
+
+/**
+ * 加书落库（汇入制，V0.2 批 C 追加的纯函数）：目标书 active，**其余条目一字不碰**——
+ * 加一本书 = 它的内容（一签池/练习/practices）并入这个人按场景组织的成长，不是换书。
+ * - 已是 active → no-op（focusTopic 有传则更新；不 bump startedAt，主线序不因重复点而变）；
+ * - paused → 恢复：startedAt/stage/stageStartedAt 全保留；
+ * - done → 重读：startedAt=now、清 finishedAt（同 mergeBookSelection 语义）；
+ * - 不存在 → 末尾插入 active、stage 1；
+ * - 书内进度不在这里写——行级 stage / stage_started_at 仍是主线书专属真源（parseBooks 读时覆盖）。
+ * 注意：首启选书不走这里（走 mergeBookSelection）——parseBooks 会给每个档案合成一条
+ * DEFAULT 书的 active 条目，纯加法会把「选了 B 书」变成「v1 与 B 双 active」，静默换掉路线图。
+ */
+export function addBookSelection(existing: BookEntry[], bookId: string, now: string, focusTopic?: TopicId): BookEntry[] {
+  const prev = existing.find((b) => b.bookId === bookId);
+  if (!prev) {
+    return [
+      ...existing,
+      { bookId, status: 'active', startedAt: now, stage: 1, stageStartedAt: now, ...(focusTopic ? { focusTopic } : {}) },
+    ];
+  }
+  const focus = focusTopic ?? prev.focusTopic;
+  if (prev.status === 'active') {
+    if (focus === prev.focusTopic) return existing;
+    return existing.map((b) => (b.bookId === bookId ? { ...b, ...(focus ? { focusTopic: focus } : {}) } : b));
+  }
+  return existing.map((b) => {
+    if (b.bookId !== bookId) return b;
+    const { finishedAt: _cleared, ...kept } = b;
+    return {
+      ...kept,
+      status: 'active' as const,
+      // done 重读只把 startedAt 拨回 now（同 merge）；paused 恢复则原条目原样激活
+      ...(b.status === 'done' ? { startedAt: now } : {}),
+      ...(focus ? { focusTopic: focus } : {}),
+    };
+  });
 }
 
 /** 愿望追加（V0.2 A4 纯函数）：同名去重（不重复记）、封顶 50 条（防灌水）、新的在后。 */

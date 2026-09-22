@@ -270,6 +270,13 @@
     "money-safety": "Money and feeling safe",
     "allowing": "Letting yourself"
   },
+  "addBook": {
+    "entry": "Bring in another book",
+    "close": "Close",
+    "topicsLead": "It lands on:",
+    "confirm": "Bring it in",
+    "added": "Done. From now on, its content joins your day."
+  },
   "timeline": {
     "title": "Your trail",
     "sub": "Change is never one moment — it's the steps you only see when you look back.",
