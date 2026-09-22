@@ -17,6 +17,6 @@ export default async function AdminBookPage({
   const sp = await searchParams;
   const state = readAdminBook(bookId);
   if (!state) notFound();
-  // ?autodraft=1 只由「新建书」成功链路带过来：进工作台即自动整包生成
+  // ?autodraft=1 只由「新建书」成功链路带过来：进工作台即自动识别并弹确认卡，确认后才生成
   return <BookEditor bookId={bookId} initial={state} autodraft={sp.autodraft === '1'} />;
 }

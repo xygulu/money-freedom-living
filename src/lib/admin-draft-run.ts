@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import matter from 'gray-matter';
 import { BOOKS_DIR, readAdminBook, writeAdminBook, type AdminBookState } from '@/lib/admin-content';
-import { recognizeBook } from '@/lib/admin-recognize';
+import { recognizeBook, type BookRecognition } from '@/lib/admin-recognize';
 import {
   buildDailyBatchNote,
   buildDailySystem,
@@ -106,6 +106,8 @@ function v1Exemplars(): { journey: string; lamps: string; daily: string } {
 /**
  * 跑一次起草（kind = journey 含灯表 ｜ daily 一签池）。守卫与识别闸都在这里，
  * 失败以 {ok:false, error} 返回，不抛异常。onLog 用于后台任务的实时进度。
+ * confirm（2026-09-23 管理员确认闸）：前端探针识别过、管理员点过确认后带来的载荷——
+ * 无素材路径有了它就不再烧一次识别调用；没有它仍走原识别闸（服务端兜底）。
  */
 export async function runDraftStep(
   bookId: string,
@@ -114,6 +116,7 @@ export async function runDraftStep(
   email: string,
   onLog?: (line: string) => void,
   root: string = BOOKS_DIR,
+  confirm?: BookRecognition,
 ): Promise<DraftStepResult> {
   const log: string[] = [];
   // 每一行日志都从这里走：同步路由拿返回的 log 数组，后台任务靠 onLog 实时流——两边同源不重复
@@ -136,15 +139,27 @@ export async function runDraftStep(
 
   // 识别闸（用户 2026-09-22 拍板「除非 AI 找不到该书本」）：无素材起草前先确认
   // AI 真的认识这本书——不认识就拒绝（不硬编通用内容冒充那本书）。
+  // 2026-09-23 起正常路径是：探针先识别 → 管理员确认卡确认 → confirm 带进来直通；
+  // 没有 confirm（旧同步路由 / 非常规调用）仍走闸，known:false 照拒（防御纵深）。
   if (!useMaterial) {
-    const rec = await recognizeBook(state.meta.title['zh-CN'] || bookId, state.meta.author, email);
-    if (!rec.known) {
-      say(`AI 不认识《${state.meta.title['zh-CN'] || bookId}》${rec.note ? `：${rec.note}` : ''}——拒绝凭空生成。`);
-      say('两条路：① 素材框贴这本书的摘录/要点再起草；② 核对 meta 里的书名/作者后重试。');
-      return { ok: false, error: 'book_unknown', log };
+    if (confirm && confirm.known === true) {
+      const t = confirm.title || state.meta.title['zh-CN'] || bookId;
+      const parts = [confirm.author && `作者 ${confirm.author}`, confirm.coreMethod && `核心：${confirm.coreMethod}`]
+        .filter(Boolean)
+        .join('，');
+      say(`AI 识别（管理员已确认）：《${t}》${parts ? `，${parts}` : ''}`);
+    } else {
+      const rec = await recognizeBook(state.meta.title['zh-CN'] || bookId, state.meta.author, email);
+      if (!rec.known) {
+        say(`AI 不认识《${state.meta.title['zh-CN'] || bookId}》${rec.note ? `：${rec.note}` : ''}——拒绝凭空生成。`);
+        say('两条路：① 素材框贴这本书的摘录/要点再起草；② 核对 meta 里的书名/作者后重试。');
+        return { ok: false, error: 'book_unknown', log };
+      }
+      const desc = [rec.author && `作者 ${rec.author}`, rec.coreMethod && `核心：${rec.coreMethod}`, rec.note]
+        .filter(Boolean)
+        .join('，');
+      if (desc) say(`AI 识别：${desc}`);
     }
-    const desc = [rec.author && `作者 ${rec.author}`, rec.note].filter(Boolean).join('，');
-    if (desc) say(`AI 识别：${desc}`);
   }
 
   try {

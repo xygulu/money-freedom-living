@@ -85,12 +85,41 @@ describe('守卫与识别闸', () => {
 
   it('无素材 + AI 不认识 → book_unknown，日志给两条路；不进生成', async () => {
     makeBook();
-    recMock.mockResolvedValueOnce({ known: false, author: '', note: '没听过这本书' });
+    recMock.mockResolvedValueOnce({ known: false, title: '', author: '', coreMethod: '', note: '没听过这本书' });
     const r = await runDraftStep('test-book', 'daily', '', 'a@b.c', undefined, root);
     expect(r.error).toBe('book_unknown');
     expect(r.log.join('\n')).toContain('AI 不认识《测试之书》');
     expect(r.log.join('\n')).toContain('素材框');
     expect(llmMock).not.toHaveBeenCalled();
+    expect(recMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('无素材 + 管理员已确认（confirm）→ 不再调识别直接生成，日志注明管理员已确认', async () => {
+    makeBook();
+    llmMock.mockResolvedValue({ cards: Array.from({ length: 30 }, (_, i) => card(i)) });
+    const r = await runDraftStep('test-book', 'daily', '', 'a@b.c', undefined, root, {
+      known: true,
+      title: '测试之书',
+      author: '某人',
+      coreMethod: '金钱心理',
+      note: '',
+    });
+    expect(r.ok).toBe(true);
+    expect(recMock).not.toHaveBeenCalled(); // 确认过了，不烧第二次识别调用
+    expect(r.log.join('\n')).toContain('AI 识别（管理员已确认）：《测试之书》，作者 某人，核心：金钱心理');
+  });
+
+  it('confirm.known !== true 视同未确认——照走识别闸（服务端兜底）', async () => {
+    makeBook();
+    recMock.mockResolvedValueOnce({ known: false, title: '', author: '', coreMethod: '', note: '没听过' });
+    const r = await runDraftStep('test-book', 'daily', '', 'a@b.c', undefined, root, {
+      known: false,
+      title: '',
+      author: '',
+      coreMethod: '',
+      note: '前端异常载荷',
+    });
+    expect(r.error).toBe('book_unknown');
     expect(recMock).toHaveBeenCalledTimes(1);
   });
 
@@ -100,6 +129,21 @@ describe('守卫与识别闸', () => {
     const r = await runDraftStep('test-book', 'daily', '素材'.repeat(40), 'a@b.c', undefined, root);
     expect(r.ok).toBe(true);
     expect(recMock).not.toHaveBeenCalled();
+  });
+
+  it('素材路径 + confirm 在场：confirm 不参与（素材即确认），日志不含「管理员已确认」', async () => {
+    makeBook();
+    llmMock.mockResolvedValue({ cards: Array.from({ length: 30 }, (_, i) => card(i)) });
+    const r = await runDraftStep('test-book', 'daily', '素材'.repeat(40), 'a@b.c', undefined, root, {
+      known: true,
+      title: '测试之书',
+      author: '某人',
+      coreMethod: '',
+      note: '',
+    });
+    expect(r.ok).toBe(true);
+    expect(recMock).not.toHaveBeenCalled();
+    expect(r.log.join('\n')).not.toContain('管理员已确认');
   });
 });
 
@@ -153,7 +197,7 @@ describe('一签分批生成（3 批 × 30 → 合并全量校验 → en 逐批�
 describe('journey + 灯表链（识别放行 → 三次调用 → 写盘）', () => {
   it('happy path：journey 4 段（中英）+ 灯表 3 盏写盘，进度行进日志', async () => {
     makeBook();
-    recMock.mockResolvedValueOnce({ known: true, author: '心屋仁之助', note: '金钱心理' });
+    recMock.mockResolvedValueOnce({ known: true, title: '一生お金に困らない生き方', author: '心屋仁之助', coreMethod: '金钱心理', note: '构造一笔小确幸' });
     llmMock.mockResolvedValueOnce({ stages: [stage(1), stage(2), stage(3), stage(4)] });
     llmMock.mockResolvedValueOnce({ stages: { 1: [lamp('testbook_stage1_a')], 2: [lamp('testbook_stage2_a')], 3: [lamp('testbook_stage3_a')] } });
     llmMock.mockResolvedValueOnce({ stages: [stage(1), stage(2), stage(3), stage(4)] });

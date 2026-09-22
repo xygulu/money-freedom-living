@@ -4,6 +4,7 @@
 // 任务表挂 globalThis（dev HMR 换模块实例也不丢）；单人后台工具，不做持久化——
 // 进程重启丢任务无妨（草稿以源文件为准，重跑即可）。
 import type { AdminBookState } from '@/lib/admin-content';
+import type { BookRecognition } from '@/lib/admin-recognize';
 import { runDraftStep } from '@/lib/admin-draft-run';
 
 export type DraftJobKind = 'journey' | 'daily' | 'all';
@@ -35,7 +36,13 @@ export function findRunningDraftJob(bookId: string): DraftJob | null {
   return null;
 }
 
-export function startDraftJob(input: { bookId: string; kind: DraftJobKind; source: string; email: string }): DraftJob {
+export function startDraftJob(input: {
+  bookId: string;
+  kind: DraftJobKind;
+  source: string;
+  email: string;
+  confirm?: BookRecognition; // 管理员确认卡确认过的识别结果（2026-09-23 确认闸）；不存进 job——GET 形状不变，日志已留痕
+}): DraftJob {
   const job: DraftJob = {
     id: crypto.randomUUID(),
     bookId: input.bookId,
@@ -48,16 +55,16 @@ export function startDraftJob(input: { bookId: string; kind: DraftJobKind; sourc
     finishedAt: null,
   };
   jobs.set(job.id, job);
-  void runJob(job, input.email, input.source);
+  void runJob(job, input.email, input.source, input.confirm);
   return job;
 }
 
-async function runJob(job: DraftJob, email: string, source: string): Promise<void> {
+async function runJob(job: DraftJob, email: string, source: string, confirm?: BookRecognition): Promise<void> {
   const steps: Array<'journey' | 'daily'> = job.kind === 'all' ? ['journey', 'daily'] : [job.kind];
   try {
     for (const [i, kind] of steps.entries()) {
       if (steps.length > 1) job.log.push(`── ${kind === 'journey' ? 'journey + 灯表' : '一签池'}（${i + 1}/${steps.length}）──`);
-      const r = await runDraftStep(job.bookId, kind, source, email, (line) => job.log.push(line));
+      const r = await runDraftStep(job.bookId, kind, source, email, (line) => job.log.push(line), undefined, confirm);
       if (!r.ok) {
         // 整包前一步失败就停：不烧后续步骤的 LLM token（比旧 draftAll 的「失败也继续」更省）
         job.status = 'failed';

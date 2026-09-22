@@ -1,7 +1,8 @@
 // 后台新建书（输入书名即可，V0.2 批 C4 后续）：书名必填，其余可选。
 // 识别闸（用户 2026-09-22 拍板「输入书名自动生成，除非 AI 找不到该书本」）：
-// 默认先 recognizeBook——AI 不认识 → 422 拒建（提示核对书名或勾选自编/小众）；
-// 认识 → 建骨架并让前端跳工作台自动起草（autodraft）。
+// 默认先 recognizeBook——AI 不认识 → 422 拒建（提示补作者或勾选自编/小众）；
+// 认识 → 建骨架并让前端跳工作台（autodraft 只触发识别探针弹确认卡，
+// 管理员确认后才真正生成——2026-09-23 确认闸）。
 // skipUnknownCheck=true（自编/小众书）→ 跳过识别只建骨架，且不自动生成
 // （AI 不认识的书自动生成只会产出通用内容——那正是要避免的）。
 import { requireApiAdmin } from '@/lib/admin-auth';
@@ -46,7 +47,8 @@ export async function POST(request: Request) {
     return Response.json({ ok: false, error: 'book_exists', log: [`已存在：${bookId}——不覆盖，换个 id 或直接进工作台。`] }, { status: 409 });
   }
 
-  // 识别闸：AI 不认识的书不建、不生成（fail-open 只在识别服务本身坏时发生）
+  // 识别闸：AI 不认识的书不建、不生成（fail-open 只在识别服务本身坏时发生）。
+  // 2026-09-23 确认闸：这里的闸只挡「建书」这半步；真正的生成确认在工作台确认卡。
   const skipUnknownCheck = body?.skipUnknownCheck === true;
   if (!skipUnknownCheck) {
     const rec = await recognizeBook(titleZh, String(body?.author ?? '').trim(), gate.email);
@@ -55,9 +57,10 @@ export async function POST(request: Request) {
         {
           ok: false,
           error: 'book_unknown',
+          recognition: rec,
           log: [
             `AI 不认识《${titleZh}》${rec.note ? `：${rec.note}` : ''}——拒绝凭空生成。`,
-            '两条路：① 核对书名（填上作者名有帮助）重试；② 勾选「自编/小众书」只建骨架，之后在素材框贴要点再起草。',
+            '补上作者名（帮 AI 对上书）再点一次；或：① 核对书名重试；② 勾选「自编/小众书」只建骨架，之后在素材框贴要点再起草。',
           ],
         },
         { status: 422 },

@@ -5,6 +5,7 @@
 // 内容质量不在这里拦——发布闸（build-content）是硬闸，这里只管把源文件改对。
 import { useEffect, useRef, useState } from 'react';
 import type { AdminBookState, AdminDailyCard, AdminLamp, AdminStage } from '@/lib/admin-content';
+import type { BookRecognition } from '@/lib/admin-recognize';
 
 const TOPICS: Array<{ id: string; zh: string }> = [
   { id: 'self-worth', zh: '我不配' },
@@ -192,6 +193,14 @@ function CardForm({ card, onChange }: { card: AdminDailyCard; onChange: (patch: 
   );
 }
 
+/** 探针 known:false 的就地红字文案：AI 拒绝凭空生成，管理员须补信息（作者/素材） */
+function recusalText(rec: BookRecognition, fallbackTitle: string): string {
+  return [
+    `AI 不认识《${rec.title || fallbackTitle}》${rec.note ? `：${rec.note}` : ''}——拒绝凭空生成。`,
+    '需要更多信息：① 核对书名/补作者（「书信息」里的作者栏，或回新建表单填作者）再点生成；② 素材框贴这本书的摘录/要点（≥50 字）——贴了素材就不走识别闸。',
+  ].join('\n');
+}
+
 export default function BookEditor({
   bookId,
   initial,
@@ -199,20 +208,25 @@ export default function BookEditor({
 }: {
   bookId: string;
   initial: AdminBookState;
-  /** 由「新建书」成功链路带上（?autodraft=1）：进工作台即自动整包生成 */
+  /** 由「新建书」成功链路带上（?autodraft=1）：进工作台即自动识别并弹确认卡，管理员确认后才生成 */
   autodraft?: boolean;
 }) {
   const [state, setState] = useState<AdminBookState>(initial);
   const [busy, setBusy] = useState<'draft' | 'all' | 'save' | 'tag' | null>(null);
   const [log, setLog] = useState<{ ok: boolean; text: string } | null>(null);
+  // 确认闸（2026-09-23）：生成点击先探针识别——probing 中 / pending 待确认 / 拒绝红字，
+  // 三个状态都直接呈现在生成按钮正下方（不放页面底部日志区，那里只放任务进度）
+  const [probe, setProbe] = useState<'probing' | null>(null);
+  const [pending, setPending] = useState<{ kind: 'journey' | 'daily' | 'all'; rec: BookRecognition } | null>(null);
+  const [probeError, setProbeError] = useState<string | null>(null);
 
-  // 自动整包只跑一次（ref 守卫 StrictMode 双跑）；失败照常显示在日志区，
-  // 操作员可贴素材或核对书名后手动重跑
+  // 自动整包只跑一次（ref 守卫 StrictMode 双跑）——2026-09-23 起只触发识别探针：
+  // AI 认识则弹确认卡等管理员点击「确认，开始生成」，不认识则按钮下就地红字拒绝
   const autoRan = useRef(false);
   useEffect(() => {
     if (!autodraft || autoRan.current) return;
     autoRan.current = true;
-    void draftAll();
+    void probeThenQueue('all');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autodraft]);
 
@@ -253,11 +267,14 @@ export default function BookEditor({
   /** 跑一次起草（后台任务 + 轮询，不碰 UI 态，供单键与整包键共用）。
    *  起草要 2-8 分钟，同步请求过 Cloudflare Tunnel 会在 100 秒被掐（524→「网络错误」），
    *  2026-09-22 起改为：POST 立刻拿 jobId，前端轮询 GET 取进度并实时刷日志区。 */
-  async function runDraft(kind: 'journey' | 'daily'): Promise<{ ok: boolean; text: string; state?: AdminBookState }> {
+  async function runDraft(
+    kind: 'journey' | 'daily',
+    confirm?: BookRecognition,
+  ): Promise<{ ok: boolean; text: string; state?: AdminBookState }> {
     const start = await fetch('/api/admin/draft-job', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ bookId, source: state.source, kind }), // 素材随请求带上，免得忘保存
+      body: JSON.stringify({ bookId, source: state.source, kind, ...(confirm ? { confirm } : {}) }), // 素材随请求带上，免得忘保存
     });
     const s = (await start.json().catch(() => null)) as { ok?: boolean; jobId?: string; error?: string; log?: string[] } | null;
     if (!start.ok || !s?.ok || !s.jobId) {
@@ -296,11 +313,11 @@ export default function BookEditor({
     }
   }
 
-  async function draft(kind: 'journey' | 'daily'): Promise<void> {
+  async function draft(kind: 'journey' | 'daily', confirm?: BookRecognition): Promise<void> {
     setBusy('draft');
     setLog(null);
     try {
-      const r = await runDraft(kind);
+      const r = await runDraft(kind, confirm);
       if (r.state) setState(r.state); // 草稿只覆盖对应区块，本地其他编辑不动
       setLog({ ok: r.ok, text: r.text });
     } catch {
@@ -310,13 +327,13 @@ export default function BookEditor({
   }
 
   // 一键整包：journey（含灯表）→ 一签，顺序跑（一签标尺依赖 journey 的段结构）
-  async function draftAll(): Promise<void> {
+  async function draftAll(confirm?: BookRecognition): Promise<void> {
     setBusy('all');
     setLog(null);
     try {
-      const a = await runDraft('journey');
+      const a = await runDraft('journey', confirm);
       if (a.state) setState(a.state);
-      const b = await runDraft('daily');
+      const b = await runDraft('daily', confirm);
       if (b.state) setState(b.state);
       setLog({ ok: a.ok && b.ok, text: `── journey + 灯表 ──\n${a.text || '（成功）'}\n── 一签池 ──\n${b.text || '（成功）'}` });
     } catch {
@@ -346,6 +363,50 @@ export default function BookEditor({
 
   const lampStages = Object.keys(state.lamps).sort((a, b) => Number(a) - Number(b));
 
+  // 确认闸入口（2026-09-23）：三个生成按钮都先走这里——探针识别 → 按钮下出确认卡或红字
+  async function probeThenQueue(kind: 'journey' | 'daily' | 'all'): Promise<void> {
+    setProbeError(null);
+    setPending(null);
+    setProbe('probing');
+    try {
+      const res = await fetch('/api/admin/recognize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookId, source: state.source }), // 素材随请求带上，免得忘保存
+      });
+      const data = (await res.json().catch(() => null)) as
+        | { ok: true; skipped?: boolean; recognition?: BookRecognition }
+        | { ok: false; error?: string; log?: string[] }
+        | null;
+      setProbe(null);
+      if (res.ok && data?.ok && data.skipped) {
+        startGenerate(kind); // 素材 ≥50 字：生成本就不走识别闸，直接开跑
+        return;
+      }
+      if (res.ok && data?.ok && data.recognition) {
+        if (data.recognition.known) setPending({ kind, rec: data.recognition });
+        else setProbeError(recusalText(data.recognition, state.meta.title['zh-CN'] || bookId));
+        return;
+      }
+      const err =
+        data && 'log' in data && data.log
+          ? data.log.join('\n')
+          : `识别请求失败（${data && 'error' in data && data.error ? data.error : `HTTP ${res.status}`}）——重试一次。`;
+      setProbeError(err);
+    } catch {
+      setProbe(null);
+      setProbeError('识别请求失败（网络错误）——重试一次。');
+    }
+  }
+
+  // 确认卡上的「确认，开始生成」/素材直通路径的派发点：清卡后真正开跑
+  function startGenerate(kind: 'journey' | 'daily' | 'all', confirm?: BookRecognition): void {
+    setPending(null);
+    setProbeError(null);
+    if (kind === 'all') void draftAll(confirm);
+    else void draft(kind, confirm);
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-baseline gap-3">
@@ -359,7 +420,16 @@ export default function BookEditor({
 
       <div className={boxCls}>
         <h2 className="text-sm">素材（可选——贴了更贴书：摘录 / 要点 / 你的转述；不贴则按书名起草）</h2>
-        <textarea className={`${inputCls} mt-2`} rows={10} value={state.source} onChange={(e) => setState((s) => ({ ...s, source: e.target.value }))} />
+        <textarea
+          className={`${inputCls} mt-2`}
+          rows={10}
+          value={state.source}
+          onChange={(e) => {
+            setState((s) => ({ ...s, source: e.target.value }));
+            setPending(null); // 素材变了，之前的识别确认作废
+            setProbeError(null);
+          }}
+        />
       </div>
 
       <div className={boxCls}>
@@ -404,8 +474,9 @@ export default function BookEditor({
       <div className={boxCls}>
         <h2 className="text-sm">AI 起草（覆盖现有内容，写回源文件）</h2>
         <p className="mt-1 text-xs leading-relaxed text-ink-soft/70">
-          生成在后台跑：中途关页也没关系，文件照写，回来刷新就能看到。每次校验不过自动重试一次；
-          无素材起草时 AI 会先识别书名——不认识就拒绝生成（贴素材或核对书名后再来）。
+          生成在后台跑：中途关页也没关系，文件照写，回来刷新就能看到。每次校验不过自动重试一次。
+          无素材起草前 AI 会先识别书名——认识则弹出确认卡，你确认「是这本书」才开始生成；
+          不认识就拒绝，需要补作者或贴素材。
           {state.meta.status === 'active' && (
             <strong className="ml-1">这本书是 active：AI 不许覆盖线上内容，起草被拒（打标不受限）。</strong>
           )}
@@ -413,29 +484,68 @@ export default function BookEditor({
         <div className="mt-3 flex flex-wrap gap-3">
           <button
             type="button"
-            onClick={() => void draftAll()}
-            disabled={busy !== null}
+            onClick={() => void probeThenQueue('all')}
+            disabled={busy !== null || probe !== null || pending !== null}
             className="border border-ink bg-ink px-5 py-2 text-sm text-paper transition-opacity hover:opacity-90 disabled:opacity-50"
           >
-            {busy === 'all' ? '整包生成中……约 5-10 分钟（可关页，稍后刷新看结果）' : '一键生成整包（journey + 灯表 + 一签）'}
+            {busy === 'all' ? '整包生成中……约 5-10 分钟（可关页，稍后刷新看结果）' : probe === 'probing' ? '正在识别这本书……' : '一键生成整包（journey + 灯表 + 一签）'}
           </button>
           <button
             type="button"
-            onClick={() => void draft('journey')}
-            disabled={busy !== null}
+            onClick={() => void probeThenQueue('journey')}
+            disabled={busy !== null || probe !== null || pending !== null}
             className="border border-ink px-5 py-2 text-sm transition-colors hover:bg-ink hover:text-paper disabled:opacity-50"
           >
             {busy === 'draft' ? '正在起草……约 1-3 分钟' : '只起草 journey + 灯表'}
           </button>
           <button
             type="button"
-            onClick={() => void draft('daily')}
-            disabled={busy !== null}
+            onClick={() => void probeThenQueue('daily')}
+            disabled={busy !== null || probe !== null || pending !== null}
             className="border border-ink px-5 py-2 text-sm transition-colors hover:bg-ink hover:text-paper disabled:opacity-50"
           >
             {busy === 'draft' ? '正在起草……' : '只起草一签池（覆盖两池 ≥90 条，约 2-4 分钟）'}
           </button>
         </div>
+        {probe === 'probing' && <p className="mt-3 text-xs text-ink-soft">AI 正在核对这本书……</p>}
+        {probeError && (
+          <pre
+            data-admin-probe-error="failed"
+            className="mt-3 border border-red-300 px-3 py-2 text-xs leading-relaxed whitespace-pre-wrap text-red-600"
+          >
+            {probeError}
+          </pre>
+        )}
+        {pending && (
+          <div data-admin-confirm-card className="mt-3 border border-line bg-white px-3 py-2 text-xs leading-relaxed">
+            <p>
+              AI 找到的书：《{pending.rec.title || state.meta.title['zh-CN'] || bookId}》｜作者：
+              {pending.rec.author || '（未给出）'}｜核心：{pending.rec.coreMethod || '（未给出）'}
+            </p>
+            {pending.rec.note && <p className="mt-1 text-ink-soft">{pending.rec.note}</p>}
+            <p className="mt-1 text-ink-soft">
+              是这本书才继续——确认后 AI 按这本书起草（覆盖现有草稿内容）。不对就取消：核对书名/补作者，或素材框贴 ≥50 字摘录后再点生成。
+            </p>
+            <div className="mt-2 flex gap-3">
+              <button
+                type="button"
+                onClick={() => startGenerate(pending.kind, pending.rec)}
+                disabled={busy !== null}
+                className="border border-ink bg-ink px-4 py-1.5 text-sm text-paper transition-opacity hover:opacity-90 disabled:opacity-50"
+              >
+                确认，开始生成
+              </button>
+              <button
+                type="button"
+                onClick={() => setPending(null)}
+                disabled={busy !== null}
+                className="border border-line px-4 py-1.5 text-sm transition-colors hover:bg-ink hover:text-paper disabled:opacity-50"
+              >
+                不对，取消
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className={boxCls}>

@@ -83,4 +83,22 @@ describe('startDraftJob 生命周期', () => {
   it('getDraftJob 查无此任务 → null', () => {
     expect(getDraftJob('no-such-id')).toBeNull();
   });
+
+  it('confirm 透传到 runDraftStep（第 7 位置参数）；每一步都带同一份', async () => {
+    stepMock.mockResolvedValue({ ok: true, log: [], state: fakeState });
+    const confirm = { known: true, title: '测试之书', author: '某人', coreMethod: '金钱心理', note: '' };
+    const job = startDraftJob({ bookId: 'job-f', kind: 'all', source: '', email: 'a@b.c', confirm });
+    await flush();
+    expect(job.status).toBe('done');
+    expect(stepMock).toHaveBeenCalledTimes(2);
+    expect(stepMock.mock.calls[0]?.[6]).toEqual(confirm);
+    expect(stepMock.mock.calls[1]?.[6]).toEqual(confirm);
+  });
+
+  it('不带 confirm → runDraftStep 收到 undefined（旧路径语义不变）', async () => {
+    stepMock.mockResolvedValue({ ok: true, log: [], state: fakeState });
+    startDraftJob({ bookId: 'job-g', kind: 'daily', source: '', email: 'a@b.c' });
+    await flush();
+    expect(stepMock.mock.calls[0]?.[6]).toBeUndefined();
+  });
 });
