@@ -219,6 +219,8 @@ export default function BookEditor({
   const [probe, setProbe] = useState<'probing' | null>(null);
   const [pending, setPending] = useState<{ kind: 'journey' | 'daily' | 'all'; rec: BookRecognition } | null>(null);
   const [probeError, setProbeError] = useState<string | null>(null);
+  // 书信息保存反馈（idle|busy|ok|fail）：只存 meta，与底部「保存全部」分开，就地显示结果
+  const [metaSave, setMetaSave] = useState<'idle' | 'busy' | 'ok' | 'fail'>('idle');
 
   // 自动整包只跑一次（ref 守卫 StrictMode 双跑）——2026-09-23 起只触发识别探针：
   // AI 认识则弹确认卡等管理员点击「确认，开始生成」，不认识则按钮下就地红字拒绝
@@ -262,6 +264,31 @@ export default function BookEditor({
       setLog({ ok: false, text: '网络错误，没存上' });
     }
     setBusy(null);
+  }
+
+  /** 只保存书信息（meta）：服务端 scope:'meta' 只把 meta 写回盘，素材/草稿区块不动。
+   *  识别闸与发布闸读的就是盘上的 meta——录完作者/出版社点一下即可，不用整份保存。
+   *  起草运行中也可点（写回会重读盘，不会盖掉，见 admin-draft-run 回归测试）。 */
+  async function saveMeta(): Promise<void> {
+    setMetaSave('busy');
+    try {
+      const res = await fetch(`/api/admin/books/${bookId}/save`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scope: 'meta', state }),
+      });
+      const data = (await res.json()) as { ok: boolean };
+      setMetaSave(data.ok ? 'ok' : 'fail');
+      setLog(
+        data.ok
+          ? { ok: true, text: '书信息已保存到 meta.md（只存书信息，素材与草稿区块不动）。' }
+          : { ok: false, text: '书信息保存失败——用「保存全部到源文件」再试一次。' },
+      );
+    } catch {
+      setMetaSave('fail');
+      setLog({ ok: false, text: '网络错误，书信息没存上' });
+    }
+    setTimeout(() => setMetaSave('idle'), 2500);
   }
 
   /** 跑一次起草（后台任务 + 轮询，不碰 UI 态，供单键与整包键共用）。
@@ -313,12 +340,19 @@ export default function BookEditor({
     }
   }
 
+  // 起草结果只合并草稿三区块（journey/lamps/daily）——meta/素材/topics 是表单里
+  // 未保存的现场编辑，整份替换会把它们冲掉（2026-09-23 用户录入被清空的根因）。
+  // 服务端写回同样只覆盖这三区块（runDraftStep 写前重读盘），两端语义对齐。
+  function mergeDraftSections(draft: AdminBookState): void {
+    setState((s) => ({ ...s, journey: draft.journey, lamps: draft.lamps, daily: draft.daily }));
+  }
+
   async function draft(kind: 'journey' | 'daily', confirm?: BookRecognition): Promise<void> {
     setBusy('draft');
     setLog(null);
     try {
       const r = await runDraft(kind, confirm);
-      if (r.state) setState(r.state); // 草稿只覆盖对应区块，本地其他编辑不动
+      if (r.state) mergeDraftSections(r.state);
       setLog({ ok: r.ok, text: r.text });
     } catch {
       setLog({ ok: false, text: '任务没能启动（网络错误）——重试一次。' });
@@ -332,9 +366,9 @@ export default function BookEditor({
     setLog(null);
     try {
       const a = await runDraft('journey', confirm);
-      if (a.state) setState(a.state);
+      if (a.state) mergeDraftSections(a.state);
       const b = await runDraft('daily', confirm);
-      if (b.state) setState(b.state);
+      if (b.state) mergeDraftSections(b.state);
       setLog({ ok: a.ok && b.ok, text: `── journey + 灯表 ──\n${a.text || '（成功）'}\n── 一签池 ──\n${b.text || '（成功）'}` });
     } catch {
       setLog({ ok: false, text: '任务没能启动（网络错误）——重试一次；若反复失败，直接在本机访问 :3000 排查。' });
@@ -433,7 +467,24 @@ export default function BookEditor({
       </div>
 
       <div className={boxCls}>
-        <h2 className="text-sm">书信息（meta.md）</h2>
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-sm">书信息（meta.md）</h2>
+          <div className="flex items-center gap-2">
+            {metaSave === 'ok' && <span className="text-xs text-ink-soft/70">已保存 ✓</span>}
+            {metaSave === 'fail' && <span className="text-xs text-red-600">没存上，重试</span>}
+            <button
+              type="button"
+              onClick={() => void saveMeta()}
+              disabled={metaSave === 'busy'}
+              className="border border-ink px-3 py-1 text-xs transition-colors hover:bg-ink hover:text-paper disabled:opacity-50"
+            >
+              {metaSave === 'busy' ? '保存中……' : '保存书信息'}
+            </button>
+          </div>
+        </div>
+        <p className="mt-1 text-xs leading-relaxed text-ink-soft/70">
+          录完作者/出版社等点「保存书信息」才落盘——识别闸与发布闸读的就是它。这里只存书信息；素材和草稿的修改仍用页面底部的「保存全部到源文件」。
+        </p>
         <div className="mt-2 grid grid-cols-2 gap-2">
           {LANGS.map((l) => (
             <TextField key={l.id} label={`书名 ${l.zh}`} value={state.meta.title[l.id] ?? ''} onChange={(v) => patchMeta({ title: { ...state.meta.title, [l.id]: v } })} />

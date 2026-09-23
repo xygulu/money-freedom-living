@@ -145,6 +145,22 @@ describe('守卫与识别闸', () => {
     expect(recMock).not.toHaveBeenCalled();
     expect(r.log.join('\n')).not.toContain('管理员已确认');
   });
+
+  it('运行期间落盘的 meta 保存不被任务写回盖掉（写前重读盘，草稿只占 journey/lamps/daily）', async () => {
+    makeBook();
+    // 模拟任务运行中管理员在别处点了保存：meta.author 落盘变为真实作者
+    llmMock
+      .mockImplementationOnce(async () => {
+        const disk = readAdminBook('test-book', root)!;
+        writeAdminBook('test-book', { ...disk, meta: { ...disk.meta, author: '真实作者' } }, root);
+        return { cards: Array.from({ length: 30 }, (_, i) => card(i)) };
+      })
+      .mockResolvedValue({ cards: Array.from({ length: 30 }, (_, i) => card(i)) }); // 其余 5 次调用照常
+    const r = await runDraftStep('test-book', 'daily', '素材'.repeat(40), 'a@b.c', undefined, root);
+    expect(r.ok).toBe(true);
+    expect(r.state?.meta.author).toBe('真实作者'); // 结果态带新 meta（不是开工时的旧值）
+    expect(readAdminBook('test-book', root)?.meta.author).toBe('真实作者'); // 磁盘没被旧值盖回
+  });
 });
 
 describe('一签分批生成（3 批 × 30 → 合并全量校验 → en 逐批翻译）', () => {

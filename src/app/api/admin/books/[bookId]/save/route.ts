@@ -1,7 +1,9 @@
 // 工作台保存（V0.2 C4）：整份编辑态写回 content/books/<id>/ 源文件。
+// scope:'meta'（2026-09-23）：只把 meta 写回盘——素材/草稿区块保持磁盘现状，
+// 表单里那些区块可能是没写完的现场编辑，不该被保存书信息顺手带走。
 // 形状校验只拦「会把文件写坏」的垃圾；内容质量（量级/四语齐）由发布闸（C2）在发布时硬拦。
 import { requireApiAdmin } from '@/lib/admin-auth';
-import { validateSaveShape, writeAdminBook } from '@/lib/admin-content';
+import { readAdminBook, validateSaveShape, writeAdminBook } from '@/lib/admin-content';
 
 export async function POST(request: Request, ctx: { params: Promise<{ bookId: string }> }) {
   const gate = await requireApiAdmin();
@@ -12,7 +14,7 @@ export async function POST(request: Request, ctx: { params: Promise<{ bookId: st
     return Response.json({ ok: false, error: 'bad_book_id' }, { status: 400 });
   }
 
-  const body = (await request.json().catch(() => null)) as { state?: unknown } | null;
+  const body = (await request.json().catch(() => null)) as { state?: unknown; scope?: unknown } | null;
   const state = body?.state;
   const errors = validateSaveShape(state);
   if (errors.length > 0) {
@@ -20,6 +22,12 @@ export async function POST(request: Request, ctx: { params: Promise<{ bookId: st
   }
 
   try {
+    if (body?.scope === 'meta') {
+      const disk = readAdminBook(bookId);
+      if (!disk) return Response.json({ ok: false, error: 'book_not_found' }, { status: 404 });
+      writeAdminBook(bookId, { ...disk, meta: (state as Parameters<typeof writeAdminBook>[1]).meta });
+      return Response.json({ ok: true });
+    }
     writeAdminBook(bookId, state as Parameters<typeof writeAdminBook>[1]);
     return Response.json({ ok: true });
   } catch (error) {
