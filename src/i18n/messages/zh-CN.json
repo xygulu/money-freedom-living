@@ -675,10 +675,10 @@
       "没做完",
       "今天没顾上"
     ],
-    "commitQ2": "② 我写下的",
-    "commitQ2Placeholder": "这一步要写的那句，写在这里",
-    "commitQ3": "③ 我想到",
-    "commitQ3Placeholder": "一句话、一件事，都行",
+    "commitQ2": "② 你写下的那句",
+    "commitQ2Placeholder": "记今天的事，写在这里",
+    "commitQ3": "③ 此刻脑子里冒出的一句话",
+    "commitQ3Placeholder": "不用组织语言，想到什么写什么",
     "commitWrittenHint": "这句只给你自己看。留空不算没做。",
     "commitSubmit": "今天到这里",
     "commitAllEmptyHint": "全部都可以留空"

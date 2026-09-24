@@ -675,10 +675,10 @@
       "Started, didn't finish",
       "Not today"
     ],
-    "commitQ2": "② What I wrote down",
-    "commitQ2Placeholder": "The line this step asks for — write it here",
-    "commitQ3": "③ Something I noticed",
-    "commitQ3Placeholder": "One sentence, one thing — both fine",
+    "commitQ2": "② The line you wrote",
+    "commitQ2Placeholder": "Note what happened today, right here",
+    "commitQ3": "③ The first words in your head",
+    "commitQ3Placeholder": "No need to polish it — write whatever surfaces",
     "commitWrittenHint": "This is for your eyes only. Leaving it blank still counts.",
     "commitSubmit": "Today ends here",
     "commitAllEmptyHint": "All three can stay blank"

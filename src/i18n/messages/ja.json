@@ -675,10 +675,10 @@
       "始めた、終わらなかった",
       "今日は手が回らなかった"
     ],
-    "commitQ2": "② 書き留めたこと",
-    "commitQ2Placeholder": "この一歩で書く一文を、ここに",
-    "commitQ3": "③ 気づいたこと",
-    "commitQ3Placeholder": "ひとことでも、ひとつの観察でも",
+    "commitQ2": "② 書き残した一句",
+    "commitQ2Placeholder": "今日のことを、ここに残す",
+    "commitQ3": "③ 今頭に浮かんだひとこと",
+    "commitQ3Placeholder": "きれいにまとめなくていい。浮かんだままに",
     "commitWrittenHint": "これはあなただけが見ます。空欄でも数えます。",
     "commitSubmit": "今日はここまで",
     "commitAllEmptyHint": "三つすべて空欄でも構いません"

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildRoad, inviteBooksFor } from '@/lib/road';
-import { DEFAULT_BOOK_ID, TOPICS } from '@/lib/content';
+import { DEFAULT_BOOK_ID, TOPICS, getBooks } from '@/lib/content';
 import type { BookEntry, ThreadEvidence, ThreadState } from '@/lib/profile';
 
 // 「你走过的路」（M11-D，docs/05 §3.5）：书在产品里唯一的露出点。
@@ -120,9 +120,18 @@ describe('你走过的路（M11-D）', () => {
 });
 
 describe('还有谁说过（docs/05 §3.3 交叉印证）', () => {
-  it('已经打开的书不再邀请——v1 只有一本书，所以恒为空', () => {
-    const opened = { books: [book(DEFAULT_BOOK_ID, '2026-02-01T00:00:00.000Z')] };
+  it('已经打开的书不再邀请——打开全部在架 active 书，邀请恒为空（不随在架书数变）', () => {
+    const catalog = getBooks().filter((b) => b.status === 'active');
+    const opened = { books: catalog.map((b) => book(b.id, '2026-02-01T00:00:00.000Z')) };
     for (const topic of TOPICS) expect(inviteBooksFor(topic, opened)).toEqual([]);
+  });
+
+  it('只打开默认书：其他在架书按命题进邀请（mubvxgl6 上线后不再是恒空；v1 单书时期它确实为空）', () => {
+    const others = getBooks().filter((b) => b.status === 'active' && b.id !== DEFAULT_BOOK_ID);
+    const invited = new Set(
+      TOPICS.flatMap((t) => inviteBooksFor(t, { books: [book(DEFAULT_BOOK_ID, '2026-02-01T00:00:00.000Z')] })).map((b) => b.id),
+    );
+    for (const b of others) expect(invited.has(b.id)).toBe(true);
   });
 
   it('一本书都没打开时，邀请的候选只能是覆盖了这个命题的在架书', () => {

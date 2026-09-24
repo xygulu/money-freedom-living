@@ -74,7 +74,9 @@ export default function ActCard({ locale, dict, exercise, speechEnabled = false,
     setPick(p);
     if (p === 'did') {
       setShowCommit(true);
-      setDid(null);
+      // ① 预选「做了」（2026-09-24 用户反馈：外面点的就是「做了」，进来不该再选一次；
+      // 真没做完的人改点「没做完/今天没顾上」，只多一次点击，不丢诚实数据）
+      setDid('done');
       setThought('');
       // 书写位已写的内容带入 ③（可改可留空跳过）——用户在卡片上写的字不丢
       setFirstLine(actWrite.trim());
@@ -213,7 +215,10 @@ export default function ActCard({ locale, dict, exercise, speechEnabled = false,
 
             {/* 叙述顺序（2026-09-18 重排，用户反馈"1/2/3 的逻辑搞不懂"）：
                 ① 做了吗 → ② 写下的那句（卡片书写框自动带入，连接可见）→ ③ 还想到什么。
-                字段通道不变（thought / firstLine），只动 UI 顺序与标签。 */}
+                字段通道不变（thought / firstLine），只动 UI 顺序与标签。
+                2026-09-24（用户反馈"外面点了做了进来还要选一次；②③区分感知不到"）：
+                ① 预选「做了」（要改的人再点没做完/今天没顾上）；②③ 文案拉开——
+                ②记今天的事（事实），③此刻脑子里的念头（不用组织语言）。通道不变。 */}
             {/* ① 我做了 */}
             <fieldset className={styles.commitGroup}>
               <legend className={styles.commitQ}>{t.commitQ1}</legend>

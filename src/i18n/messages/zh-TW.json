@@ -675,10 +675,10 @@
       "開頭了，沒做完",
       "今天沒顧上"
     ],
-    "commitQ2": "② 我寫下的",
-    "commitQ2Placeholder": "這一步要寫的那句，寫在這裡",
-    "commitQ3": "③ 我留意到了什麼",
-    "commitQ3Placeholder": "一句話，一個觀察——都行",
+    "commitQ2": "② 你寫下的那句",
+    "commitQ2Placeholder": "記今天的事，寫在這裡",
+    "commitQ3": "③ 此刻腦中冒出的一句話",
+    "commitQ3Placeholder": "不用組織語言，想到什麼寫什麼",
     "commitWrittenHint": "這只給你自己看。留空也算。",
     "commitSubmit": "今天到這裡",
     "commitAllEmptyHint": "三格都可以留空"
