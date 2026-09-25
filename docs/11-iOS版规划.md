@@ -1,6 +1,6 @@
 # docs/11 · iOS 版规划（V0.3 候选，2026-09-25 起草）
 
-> 用户 2026-09-25 拍板：要出 iOS 版本，**先不含管理后台**。本文档是规划（M0 决策未完成前不动码）。
+> 用户 2026-09-25 拍板：要出 iOS 版本，**先不含管理后台**。同日 M0 四项全部拍板（§6），壳工程骨架已落（§3 M1）；编译/签名/推送密钥等 Mac 侧与账号侧动作见 §7。
 > P0 批已闭环（每日两问/L4L5M/node_verdict 都在码上）；P1 七条经用户确认**暂缓**，iOS 优先。
 
 ## 0. 结论先行
@@ -29,24 +29,25 @@
 
 ## 3. 里程碑
 
-### M0 · 决策与准备（不写码，1-2 天）——等用户拍板 4 件事
+### M0 · 决策与准备 —— ✅ 2026-09-25 用户四项全部拍板
 
-1. **Apple Developer 账号**（$99/年，谁的名下、公司还是个人）。
-2. **构建路径**：⚠️ 本服务器是 Linux，**出不了 ipa**。三选一：验收侧 Mac（Hermes 侧有 Mac，Xcode + `npx cap open ios`）／云 mac（GitHub Actions macOS runner 私库要付费，或 Ionic Appflow）／其他 mac 设备。
-3. **首版要不要推送**：要 → 注册 APNs Auth Key、后端加 device token 通道（与邮件并列的触达通道，产品口径「走了之后我还能找到你」从信扩到推送）；不要 → M2 跳过，风险是召回只剩邮件（P1-3 域名问题继续压着邮件通道）。
-4. **付费形态**：iOS 内卖数字订阅**必须走 IAP**（guideline 3.1.1），Creem 外链在 iOS 内会被卡。Creem 尚未上线（U12）——**首版建议免费、无付费墙过审**，付费等 U12 + IAP/外链决策单独拍板。
+1. **Apple Developer 账号**：**个人主体，尚未注册**（$99/年）。→ 待办：注册 Apple Developer Program；注册后需要拿到 **Team ID + APNs Auth Key（.p8 文件 + Key ID）** 给后端配推送。
+2. **构建路径**：**用户自己的另一台 Mac**（验收侧 mac 之外还有设备）。→ Mac 侧流程见 §7。
+3. **首版要不要推送**：**要**。→ M2 全量在册：APNs + device token 通道 + 触达调度加 push 通道；权限请求时机 = 首次「今天这一步」之后。
+4. **付费形态**：**同意首版免费无墙**——先测 iOS 上的效果，再考虑付费（IAP 3.1.1 约束届时单独拍板）。
 
-### M1 · 壳工程（周级，依赖 M0-2 构建路径就绪）
+### M1 · 壳工程（骨架已就绪 2026-09-25，编译/签名等 Mac）
 
-- Capacitor init，`server.url` 指向线上域名（生产 build，见 §4）。
-- 图标 / 启动屏（产品视觉从页面导出即可）；状态栏配色。
-- **safe-area 适配**：`viewport-fit=cover` + `env(safe-area-inset-*)`——**web 侧已于 2026-09-25 先行落地**（body 四边 env padding + 经典 sticky 条 + 陪伴者钮/提交面板/聊天弹层三处 calc 补边，见 docs/03 §11）；真机验证等壳就绪。**遗留待拍板**：输入控件普遍 14px，iOS 聚焦会自动放大——全局提到 16px（动审美）或壳里 `maximum-scale=1`（牺牲缩放可及性），二选一。
-- iOS 滚动手感（橡皮筋、输入法顶起）、暗色模式策略（首版锁定亮色最省）。
-- 壳内导航黑名单：`/admin*` 拦在 WebView 外（双保险）。
+- ✅ **Capacitor 8.5.2 远端壳**（`shell/`，与 Next 应用完全隔离）：`server.url` → `https://honghong.miller.ink` + `allowNavigation`（桥注入，推送可用）；bundle id `ink.miller.honghong`（改名窗口 = 门户建 App ID 前）；ios 工程已在 Linux 生成（Cap 8 走 SPM，Mac 侧无需 pod install）。
+- ✅ **Info.plist 已配**：`NSMicrophoneUsageDescription`（STT 麦克风必需，无则崩）、iPhone 竖屏锁定、`UIUserInterfaceStyle: Light`（首版锁亮色）、`ITSAppUsesNonExemptEncryption: false`（HTTPS-only 豁免，M3 提前）。
+- ⏳ 图标 / 启动屏（现用 Capacitor 默认图，TestFlight 内测够用；正式前从产品视觉导出）；产品展示名待定（中英文取舍）。
+- ✅ **safe-area 适配**：`viewport-fit=cover` + `env(safe-area-inset-*)`——**web 侧已于 2026-09-25 先行落地**（body 四边 env padding + 经典 sticky 条 + 陪伴者钮/提交面板/聊天弹层三处 calc 补边，见 docs/03 §11）；真机验证等壳就绪。**遗留待拍板**：输入控件普遍 14px，iOS 聚焦会自动放大——全局提到 16px（动审美）或壳里 `maximum-scale=1`（牺牲缩放可及性），二选一。
+- ⏳ iOS 滚动手感（橡皮筋、输入法顶起）——真机上手后调。
+- ⏳ 壳内导航黑名单：`/admin*` 拦在 WebView 外（双保险）——第一道（白名单外 404）已有；第二道待做（web 侧识别 Capacitor 环境时 /admin 跳回首页）。
 
 ### M2 · 原生桥（可与 M1 并行做后端部分）
 
-- **推送**（若 M0-3 拍板要）：Capacitor Push + APNs；device token 上报后端新表（或 profile 行内 JSONB，同 books 的理由）；触达调度器在邮件之外加 push 通道；权限请求时机 = 用户完成首次「今天这一步」之后（别在启动时弹）。
+- **推送**（✅ M0 已拍板：要）：Capacitor Push + APNs；device token 上报后端新表（或 profile 行内 JSONB，同 books 的理由）；触达调度器在邮件之外加 push 通道；权限请求时机 = 用户完成首次「今天这一步」之后（别在启动时弹）。**前置：Apple 账号注册后取 .p8 + Key ID + Team ID（§7）**；web 侧需在壳环境检测（`window.Capacitor`）后注册 push 并上报 token。
 - **Sign in with Apple**：**只要登录页露出任何第三方登录（Google 等）就必须提供**；BetterAuth 有现成 provider。若首版只保留邮箱+游客，可不做。
 - **Universal Links**：召回邮件/推送的链接直达 app 内对应页（未装则回落 web）。
 
@@ -71,9 +72,16 @@
 
 - Expo/RN 原生重写；Android（壳可复用，等 iOS 过审后照搬）；管理后台进壳；IAP 支付（等 U12 + 拍板）；widget/Watch 等原生 surface。
 
-## 6. 待用户拍板清单（M0）
+## 6. M0 拍板记录
 
-- [ ] Apple Developer 账号（主体、$99/年）
-- [ ] 构建路径：Mac / 云 mac，选一
-- [ ] 首版要不要推送
-- [ ] 付费形态：首版免费无墙？（建议：是）
+✅ 2026-09-25 全部落定（详情见 §3 M0）：个人账号（待注册）／用户自有 Mac 构建／首版要推送／首版免费无墙。
+
+## 7. Mac 侧操作清单（用户的另一台 Mac，账号注册后）
+
+1. `git clone`/`git pull` 本仓库 → `cd shell`
+2. `pnpm install && pnpm exec cap sync ios`（Linux 侧已生成 ios 工程，Mac 上补 pod install）
+3. 注册 Apple Developer Program（个人，$99/年）→ 开发者门户建 **App ID**（bundle id `ink.miller.honghong`，改名窗口 = 首次上传前）+ **APNs Auth Key（.p8，记 Key ID）**
+4. Xcode 打开 `shell/ios/App` → Signing & Capabilities 选个人 Team、勾 **Push Notifications** capability
+5. `npx cap open ios` 真机跑通 → Product → Archive → TestFlight
+
+服务器侧需要的密钥（配推送时给）：.p8 文件、Key ID、Team ID——走私下渠道，不进仓库。
