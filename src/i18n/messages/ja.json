@@ -275,7 +275,9 @@
     "close": "閉じる",
     "topicsLead": "落ちる場所：",
     "confirm": "取り込む",
-    "added": "できました。次からは、その内容もあなたの一日に一緒に現れます。"
+    "added": "できました。次からは、その内容もあなたの一日に一緒に現れます。",
+    "attributionLead": "あなたの日々には",
+    "attributionTrail": "の内容が溶け込んでいる"
   },
   "timeline": {
     "title": "成長の足あと",

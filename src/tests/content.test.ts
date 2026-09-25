@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_BOOK_ID, getDailyPool, getJourneyStage, getJourneyStages, getPracticesForStage, pickDaily } from '@/lib/content';
+import { DEFAULT_BOOK_ID, formatBookTitles, getDailyPool, getJourneyStage, getJourneyStages, getPracticesForStage, pickDaily } from '@/lib/content';
 
 const ENABLED = ['en', 'zh-CN'] as const;
 
@@ -154,6 +154,24 @@ describe('practices 通道', () => {
       expect(['fact', 'opinion']).toContain(n.type);
       expect([1, 2, 3, 4]).toContain(n.stage);
       expect(n.body.length).toBeGreaterThan(50);
+    }
+  });
+});
+
+describe('formatBookTitles（归属行，2026-09-24：用户需要知道在落地的是哪几本书）', () => {
+  it('zh-CN/zh-TW 用《》，紧排不分隔', () => {
+    expect(formatBookTitles(['一生把钱看轻', '不愁钱的活法'], 'zh-CN')).toBe('《一生把钱看轻》《不愁钱的活法》');
+    expect(formatBookTitles(['一生把錢看輕'], 'zh-TW')).toBe('《一生把錢看輕》');
+  });
+
+  it('ja 用『』，en 用弯引号加逗号分隔', () => {
+    expect(formatBookTitles(['一生お金に困らない生き方'], 'ja')).toBe('『一生お金に困らない生き方』');
+    expect(formatBookTitles(['A', 'B'], 'en')).toBe('“A”, “B”');
+  });
+
+  it('空列表给空串（调用侧负责整行不渲染）', () => {
+    for (const locale of ['zh-CN', 'zh-TW', 'ja', 'en'] as const) {
+      expect(formatBookTitles([], locale)).toBe('');
     }
   });
 });

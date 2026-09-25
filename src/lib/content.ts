@@ -164,6 +164,17 @@ export function bookTitle(bookId: string, locale: Locale): string {
   return book.title[locale]?.trim() || book.title.en?.trim() || bookId;
 }
 
+/**
+ * 书名列表按语言包书名号并连接（归属行用，2026-09-24 用户拍板「用户需要知道
+ * 在落地的是哪几本书」）：zh《…》、ja『…』、en “…”。前后文案（lead/trail）在
+ * dict.addBook——这里只管列表的格式，不掺句子结构。
+ */
+export function formatBookTitles(titles: string[], locale: Locale): string {
+  if (locale === 'ja') return titles.map((t) => `『${t}』`).join('');
+  if (locale === 'en') return titles.map((t) => `“${t}”`).join(', ');
+  return titles.map((t) => `《${t}》`).join(''); // zh-CN / zh-TW
+}
+
 export function getJourneyStages(locale: Locale, bookId: string = DEFAULT_BOOK_ID): JourneyStage[] {
   return (isEnabled(locale) ? bundle.journey[bookId]?.[locale] : null) ?? [];
 }

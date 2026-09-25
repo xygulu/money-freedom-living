@@ -17,7 +17,7 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { getDict } from '@/i18n/get-dict';
 import { enabledLocales, isLocale } from '@/i18n/config';
-import { DEFAULT_BOOK_ID, bookTitle, getBooks, getJourneyStages, pickDaily, pickExercise } from '@/lib/content';
+import { DEFAULT_BOOK_ID, bookTitle, formatBookTitles, getBooks, getJourneyStages, pickDaily, pickExercise } from '@/lib/content';
 import { requireSignedIn } from '@/lib/identity';
 import { activeBookEntries, activeBookId, getProfile, recordDailySeen } from '@/lib/profile';
 import { getUiVersion } from '@/lib/ui-version';
@@ -148,6 +148,21 @@ export default async function journeyNewPage({
         stage={stage}
         speechEnabled={getSttProviders().length > 0}
       />
+
+      {/* 归属行（2026-09-24 用户拍板「用户需要知道在落地的是哪几本书」）：汇入制下
+          一签/练习来自全部 active 书的合并池，这行低调告知「你的成长里有哪几本的内容」。
+          红线 8 不破：只归属、无进度、无管理动作，书仍不以「物」的身份露面。
+          activeEntries 主线在前（activeBookEntries 排序）；候选空/全部已加时这行仍在。 */}
+      {activeEntries.length > 0 && (
+        <p data-book-attribution="" className="mt-8 text-sm text-ink-soft">
+          {dict.addBook.attributionLead}
+          {formatBookTitles(
+            activeEntries.map((e) => bookTitle(e.bookId, locale)),
+            locale,
+          )}
+          {dict.addBook.attributionTrail}
+        </p>
+      )}
 
       {/* 加书入口（汇入制）：只列已上线且还没加的书，没有候选整个不渲染（红线 1：不陈列）。
           书在这里只以「内容会落进哪些场景」的身份露面，不做书架、无进度无红点（红线 8）。 */}

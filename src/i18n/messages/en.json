@@ -275,7 +275,9 @@
     "close": "Close",
     "topicsLead": "It lands on:",
     "confirm": "Bring it in",
-    "added": "Done. From now on, its content joins your day."
+    "added": "Done. From now on, its content joins your day.",
+    "attributionLead": "Your growth draws on ",
+    "attributionTrail": ""
   },
   "timeline": {
     "title": "Your trail",

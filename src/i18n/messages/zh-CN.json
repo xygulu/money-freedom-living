@@ -275,7 +275,9 @@
     "close": "收起",
     "topicsLead": "会落在：",
     "confirm": "带进来",
-    "added": "好了。从下一次起，它的内容会一起出现在你的一天里。"
+    "added": "好了。从下一次起，它的内容会一起出现在你的一天里。",
+    "attributionLead": "你的成长里有",
+    "attributionTrail": "的内容"
   },
   "timeline": {
     "title": "成长足迹",
