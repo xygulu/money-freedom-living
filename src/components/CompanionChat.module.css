@@ -29,7 +29,7 @@
   border-top-right-radius: 18px;
   display: flex;
   flex-direction: column;
-  padding: 16px 18px 14px;
+  padding: 16px 18px calc(14px + env(safe-area-inset-bottom));
   box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.12);
   /* 字体与旅程页卡片（DailyCardNew/MirrorCard/ActCard）同一声明：
      scene-serif 宋体栈——弹层漂浮在旅程页上，跟它脚下的页面一致

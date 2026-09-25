@@ -40,7 +40,7 @@
 
 - Capacitor init，`server.url` 指向线上域名（生产 build，见 §4）。
 - 图标 / 启动屏（产品视觉从页面导出即可）；状态栏配色。
-- **safe-area 适配**：`viewport-fit=cover` + `env(safe-area-inset-*)`——现有页面没做过刘海/底部横条适配，要过一遍主要页面（旅程/聊聊/测试/我的）。
+- **safe-area 适配**：`viewport-fit=cover` + `env(safe-area-inset-*)`——**web 侧已于 2026-09-25 先行落地**（body 四边 env padding + 经典 sticky 条 + 陪伴者钮/提交面板/聊天弹层三处 calc 补边，见 docs/03 §11）；真机验证等壳就绪。**遗留待拍板**：输入控件普遍 14px，iOS 聚焦会自动放大——全局提到 16px（动审美）或壳里 `maximum-scale=1`（牺牲缩放可及性），二选一。
 - iOS 滚动手感（橡皮筋、输入法顶起）、暗色模式策略（首版锁定亮色最省）。
 - 壳内导航黑名单：`/admin*` 拦在 WebView 外（双保险）。
 

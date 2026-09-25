@@ -2,7 +2,7 @@
   position: fixed;
   /* 一幕宽度 420-580，居中后 right = (vw - 容器宽)/2 + 20 */
   right: calc(50% - min(290px, 50vw - 20px));
-  bottom: 24px;
+  bottom: calc(24px + env(safe-area-inset-bottom));
   z-index: 45;
   display: flex;
   align-items: flex-end;

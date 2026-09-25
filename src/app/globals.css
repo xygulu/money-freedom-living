@@ -20,6 +20,20 @@
   --color-accent: var(--accent);
 }
 
+/* iOS 安全区（docs/11 M1）：viewport-fit=cover 后，刘海/底部横条区域由 env() 补边。
+   只在 standalone/WebView 里非零；手机浏览器里为 0，行为与从前完全一致。
+   html/body 锁 100% + 容器 min-h-full：让安全区 padding 计入视口高度，
+   避免出现 34px 的常驻尾部滚动。 */
+html,
+body {
+  height: 100%;
+}
+
+body {
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+    env(safe-area-inset-left);
+}
+
 body {
   background: var(--paper);
   color: var(--ink);

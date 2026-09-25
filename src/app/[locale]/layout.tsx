@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { headers, cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 import '../globals.css';
@@ -13,6 +13,16 @@ import JourneyProgressBar from '@/components/JourneyProgressBar';
 export const metadata: Metadata = {
   title: 'Money Freedom Living',
   description: 'A room of your own, for everything money makes you feel.',
+};
+
+// iOS 刘海/底部横条（docs/11 M1 safe-area）：cover 让内容延伸到屏幕物理边缘，
+// 各处再用 env(safe-area-inset-*) 补边（globals.css 的 body padding + 各弹层）。
+// themeColor 跟 paper 底色——Safari 地址栏/状态栏区域不再发白。
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+  themeColor: '#faf7f2',
 };
 
 export function generateStaticParams() {
@@ -63,8 +73,9 @@ export default async function LocaleLayout({
           }}
         />
       </head>
-      <body className="min-h-dvh antialiased">
-        <div className="mx-auto flex min-h-dvh max-w-xl flex-col px-5">
+      <body className="h-full antialiased">
+        {/* 安全区 padding 在 body（globals.css）；容器 min-h-full 让它计入视口高度 */}
+        <div className="mx-auto flex min-h-full max-w-xl flex-col px-5">
           <main className="flex-1">{children}</main>
 
           {/* 前台改造（70-2 A1）· 底部 4 Tab 已移除。
@@ -72,7 +83,7 @@ export default async function LocaleLayout({
               - 新版路径：journey-new 自带 PathBar；本页 chat/journal/me 由各自页面承担入口
               目标骨架 = 1 真入口（/） + 1 存档（/archive） + 1 陪伴者（右下角常驻） */}
           {uiVersion === 'classic' && (
-            <div className="sticky bottom-0 -mx-5 mt-10 border-t border-line bg-paper/95 backdrop-blur">
+            <div className="sticky bottom-0 -mx-5 mt-10 border-t border-line bg-paper/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
               <JourneyProgressBar locale={locale} dict={dict} profile={profile} />
               {/* 经典版仍保留底部 4 Tab（以维持经典版逐字原貌，迁移动作不在本批）
                   导航项用 dict.nav.*；aria-label=Main 与既有 smoke 锚点契约一致 */}
