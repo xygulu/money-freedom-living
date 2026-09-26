@@ -241,6 +241,17 @@ export interface TouchState {
   lastOpenedAt?: string;
 }
 
+/** APNs 设备 token（docs/11 M2）：一行一台设备，app 每次启动/前台都会重新上报（自愈）。 */
+export interface PushTokenEntry {
+  token: string;
+  platform: 'ios';
+  addedAt: string;
+  lastSeenAt: string;
+}
+
+/** 设备数上限：一个真人不会有 10 台在用设备，超限说明 token 堆了陈年死设备，挤掉最旧 */
+export const PUSH_TOKEN_CAP = 10;
+
 export interface GrowthProfile {
   user_key: string;
   locale: string;
@@ -270,6 +281,8 @@ export interface GrowthProfile {
   threads: Partial<Record<TopicId, ThreadState>>;
   /** M11-E：触达层状态 */
   touch: TouchState;
+  /** docs/11 M2：APNs 设备 token（行内列，导出/删号/游客迁移随行覆盖） */
+  push_tokens: PushTokenEntry[];
 }
 
 /** Neon HTTP 驱动把 DATE 解析成 JS Date（本地时区午夜）——归一化回 'YYYY-MM-DD'，
@@ -356,6 +369,36 @@ function parseThreads(value: unknown): GrowthProfile['threads'] {
 function parseTouch(value: unknown): TouchState {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
   return value as TouchState;
+}
+
+/** push_tokens 归位：老档案无此列/坏数据一律按空数组（不报错——丢只发生在写入侧）。
+ *  条目里 token 缺失/空串的直接剔除，platform 非 ios 视为坏行丢弃。 */
+export function parsePushTokens(value: unknown): PushTokenEntry[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((t) => (t ?? {}) as Partial<PushTokenEntry>)
+    .filter((t) => typeof t.token === 'string' && t.token.length > 0 && t.platform === 'ios')
+    .map((t) => ({
+      token: t.token as string,
+      platform: 'ios' as const,
+      addedAt: typeof t.addedAt === 'string' ? t.addedAt : '',
+      lastSeenAt: typeof t.lastSeenAt === 'string' ? t.lastSeenAt : '',
+    }));
+}
+
+/**
+ * token 合并（纯函数，测试钉行为）：同 token 刷新 lastSeenAt 并移到队尾；
+ * 新 token 追加；超过 PUSH_TOKEN_CAP 挤掉最旧（数组头）。列表即"最旧在前"。
+ */
+export function mergePushToken(
+  list: PushTokenEntry[],
+  token: string,
+  platform: 'ios',
+  now: string,
+): PushTokenEntry[] {
+  const rest = list.filter((t) => t.token !== token);
+  const next = [...rest, { token, platform, addedAt: now, lastSeenAt: now }];
+  return next.slice(Math.max(0, next.length - PUSH_TOKEN_CAP));
 }
 
 /**
@@ -490,6 +533,7 @@ function rowToProfile(row: Record<string, unknown>): GrowthProfile {
     wished_books: parseWishedBooks(row.wished_books),
     threads: parseThreads(row.threads),
     touch: parseTouch(row.touch),
+    push_tokens: parsePushTokens(row.push_tokens),
   };
 }
 
@@ -499,7 +543,7 @@ export async function getProfile(userKey: string): Promise<GrowthProfile | null>
     sql`SELECT user_key, locale, portrait, concerns, stage, stage_started_at,
                pinned, memories, experiments, letters, stamps, portrait_evolution,
                stage_assessment, created_at, daily_seen, payday, total_active_days, last_active_date,
-               books, wished_books, threads, touch
+               books, wished_books, threads, touch, push_tokens
         FROM growth_profiles WHERE user_key = ${userKey}`
   );
   const profile = rows[0] ? rowToProfile(rows[0]) : null;
@@ -884,9 +928,11 @@ export async function findUserKeyByUnsubToken(token: string): Promise<string | n
 }
 
 /**
- * 调度器的候选集（M11-E）：只捞**已 opt-in** 的行，未同意的人连查询都不进——
- * 合规第一条（未 opt-in 收不到任何触达邮件）在 SQL 层就先关一道闸。
- * 真正发不发还要过 `pickTouchNode`（活跃度/间隔/节点是否发过），这里只做粗筛。
+ * 调度器的候选集（M11-E）：只捞**已 opt-in**（邮件）或**持有设备 token**（推送）的行，
+ * 两样都没有的人连查询都不进——合规第一条（未同意收不到任何触达）在 SQL 层先关一道闸。
+ * 真正发不发、走哪条通道还要过 `pickTouchNode`（活跃度/间隔/节点是否发过），这里只做粗筛。
+ * 游客（g:）也进候选：壳里的游客没有邮箱，推送是「走了之后我还能找到你」的唯一通道
+ * （docs/11 §4——token 随卸载消失，卸载即自然退订）。
  */
 export async function listTouchCandidates(limit = 500): Promise<GrowthProfile[]> {
   await ensureSchema();
@@ -894,14 +940,50 @@ export async function listTouchCandidates(limit = 500): Promise<GrowthProfile[]>
     sql`SELECT user_key, locale, portrait, concerns, stage, stage_started_at,
                pinned, memories, experiments, letters, stamps, portrait_evolution,
                stage_assessment, created_at, daily_seen, payday, total_active_days, last_active_date,
-               books, threads, touch
+               books, threads, touch, push_tokens
         FROM growth_profiles
         WHERE touch->>'emailOptIn' = 'true'
-          AND user_key LIKE 'u:%'
+           OR (jsonb_typeof(push_tokens) = 'array' AND jsonb_array_length(push_tokens) > 0)
         ORDER BY created_at ASC
         LIMIT ${limit}`
   );
   return rows.map(rowToProfile);
+}
+
+/**
+ * 上报/刷新设备 token（docs/11 M2）：同 token 刷新 lastSeenAt，新 token 追加，超限挤最旧。
+ * 读-合-写两步而不是单条 SQL：app 每次启动都会重报，两台设备同秒注册把对方挤掉的
+ * 竞态下一次启动自愈，不值得为它写一段 jsonb 手术。
+ */
+export async function upsertPushToken(
+  userKey: string,
+  token: string,
+  platform: 'ios' = 'ios',
+): Promise<PushTokenEntry[]> {
+  const now = new Date().toISOString();
+  const rows = await execWithFailover((sql: SqlClient) =>
+    sql`SELECT push_tokens FROM growth_profiles WHERE user_key = ${userKey}`
+  );
+  const next = mergePushToken(parsePushTokens(rows[0]?.push_tokens), token, platform, now);
+  await execWithFailover((sql: SqlClient) =>
+    sql`UPDATE growth_profiles
+        SET push_tokens = ${JSON.stringify(next)}::jsonb, updated_at = now()
+        WHERE user_key = ${userKey}`
+  );
+  return next;
+}
+
+/** 删一台设备（卸载主动上报/APNs 410 反馈共用）：按 token 精确移除。 */
+export async function removePushToken(userKey: string, token: string): Promise<void> {
+  const rows = await execWithFailover((sql: SqlClient) =>
+    sql`SELECT push_tokens FROM growth_profiles WHERE user_key = ${userKey}`
+  );
+  const next = parsePushTokens(rows[0]?.push_tokens).filter((t) => t.token !== token);
+  await execWithFailover((sql: SqlClient) =>
+    sql`UPDATE growth_profiles
+        SET push_tokens = ${JSON.stringify(next)}::jsonb, updated_at = now()
+        WHERE user_key = ${userKey}`
+  );
 }
 
 /** 换书 / 开新书：把旧的当前书置为 paused（或 done），把目标书设为 active。 */

@@ -9,6 +9,7 @@ import { resolveIdentity } from '@/lib/identity';
 import { getProfile } from '@/lib/profile';
 import { getUiVersion } from '@/lib/ui-version';
 import JourneyProgressBar from '@/components/JourneyProgressBar';
+import PushTapBridge from '@/components/PushTapBridge';
 
 export const metadata: Metadata = {
   title: 'Money Freedom Living',
@@ -74,6 +75,8 @@ export default async function LocaleLayout({
         />
       </head>
       <body className="h-full antialiased">
+        {/* 推送点按桥（docs/11 M2）：壳里点通知跳站内；浏览器与 SSR 下是空转的 null */}
+        <PushTapBridge />
         {/* 安全区 padding 在 body（globals.css）；容器 min-h-full 让它计入视口高度 */}
         <div className="mx-auto flex min-h-full max-w-xl flex-col px-5">
           <main className="flex-1">{children}</main>

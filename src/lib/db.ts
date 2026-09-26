@@ -199,6 +199,11 @@ async function doMigrate(): Promise<void> {
   await sql`ALTER TABLE growth_profiles ADD COLUMN IF NOT EXISTS threads JSONB NOT NULL DEFAULT '{}'`;
   // touch：触达层状态 { emailOptIn, optInAt, unsubToken, lastSentAt, sentNodes:{D7:at,…}, lastOpenedAt? }
   await sql`ALTER TABLE growth_profiles ADD COLUMN IF NOT EXISTS touch JSONB NOT NULL DEFAULT '{}'`;
+  // push_tokens：APNs 设备 token（iOS 壳，docs/11 M2）。与 touch 分列而不是塞进 touch——
+  // 两者写路径不同（token 注册在 app 启动/前台时发生，consent 改动走 saveTouch 补丁），
+  // 同列读改写会互相踩。行内列 = 导出/删号/游客迁移天然覆盖（同 books 的理由）。
+  // [{token, platform:'ios', addedAt, lastSeenAt}]，上限 10 台设备（超出挤掉最旧）
+  await sql`ALTER TABLE growth_profiles ADD COLUMN IF NOT EXISTS push_tokens JSONB NOT NULL DEFAULT '[]'`;
   await sql`CREATE INDEX IF NOT EXISTS idx_chat_sessions_user ON chat_sessions(user_key, created_at DESC)`;
 
   // 对话原文只存这里（用户可删）；日志/safety_events 不含原文（P§9 日志纪律）

@@ -25,6 +25,7 @@ const portrait = (over: Partial<Portrait> = {}): Portrait => ({
 const profile = (over: Partial<GrowthProfile> = {}): GrowthProfile => ({
   user_key: 'u:test',
   locale: 'zh-CN',
+  push_tokens: [],
   portrait: portrait(),
   concerns: [],
   stage: 1,

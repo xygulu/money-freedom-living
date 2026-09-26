@@ -173,6 +173,9 @@
         "question": "Looking back — did it work? Do you want to keep going?"
       }
     },
+    "push": {
+      "fallbackBody": "Come back for a moment. A sentence of yours is being kept for you."
+    },
     "nodeBackLead": "You came back from this letter."
   },
   "journey": {

@@ -4,6 +4,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { currentAdmin } from '@/lib/admin-auth';
+import NativeGuard from '@/components/admin/NativeGuard';
 import '../globals.css';
 
 export const metadata: Metadata = {
@@ -20,6 +21,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <html lang="zh-CN">
       <body className="min-h-dvh bg-paper antialiased">
+        {/* docs/11 M1：后台不进 iOS 壳——壳内打开 /admin 直接跳回首页（第二道闸） */}
+        <NativeGuard />
         <div className="mx-auto flex min-h-dvh max-w-3xl flex-col px-5 py-10">
           <header className="border-b border-line pb-4">
             <p className="text-xs tracking-widest text-ink-soft">运营后台</p>

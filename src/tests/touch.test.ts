@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { pickTouchNode, pickEcho, composeTouch, unsubUrl, isDeliverableEmail, TOUCH_NODES, MIN_GAP_DAYS } from '../lib/touch';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { pickTouchNode, pickEcho, composeTouch, composePush, pushConfigured, unsubUrl, isDeliverableEmail, TOUCH_NODES, MIN_GAP_DAYS } from '../lib/touch';
 import type { GrowthProfile } from '../lib/profile';
 import en from '../i18n/messages/en.json';
 import zhCN from '../i18n/messages/zh-CN.json';
@@ -302,5 +302,87 @@ describe('M11-E 收件地址：保留域名一封都不寄', () => {
     expect(isDeliverableEmail('someone@gmail.com')).toBe(true);
     expect(isDeliverableEmail('a.b+tag@sub.miller.ink')).toBe(true);
     expect(isDeliverableEmail('人@例子.中国')).toBe(true); // 国际化域名不该被误杀
+  });
+});
+
+describe('pickTouchNode push 通道（docs/11 M2）：共享节点状态，绝不双轰', () => {
+  const tokens = [{ token: 'dev-1', platform: 'ios' as const, addedAt: ago(30), lastSeenAt: ago(30) }];
+
+  it('有 token：从没 opt-in 邮件的人，push 通道照样能选中节点（游客就靠这条道）', () => {
+    const p = profileOf({ touch: {}, push_tokens: tokens });
+    expect(pickTouchNode(p, new Date(), 'push')).toBe('D30');
+  });
+
+  it('没 token：push 通道对他是关着的（哪怕邮件都 opt-in 了）', () => {
+    const p = profileOf({ touch: { emailOptIn: true, unsubToken: 't' } });
+    expect(pickTouchNode(p, new Date(), 'push')).toBeNull();
+  });
+
+  it('email 通道的默认签名完全不变（存量调用零感知）', () => {
+    const p = profileOf({ created_at: ago(7), last_active_date: agoDate(2) });
+    expect(pickTouchNode(p)).toBe('D7');
+    expect(pickTouchNode(p, new Date(), 'email')).toBe('D7');
+  });
+
+  it('共享 sentNodes：push 发过的节点，email 通道不再补发同一节点', () => {
+    const p = profileOf({
+      touch: { emailOptIn: true, unsubToken: 't', sentNodes: { D30: ago(10) }, lastSentAt: ago(10) },
+    });
+    expect(pickTouchNode(p, new Date(), 'email')).toBeNull();
+  });
+
+  it('共享 lastSentAt：刚通过 push 触达过，email 也要等完间隔（反之亦然）', () => {
+    const p = profileOf({
+      touch: { emailOptIn: true, unsubToken: 't', lastSentAt: ago(MIN_GAP_DAYS - 1) },
+      push_tokens: tokens,
+    });
+    expect(pickTouchNode(p, new Date(), 'email')).toBeNull();
+    expect(pickTouchNode(p, new Date(), 'push')).toBeNull();
+  });
+});
+
+describe('composePush：文案复用节点信资产（docs/10 §2.1 同源问题的延伸）', () => {
+  it('有问题的节点：标题 = 信主题、正文 = 节点问题——推送里问的还是同一个问题', () => {
+    const push = composePush({ node: 'D7', profile: profileOf(), dict: zhCN as unknown as Dict, locale: 'zh-CN', baseUrl: 'https://x.example' });
+    const tpl = (zhCN.touch.letters as unknown as Record<string, { subject: string; question?: string }>).D7;
+    expect(push?.title).toBe(tpl.subject);
+    expect(push?.body).toBe(tpl.question);
+    expect(push?.url).toBe('https://x.example/zh-CN/journey-new?from=touch&node=D7');
+  });
+
+  it('D3 没问题可问：用兜底句，绝不编一句替他说', () => {
+    const push = composePush({ node: 'D3', profile: profileOf(), dict: zhCN as unknown as Dict, locale: 'zh-CN', baseUrl: 'https://x.example' });
+    expect(push?.body).toBe(zhCN.touch.push.fallbackBody);
+  });
+
+  it('四语模板的 push 兜底句都非空（漏翻译就发空推送）', () => {
+    for (const dict of [en, zhCN, zhTW, ja] as unknown as Dict[]) {
+      expect(dict.touch.push.fallbackBody.trim().length).toBeGreaterThan(0);
+    }
+  });
+
+  it('标题与正文都做长度截断（APNs UI 层不收长文）', () => {
+    const push = composePush({ node: 'D7', profile: profileOf(), dict: en as unknown as Dict, locale: 'en', baseUrl: 'https://x.example' });
+    expect((push?.title.length ?? 0)).toBeLessThanOrEqual(61); // 60 + 省略号
+    expect((push?.body.length ?? 0)).toBeLessThanOrEqual(141);
+  });
+});
+
+describe('pushConfigured：三件套缺一就是"这台机器不推推送"', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('缺任一环境变量 → false（调度器据此回落 email）', () => {
+    vi.stubEnv('APNS_P8', '');
+    vi.stubEnv('APNS_KEY_ID', '');
+    vi.stubEnv('APNS_TEAM_ID', '');
+    expect(pushConfigured()).toBe(false);
+    vi.stubEnv('APNS_KEY_ID', 'KID1234567');
+    expect(pushConfigured()).toBe(false);
+    vi.stubEnv('APNS_TEAM_ID', 'TEAM123456');
+    expect(pushConfigured()).toBe(false);
+    vi.stubEnv('APNS_P8', 'LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0K');
+    expect(pushConfigured()).toBe(true);
   });
 });

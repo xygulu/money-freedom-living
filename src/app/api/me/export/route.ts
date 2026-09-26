@@ -65,6 +65,8 @@ export async function GET(request: NextRequest) {
             wishedBooks: profile.wished_books,
             threads: profile.threads,
             touch: profile.touch,
+            // docs/11 M2：设备标识也属可携数据（透明原则）；导出后用户可自行核对删净
+            pushTokens: profile.push_tokens,
           }
         : null,
       journal,

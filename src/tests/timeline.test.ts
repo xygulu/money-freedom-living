@@ -21,6 +21,7 @@ const profile = (over: Partial<GrowthProfile> = {}): GrowthProfile => ({
   concerns: [],
   stage: 1,
   stage_started_at: '2026-09-01T00:00:00Z',
+  push_tokens: [],
   pinned: [],
   memories: [],
   experiments: [],

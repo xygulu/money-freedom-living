@@ -29,6 +29,7 @@ const profile = (
   return {
     user_key: 'g:test',
     locale: 'zh-CN',
+    push_tokens: [],
     portrait: null,
     concerns: [],
     stage: 2,

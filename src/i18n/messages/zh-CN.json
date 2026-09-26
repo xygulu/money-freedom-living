@@ -173,6 +173,9 @@
         "question": "回过头看，成了吗？还想接着走吗？"
       }
     },
+    "push": {
+      "fallbackBody": "回来看一眼。有一句话，一直替你留着。"
+    },
     "nodeBackLead": "你是从这封信回来的。"
   },
   "journey": {

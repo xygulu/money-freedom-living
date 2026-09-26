@@ -24,6 +24,7 @@
 import { useState } from 'react';
 import type { Dict } from '@/i18n/get-dict';
 import SpeechButton from './SpeechButton';
+import { maybeRegisterPush } from '@/lib/push-register';
 import styles from './ActCard.module.css';
 
 export type DidChoice = 'done' | 'partial' | 'missed';
@@ -113,6 +114,9 @@ export default function ActCard({ locale, dict, exercise, speechEnabled = false,
       if (!res.ok) throw new Error(String(res.status));
       const data = (await res.json()) as { receipt?: string | null };
       const receipt = typeof data.receipt === 'string' && data.receipt ? data.receipt : null;
+      // 推送权限请求时机（docs/11 M2 拍板）：首次「今天这一步」提交成功之后，
+      // 只在壳（Capacitor）里会真的弹，浏览器里是空操作。fire-and-forget，不挡回执。
+      void maybeRegisterPush();
       onSubmitted({
         did,
         thought: thought.trim(),

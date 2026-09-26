@@ -13,6 +13,9 @@
 import type { Dict } from '@/i18n/get-dict';
 import type { GrowthProfile } from './profile';
 
+/** 触达通道（docs/11 M2）：email 是信（产品仪式）；push 是壳里的一句提醒。 */
+export type TouchChannel = 'email' | 'push';
+
 /** 触达节点：从档案建立那天起算的第 N 天。顺序即优先级（先到先发）。 */
 export const TOUCH_NODES = [3, 7, 14, 21, 30, 66, 90] as const;
 export type TouchNode = `D${(typeof TOUCH_NODES)[number]}`;
@@ -54,11 +57,26 @@ function daysSinceDate(date: string | null, now: Date): number {
  * 每一道都是「不发」的理由，最后才轮到「发」。
  * 「人还在不在」挪到最后一道，是因为门槛按节点而定（见 `awayDaysFor`）——得先知道
  * 是哪一封，才知道该用几天的门槛。
+ *
+ * 通道（docs/11 M2）：两条通道**共享**全部节点状态（sentNodes / lastSentAt / MIN_GAP /
+ * awayDays）——同一个节点一辈子只触达一次，绝不双轰。差异只在第一道「同意」闸：
+ * - email：emailOptIn + 退订 token（退不掉的信不发）
+ * - push：档案挂着设备 token（同意 = iOS 系统权限；退订 = 系统设置关通知/卸载）
+ * 调度器的通道选择规则：有 token 且推送通道配好 → push；否则 → email。所以同一个
+ * 人永远只会在其中一条通道上被选中，sentNodes 写的是同一份账。
  */
-export function pickTouchNode(profile: GrowthProfile, now: Date = new Date()): TouchNode | null {
+export function pickTouchNode(
+  profile: GrowthProfile,
+  now: Date = new Date(),
+  channel: TouchChannel = 'email',
+): TouchNode | null {
   const touch = profile.touch ?? {};
-  if (touch.emailOptIn !== true) return null; // 没同意收信 —— 一封都不发
-  if (!touch.unsubToken) return null; // 退不掉的信不发
+  if (channel === 'email') {
+    if (touch.emailOptIn !== true) return null; // 没同意收信 —— 一封都不发
+    if (!touch.unsubToken) return null; // 退不掉的信不发
+  } else if (!(profile.push_tokens ?? []).length) {
+    return null; // 没有可推送的设备——这通道对他是关着的
+  }
   if (touch.lastSentAt && daysBetween(touch.lastSentAt, now) < MIN_GAP_DAYS) return null; // 刚发过
 
   const age = daysBetween(profile.created_at, now);
@@ -199,6 +217,40 @@ function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+export interface TouchPush {
+  title: string;
+  body: string;
+  /** 点击跳转目标（绝对 URL）：壳内由 pushNotificationActionPerformed 接住后站内跳转，
+   *  未装壳的极端场景回落 Safari 打开——同一个地址两种归宿。 */
+  url: string;
+}
+
+/**
+ * 组装一条推送（docs/11 M2）。文案**复用节点信的资产**（subject 做标题、节点问题做正文），
+ * 不另立一套文案体系——「信里问的」和「推送里问的」必须还是同一个问题（docs/10 §2.1 的
+ * 延伸：两处引用一处真源）。没有问题可问的节点（D3）用一条安静的兜底句。
+ * 禁语铁律同信：不带任何进度/天数/未完成计数。
+ */
+export function composePush(params: {
+  node: TouchNode;
+  profile: GrowthProfile;
+  dict: Dict;
+  locale: string;
+  baseUrl: string;
+}): TouchPush | null {
+  const { node, profile, dict, locale, baseUrl } = params;
+  const tpl = (
+    dict.touch.letters as unknown as Record<string, { subject?: string; question?: string } | undefined>
+  )[node];
+  if (!tpl?.subject) return null;
+  const question = (tpl.question ?? '').trim();
+  const body = question || dict.touch.push.fallbackBody;
+  const url = `${baseUrl.replace(/\/$/, '')}/${locale}/journey-new?from=touch&node=${node}`;
+  // APNs alert 长度上限（body 4KB 整包，UI 层截断在 ~180 字符）；quote 原话过长会被
+  // 系统折行省略，正文就只给问题/兜底句，原话留给回程页——push 负责把人带回来。
+  return { title: clip(tpl.subject, 60), body: clip(body, 140), url };
+}
+
 /** RFC 2606 / 6761 保留给测试与文档的域名——真实世界里不存在，寄过去必定硬退 */
 const RESERVED_TLDS = ['test', 'example', 'invalid', 'localhost'];
 const RESERVED_DOMAINS = ['example.com', 'example.net', 'example.org'];
@@ -224,4 +276,10 @@ export function isDeliverableEmail(email: string): boolean {
 /** 触达通道有没有配好——没配不是错误，是"这台机器不发信"，调度器据此优雅降级 */
 export function touchConfigured(): boolean {
   return Boolean(process.env.RESEND_API_KEY && process.env.RESEND_FROM);
+}
+
+/** 推送通道有没有配好（APNs 三件套齐：.p8 内容 + Key ID + Team ID）。
+ *  缺任一件 = 这台机器不推推送，调度器回落 email 通道（docs/11 M2）。 */
+export function pushConfigured(): boolean {
+  return Boolean(process.env.APNS_P8 && process.env.APNS_KEY_ID && process.env.APNS_TEAM_ID);
 }

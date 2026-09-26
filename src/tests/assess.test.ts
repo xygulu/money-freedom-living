@@ -249,6 +249,7 @@ describe('shouldOfferAssess（提议闸：首评/素材/天数/冷却/锁/TTL）
     user_key: 'u:test',
     locale: 'zh-CN',
     portrait: { spoken: [], baseColor: 'x', moments: [], script: '', toFuture: '', version: 1, calibrations: [], scriptStatus: 'confirmed' },
+    push_tokens: [],
     concerns: [],
     stage: 1,
     stage_started_at: '2026-08-01T00:00:00Z',

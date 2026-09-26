@@ -10,6 +10,7 @@ import type { GrowthProfile } from '@/lib/profile';
 const profile = (over: Partial<GrowthProfile> = {}): GrowthProfile => ({
   user_key: 'u:test',
   locale: 'zh-CN',
+  push_tokens: [],
   portrait: null,
   concerns: [],
   stage: 1,

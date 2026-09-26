@@ -45,11 +45,11 @@
 - ⏳ iOS 滚动手感（橡皮筋、输入法顶起）——真机上手后调。
 - ⏳ 壳内导航黑名单：`/admin*` 拦在 WebView 外（双保险）——第一道（白名单外 404）已有；第二道待做（web 侧识别 Capacitor 环境时 /admin 跳回首页）。
 
-### M2 · 原生桥（可与 M1 并行做后端部分）
+### M2 · 原生桥 —— ✅ 后端+壳侧代码已全部落地（2026-09-25，docs/03 §11），只欠密钥与真机验证
 
-- **推送**（✅ M0 已拍板：要）：Capacitor Push + APNs；device token 上报后端新表（或 profile 行内 JSONB，同 books 的理由）；触达调度器在邮件之外加 push 通道；权限请求时机 = 用户完成首次「今天这一步」之后（别在启动时弹）。**前置：Apple 账号注册后取 .p8 + Key ID + Team ID（§7）**；web 侧需在壳环境检测（`window.Capacitor`）后注册 push 并上报 token。
-- **Sign in with Apple**：**只要登录页露出任何第三方登录（Google 等）就必须提供**；BetterAuth 有现成 provider。若首版只保留邮箱+游客，可不做。
-- **Universal Links**：召回邮件/推送的链接直达 app 内对应页（未装则回落 web）。
+- **推送**（✅ M0 已拍板：要）：**已完成**——`growth_profiles.push_tokens` 行内列表（零新表，导出/删号/游客迁移随行）；`pickTouchNode` 通道参数（email/push 共享节点状态，同一节点绝不双轰，token 在走 push、没有走 email）；APNs HTTP/2 直发（`src/lib/push-apns.ts`，.p8 签 JWT，jose）；`POST/DELETE /api/me/push` 上报路由；壳内注册时机=首次「今天这一步」提交成功后（`src/lib/push-register.ts`）；`PushTapBridge` 通知点按站内跳转。**待办**：① Apple 账号注册后把 `.p8 + Key ID + Team ID` 配进 env（`APNS_P8/APNS_KEY_ID/APNS_TEAM_ID`，开发构建另配 `APNS_ENV=sandbox`）——没配时调度整体回落 email，行为零变化；② 真机验证：权限弹窗时机/到达/点按跳转/卸载摘牌。
+- **Sign in with Apple**：**只要登录页露出任何第三方登录（Google 等）就必须提供**；BetterAuth 有现成 provider。若首版只保留邮箱+游客，可不做（现登录页=邮箱+游客 → 首版暂不做）。
+- **Universal Links**：召回邮件/推送的链接直达 app 内对应页（未装则回落 web）。推送点按已由 tap 桥覆盖；此项只剩邮件链接直达，留待有需要再做。
 
 ### M3 · 合规件（纯文案+配置，1-2 天）
 
