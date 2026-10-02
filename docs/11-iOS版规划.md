@@ -36,12 +36,12 @@
 3. **首版要不要推送**：**要**。→ M2 全量在册：APNs + device token 通道 + 触达调度加 push 通道；权限请求时机 = 首次「今天这一步」之后。
 4. **付费形态**：**同意首版免费无墙**——先测 iOS 上的效果，再考虑付费（IAP 3.1.1 约束届时单独拍板）。
 
-### M1 · 壳工程（骨架已就绪 2026-09-25，编译/签名等 Mac）
+### M1 · 壳工程（✅ 代码侧全齐——骨架/Info.plist/safe-area/16px/图标启动屏，2026-10-02；剩 Mac 编译签名 + 展示名 + 真机滚动手感）
 
 - ✅ **Capacitor 8.5.2 远端壳**（`shell/`，与 Next 应用完全隔离）：`server.url` → `https://honghong.miller.ink` + `allowNavigation`（桥注入，推送可用）；bundle id `ink.miller.honghong`（改名窗口 = 门户建 App ID 前）；ios 工程已在 Linux 生成（Cap 8 走 SPM，Mac 侧无需 pod install）。
 - ✅ **Info.plist 已配**：`NSMicrophoneUsageDescription`（STT 麦克风必需，无则崩）、iPhone 竖屏锁定、`UIUserInterfaceStyle: Light`（首版锁亮色）、`ITSAppUsesNonExemptEncryption: false`（HTTPS-only 豁免，M3 提前）。
-- ⏳ 图标 / 启动屏（现用 Capacitor 默认图，TestFlight 内测够用；正式前从产品视觉导出）；产品展示名待定（中英文取舍）。
-- ✅ **safe-area 适配**：`viewport-fit=cover` + `env(safe-area-inset-*)`——**web 侧已于 2026-09-25 先行落地**（body 四边 env padding + 经典 sticky 条 + 陪伴者钮/提交面板/聊天弹层三处 calc 补边，见 docs/03 §11）；真机验证等壳就绪。**遗留待拍板**：输入控件普遍 14px，iOS 聚焦会自动放大——全局提到 16px（动审美）或壳里 `maximum-scale=1`（牺牲缩放可及性），二选一。
+- ✅ **图标 / 启动屏（占位版，2026-10-02）**：程序化生成（`scripts/make-ios-icons.mjs`，Node 手写 PNG 编码器，Linux 无 ImageMagick/sharp 也能复跑）——暖纸底 + 硬币新芽、产品色板同源；正式视觉定稿后改脚本重跑即整体替换。⏳ 产品展示名待定（中英文取舍，现为「一辈子不愁钱的活法」占位）。
+- ✅ **safe-area 适配**：`viewport-fit=cover` + `env(safe-area-inset-*)`——**web 侧已于 2026-09-25 先行落地**（body 四边 env padding + 经典 sticky 条 + 陪伴者钮/提交面板/聊天弹层三处 calc 补边，见 docs/03 §11）；真机验证等壳就绪。**遗留项已销（2026-10-02，A 案）**：输入控件全局提到 16px（`input/select/textarea` 一条 `!important` 规则），iOS 聚焦不再自动放大；桌面观感差异仅在控件本身。
 - ⏳ iOS 滚动手感（橡皮筋、输入法顶起）——真机上手后调。
 - ⏳ 壳内导航黑名单：`/admin*` 拦在 WebView 外（双保险）——第一道（白名单外 404）已有；第二道待做（web 侧识别 Capacitor 环境时 /admin 跳回首页）。
 
@@ -53,8 +53,10 @@
 
 ### M3 · 合规件（纯文案+配置，1-2 天）
 
-- 隐私政策 URL（公开网页）、App Privacy 表（收集：邮箱/档案内容/诊断；不追踪）、Export Compliance（标准加密豁免声明）。
-- 删号入口在 app 内的可见性复查（现在功能有，入口深不深要过一遍）。
+- ✅ **隐私政策 URL**：`/{locale}/privacy` 四语页已存在（`src/lib/privacy.ts`，着陆页有链接）——提审直接填 `https://honghong.miller.ink/zh-CN/privacy`（2026-10-02 复查）。
+- ✅ **Export Compliance**：Info.plist `ITSAppUsesNonExemptEncryption: false` 已配（HTTPS-only 豁免）。
+- ✅ **删号入口可见性复查（2026-10-02）**：主导航「我的」（layout `nav.me`）含恢复码/导出/删号账户区，archive 页亦直链 `/me#delete`——满足 5.1.1(v)；真机再过一遍层级手感。
+- ⏳ App Privacy 表（收集：邮箱/档案内容/诊断；不追踪）——提审时在 App Store Connect 填。
 
 ### M4 · TestFlight → 提审
 

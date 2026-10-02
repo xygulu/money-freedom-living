@@ -48,6 +48,16 @@ body {
     serif;
 }
 
+/* iOS 聚焦放大修复（docs/11 M1 遗留项，2026-10-02 落 A 案）：WKWebView / iOS Safari
+   会对字号 <16px 的输入控件在聚焦时自动放大页面。输入控件统一 16px 起——非控件文本
+   不动，桌面观感差异仅在控件本身。!important 为盖过 module.css 里的 12/13/14px
+   控件字号：防放大优先于局部小字设计。撤销即删本段。 */
+input,
+select,
+textarea {
+  font-size: 16px !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
