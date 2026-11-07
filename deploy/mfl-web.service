@@ -1,0 +1,21 @@
+[Unit]
+Description=money-freedom-living Web（Next.js 生产模式，P1-1 / docs/11 §4）
+# 文档：deploy/README.md §0（中文文件名做不成合法 URL，见 mfl-touch.service 的注释）
+Documentation=file:///root/money-freedom-living/deploy/README.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/root/money-freedom-living
+# 直接调 next 的入口，不依赖 pnpm/corepack 在 systemd 的 PATH 里
+ExecStart=/usr/bin/env node /root/money-freedom-living/node_modules/next/dist/bin/next start -p 3000
+Environment=NODE_ENV=production
+# 凭据只从 .env.local 读（Next 自动加载），绝不写进 unit 文件
+Restart=always
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

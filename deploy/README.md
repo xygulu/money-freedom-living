@@ -2,6 +2,42 @@
 
 触达层的调度。**不配也能跑**——不配就是「这台机器不发信」，产品其他部分零影响。
 
+## 0. 生产模式（P1-1，iOS 前置）
+
+iOS 壳指向 `https://honghong.miller.ink`，这里跑的**必须是生产 build**——不能让 iOS 用户落在 dev 模式上（docs/11 §4）。2026-11-07 已在 Linux 侧验证：`next build` 通过，`next start -p 3100` 试跑首页/隐私页/英文页均 200、DB 正常连接。
+
+### 0.1 构建
+
+```bash
+cd /root/money-freedom-living
+pnpm build            # 或 ./node_modules/.bin/next build（pnpm 不在 PATH 时）
+```
+
+**内容更新要重建**：`content.json` 在构建时打进产物（页面模块顶层 import），发布新书/改书后必须重新 `pnpm build` 并重启服务，否则线上还是旧内容。日常开发仍用 `pnpm dev`（即时生效），两者别同时占 3000。
+
+### 0.2 挂上 systemd
+
+```bash
+cp deploy/mfl-web.service /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable --now mfl-web.service
+systemctl status mfl-web.service        # active (running)
+journalctl -u mfl-web.service -n 50     # 日志
+```
+
+unit 用 `node node_modules/next/dist/bin/next start -p 3000` 直启（不依赖 pnpm 在 systemd 的 PATH 里），`Restart=always` 自愈；凭据仍由 Next 从 `.env.local` 自动加载。
+
+### 0.3 切换前的前置闸（用户 2026-09-25 定）
+
+**先等 mubuqodp 一签池生成完**（现仍 draft / 0 签）——生成流程在 dev 里跑完、内容稳定后，一次 `pnpm build` 带入生产再切，避免切了生产还回头补内容。
+
+### 0.4 回滚
+
+```bash
+systemctl disable --now mfl-web.service
+pnpm dev                                # 回到开发模式（旧行为）
+```
+
 ## 1. 环境变量（写进 `.env.local`，不进仓库）
 
 | 变量 | 作用 | 不配会怎样 |
