@@ -78,7 +78,7 @@
 上线前置（需要 Creem 账号主在后台操作，代码侧无改动）：
 
 1. 生产环境 `.env` 切 live API key（`CREEM_API_KEY` 等）。
-2. Creem 后台配置生产 webhook 指向 `https://<域名>/api/payments/webhook/creem`，并校验签名密钥配置一致。
+2. Creem 后台配置生产 webhook 指向 `https://<域名>/api/payments/webhook`（单一共享入口，无 `/creem` 子路径；路由靠验签探测分发到已启用平台），并校验签名密钥配置一致。
 3. 用 live key 走一笔真实低额支付 + 退款，验证 webhook 到达与 VIP 生效/过期。
 
 ## 6. 上线语言决定与 zh-TW / ja 转正前置清单

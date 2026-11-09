@@ -71,6 +71,10 @@ describe('中立契约', () => {
     }
   });
 
+  it('checkoutIdParam 是前端 config 驱动的锚点：Creem 固定为 checkout_id（回跳参数解析依赖它）', () => {
+    expect(creemProvider.checkoutIdParam).toBe('checkout_id');
+  });
+
   it('adapter 错误类是中立基类的实例（路由层 instanceof 判定的前提）', () => {
     const err = new CreemApiError(429, 'rate limited', 'trace-1');
     expect(err).toBeInstanceOf(PaymentProviderError);

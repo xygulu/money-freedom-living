@@ -108,9 +108,22 @@ export async function applyPaymentEvent(
           status = COALESCE(EXCLUDED.status, subscriptions.status),
           provider_status = COALESCE(EXCLUDED.provider_status, subscriptions.provider_status),
           will_cancel = COALESCE(EXCLUDED.will_cancel, subscriptions.will_cancel),
-          -- info 事件常不带账期：NULL 表示保留旧账期，不用编造值覆盖平台真源
-          current_period_end = COALESCE(EXCLUDED.current_period_end, subscriptions.current_period_end),
-          period_end_estimated = COALESCE(EXCLUDED.period_end_estimated, subscriptions.period_end_estimated),
+          -- info/revoke 事件不带账期：NULL 保留旧账期，不用编造值覆盖平台真源。
+          -- 估计账期（period_end_estimated=true，来自本地兜底 +31d）绝不覆盖已有账期——
+          -- 平台重复投递 checkout.completed、反查又失败时，每次兜底都生成新的 now+31d，
+          -- 若允许覆盖，重复投递会把 vip_until 越推越远，还可能用估计值抹掉已存真账期。
+          current_period_end = CASE
+            WHEN EXCLUDED.current_period_end IS NULL THEN subscriptions.current_period_end
+            WHEN EXCLUDED.period_end_estimated = true AND subscriptions.current_period_end IS NOT NULL
+              THEN subscriptions.current_period_end
+            ELSE EXCLUDED.current_period_end
+          END,
+          period_end_estimated = CASE
+            WHEN EXCLUDED.current_period_end IS NULL THEN subscriptions.period_end_estimated
+            WHEN EXCLUDED.period_end_estimated = true AND subscriptions.current_period_end IS NOT NULL
+              THEN subscriptions.period_end_estimated
+            ELSE EXCLUDED.period_end_estimated
+          END,
           updated_at = now()
         RETURNING user_id, status, current_period_end
       )
@@ -119,7 +132,9 @@ export async function applyPaymentEvent(
              GREATEST(
                (SELECT max(current_period_end) FROM subscriptions s
                 WHERE s.user_id = sub.user_id
-                  AND s.provider_subscription_id <> ${event.subscriptionId}
+                  -- 排除"本行"须同时判 provider + subscription_id：两家平台 id 撞号时，
+                  -- 只判 subscription_id 会误排除另一平台的订阅行，重算账期漏掉它
+                  AND (s.provider <> ${provider.id} OR s.provider_subscription_id <> ${event.subscriptionId})
                   AND s.status IN ('live', 'grace')),
                CASE WHEN sub.status IN ('live', 'grace') THEN sub.current_period_end END
              ),

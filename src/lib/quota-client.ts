@@ -109,18 +109,30 @@ export async function fetchPaymentConfig(): Promise<PaymentConfig | null> {
  * 核对支付结果（支付成功回跳页用），本地开发收不到 webhook 的主通道。
  * provider 必须与 checkout 时一致地透传：多平台启用时缺省会回退第一个启用
  * 平台，拿错 adapter 回查会 404，用户付了钱权益却不生效。
+ *
+ * 说明：checkoutId 是**已经从回跳 URL 按平台 checkoutIdParam 解析出来的值**，
+ * 本函数只负责把它以内部 API 契约名 `checkout_id` 传给 /api/payments/verify——
+ * 回跳 URL 参数名（checkout_id / session_id…）的解析在调用方用 config 完成，
+ * 这里不关心平台差异。
  */
 export async function verifyCheckout(
   checkoutId: string,
   provider?: string | null
-): Promise<{ ok: true; granted: boolean } | { ok: false; error: string }> {
+): Promise<
+  | { ok: true; granted: boolean; status?: string }
+  | { ok: false; error: string }
+> {
   try {
     const params = new URLSearchParams({ checkout_id: checkoutId });
     if (provider) params.set('provider', provider);
     const res = await fetch(`/api/payments/verify?${params.toString()}`);
-    const data = (await res.json().catch(() => ({}))) as { granted?: boolean; error?: string };
+    const data = (await res.json().catch(() => ({}))) as {
+      granted?: boolean;
+      status?: string;
+      error?: string;
+    };
     if (!res.ok) return { ok: false, error: data.error ?? '核实支付状态失败' };
-    return { ok: true, granted: data.granted === true };
+    return { ok: true, granted: data.granted === true, status: data.status };
   } catch {
     return { ok: false, error: '网络异常，请稍后再试' };
   }

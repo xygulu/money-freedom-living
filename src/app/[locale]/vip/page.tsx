@@ -10,7 +10,7 @@ import { enabledLocales, isLocale } from '@/i18n/config';
 import { auth } from '@/lib/auth';
 import { requireSignedIn } from '@/lib/identity';
 import { getEntitlement } from '@/lib/entitlements';
-import { getDefaultProvider } from '@/lib/payments/registry';
+import { getDefaultProvider, getEnabledProvider } from '@/lib/payments/registry';
 import VipView from '@/components/VipView';
 
 export const dynamic = 'force-dynamic';
@@ -20,7 +20,7 @@ export default async function vipPage({
   searchParams,
 }: {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ checkout_id?: string; provider?: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const { locale } = await params;
   if (!isLocale(locale) || !enabledLocales.includes(locale)) notFound();
@@ -35,7 +35,13 @@ export default async function vipPage({
   const isVip = Boolean(entitlement?.vipUntil && new Date(entitlement.vipUntil) > new Date());
   const providerConfigured = Boolean(getDefaultProvider());
 
-  const { checkout_id: checkoutId, provider } = await searchParams;
+  // 回跳 URL 的结账参数名由平台决定（Creem=checkout_id，Stripe=session_id……），
+  // 经 config 的 checkoutIdParam 驱动解析——前端不硬编码任何平台参数名，接新平台零改动。
+  const raw = await searchParams;
+  const providerParam = typeof raw.provider === 'string' ? raw.provider : undefined;
+  const configured = getEnabledProvider(providerParam ?? '') ?? getDefaultProvider();
+  const checkoutIdParam = configured?.checkoutIdParam ?? 'checkout_id';
+  const checkoutId = typeof raw[checkoutIdParam] === 'string' ? (raw[checkoutIdParam] as string) : null;
 
   return (
     <div className="flex flex-col pt-16">
@@ -48,8 +54,8 @@ export default async function vipPage({
           isVip={isVip}
           vipUntil={entitlement?.vipUntil ?? null}
           providerConfigured={providerConfigured}
-          checkoutId={checkoutId ?? null}
-          providerParam={provider ?? null}
+          checkoutId={checkoutId}
+          providerParam={providerParam ?? null}
           dict={dict.vip}
         />
       </div>

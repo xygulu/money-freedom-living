@@ -5,6 +5,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Dict } from '@/i18n/get-dict';
+import { createCheckout, openPortal, verifyCheckout } from '@/lib/quota-client';
 
 interface Props {
   locale: string;
@@ -31,20 +32,19 @@ export default function VipView({
   const [verifyState, setVerifyState] = useState<'idle' | 'pending' | 'granted' | 'failed'>('idle');
   const verifyStarted = useRef(false);
 
-  // Creem 回跳：有 checkout_id 就回查一次权益（granted 后刷新服务端状态）
+  // 支付回跳：有结账 id 就回查一次权益（granted 后刷新服务端状态）。
+  // 回跳参数名已在服务端（vip/page）用 config 的 checkoutIdParam 解析成 checkoutId，
+  // 这里只把值交给统一请求层 verifyCheckout（内部用 verify API 契约名 checkout_id）。
   useEffect(() => {
     if (!checkoutId || verifyStarted.current) return;
     verifyStarted.current = true;
     setVerifyState('pending');
-    const params = new URLSearchParams({ checkout_id: checkoutId });
-    if (providerParam) params.set('provider', providerParam);
-    fetch(`/api/payments/verify?${params.toString()}`)
-      .then((res) => res.json())
-      .then((data: { granted?: boolean; status?: string }) => {
-        if (data.granted) {
+    verifyCheckout(checkoutId, providerParam)
+      .then((res) => {
+        if (res.ok && res.granted) {
           setVerifyState('granted');
           router.refresh();
-        } else if (data.status === 'pending') {
+        } else if (res.ok && res.status === 'pending') {
           setVerifyState('pending');
         } else {
           setVerifyState('failed');
@@ -57,19 +57,13 @@ export default function VipView({
     if (busy) return;
     setBusy(true);
     setError(null);
-    try {
-      const res = await fetch(`/api/payments/${path}`, { method: 'POST' });
-      const data = (await res.json()) as { url?: string; error?: string };
-      if (data.url) {
-        window.location.href = data.url;
-        return;
-      }
-      setError(data.error ?? t.error);
-    } catch {
-      setError(t.error);
-    } finally {
-      setBusy(false);
+    const res = path === 'checkout' ? await createCheckout() : await openPortal();
+    if (res.ok && res.url) {
+      window.location.href = res.url;
+      return;
     }
+    setError(res.ok ? t.error : res.error);
+    setBusy(false);
   }
 
   if (verifyState === 'granted') {
