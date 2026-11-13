@@ -20,6 +20,9 @@ export default function AdminPage() {
   return (
     <section>
       <h1 className="text-lg font-medium">书的内容包生产</h1>
+      <p className="mt-2 text-xs text-ink-soft">
+        <Link href="/admin/metrics" className="underline underline-offset-2">→ 机制仪表（验证期漏斗）</Link>
+      </p>
 
       <ul className="mt-4 flex flex-col gap-2" data-admin-steps>
         {STEPS.map((s) => (
