@@ -25,10 +25,13 @@ import { computeStageProgress } from '@/lib/stage';
 import { getSttProviders } from '@/lib/stt';
 import { lastQuoteBefore } from '@/lib/road';
 import { isVerdictNode } from '@/lib/cognition';
+import { isAnchorDay } from '@/lib/anchor';
+import { timeZoneFrom } from '@/lib/time';
 import { nodeQuestion, returnGapBucket, touchReturnQuery } from '@/lib/touch';
 import { track } from '@/lib/analytics';
 import NewJourneyView from '@/components/NewJourneyView';
 import AddBookEntry from '@/components/AddBookEntry';
+import AnchorCard from '@/components/AnchorCard';
 
 export const dynamic = 'force-dynamic';
 
@@ -110,6 +113,15 @@ export default async function journeyNewPage({
   // 没有就不渲染（留白不占位）；今天的原话不算"上次"（MirrorCard 已经照过一次）。
   const lastEcho = profile ? lastQuoteBefore(profile, today) : null;
 
+  // 归来问候（A2，classic 同款判据）：隔 ≥3 天回来给一句"我还在"，不追责、
+  // 不问为什么没来、不显示中断天数。连续使用不打扰。
+  const gapDays = profile?.last_active_date
+    ? Math.floor((Date.parse(`${today}T00:00:00Z`) - Date.parse(`${profile.last_active_date}T00:00:00Z`)) / 86_400_000)
+    : -1;
+  const welcomeBack = gapDays >= 3;
+  // 锚点日被动感知（A2）：只有用户自己设了锚点才会出现（默认不猜）
+  const anchorToday = profile?.payday ? isAnchorDay(profile.payday, timeZoneFrom(cookieList)) : false;
+
   // 验收打点（与 classic /journey 同口径；A1/U1：此前新版完全不记——邮件拉回的
   // 归因在新版不可测，"触达拉回率"护栏指标只能拿到 classic 一半的数据）。
   const gapBucket = returnGapBucket(profile?.last_active_date, today);
@@ -184,6 +196,18 @@ export default async function journeyNewPage({
         </div>
       )}
 
+      {/* 归来问候 + 锚点日（A2，classic 同款文案与判据）：一条被动感知，一个安静问候 */}
+      {welcomeBack && (
+        <p data-welcome-back className="mb-8 border border-dashed border-line bg-white/60 p-5 text-sm leading-relaxed">
+          {dict.journey.welcomeBack}
+        </p>
+      )}
+      {anchorToday && (
+        <p data-anchor-today className="mb-8 border border-line bg-white/60 p-5 text-sm leading-relaxed">
+          {dict.journey.anchorDay}
+        </p>
+      )}
+
       <NewJourneyView
         locale={locale}
         dict={dict}
@@ -222,6 +246,15 @@ export default async function journeyNewPage({
           dict={dict}
           books={candidates.map((b) => ({ id: b.id, title: bookTitle(b.id, locale), topics: b.topics }))}
         />
+      )}
+
+      {/* 周期锚点邀请（A2）：只在还没设时出现在页面最底部（P3-3 的教训：空锚点卡
+          不能占首屏）——设了之后这张卡整个消失，锚点日只剩一行被动感知。
+          设完想改/清除：经典版仍提供；classic 退役前再评估是否给新版补管理入口。 */}
+      {profile && !profile.payday && (
+        <div className="mt-8" data-anchor-invite>
+          <AnchorCard locale={locale} payday={null} dict={dict} />
+        </div>
       )}
     </div>
   );

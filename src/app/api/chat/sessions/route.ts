@@ -6,7 +6,7 @@
 // 留给它自己的 DELETE / 10 轮收尾关闭。
 import { NextRequest } from 'next/server';
 import { requireApiUser } from '@/lib/api-auth';
-import { createSession, findOpenChatSession, findOpenCompanionSession, type SessionKind } from '@/lib/chat';
+import { appendMessage, createSession, findOpenChatSession, findOpenCompanionSession, normalizeSeedQuote, type SessionKind } from '@/lib/chat';
 import { settleSession } from '@/lib/memory';
 import { getQuotaStatus, clientIpFromHeaders, guestKeyForRequest, guestCookieHeader, GUEST_ID_COOKIE } from '@/lib/quota';
 import { timeZoneFrom, todayIn } from '@/lib/time';
@@ -24,10 +24,12 @@ export async function POST(request: NextRequest) {
     if (!auth.ok) return auth.response;
     const identity = auth.identity;
 
-    const body = (await request.json().catch(() => ({}))) as { locale?: string; kind?: string };
+    const body = (await request.json().catch(() => ({}))) as { locale?: string; kind?: string; quote?: string };
     const locale = isLocale(body.locale) && enabledLocales.includes(body.locale) ? body.locale : 'en';
     // kind 白名单：只接受 chat / companion；缺省 chat（旧客户端兼容）
     const kind: SessionKind = body.kind === 'companion' ? 'companion' : 'chat';
+    // A4（?quote 落对话历史）：球气泡那句原文只在新建正式会话时入历史
+    const seedQuote = kind === 'chat' ? normalizeSeedQuote(body.quote) : '';
 
     // 惰性结算：上次正式对话若没走"结束"流程（直接关页面/轮数未到），在此补摘要并关闭。
     // settleSession 内部 best-effort，LLM 失败也会关会话，不阻塞新会话。
@@ -62,7 +64,17 @@ export async function POST(request: NextRequest) {
     }
 
     const session = await createSession({ userKey: identity.key, locale, kind });
-    await track(identity.key, 'chat_session_started', { kind }, locale);
+    // A4：球气泡里那句话（陪伴者自己说的）落进对话历史——/chat/history 回看能看到，
+    // opener 的上下文天然含它，AI 首条回复就能接住原话。不伪造 user 消息（E5-5① 同源
+    // 纪律）；不额外扣配额（配额仍只在首条 AI 回复成功时落账）。
+    if (seedQuote) {
+      try {
+        await appendMessage(session.id, 'assistant', seedQuote);
+      } catch (error) {
+        console.error('[api/chat/sessions] seed quote failed:', error);
+      }
+    }
+    await track(identity.key, 'chat_session_started', { kind, quoted: Boolean(seedQuote) }, locale);
     const headers: Record<string, string> = { 'Cache-Control': 'no-store' };
     if (identity.newGuestCookie) headers['Set-Cookie'] = identity.newGuestCookie;
     else if (guest.newCookieId) headers['Set-Cookie'] = guestCookieHeader(guest.newCookieId);

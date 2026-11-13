@@ -14,6 +14,8 @@ import { resolveIdentity } from '@/lib/identity';
 import { getDict } from '@/i18n/get-dict';
 import { getProfile, activeBookId } from '@/lib/profile';
 import { getJourneyStage } from '@/lib/content';
+import { anchorKindForToday } from '@/lib/anchor';
+import { timeZoneFrom } from '@/lib/time';
 import { buildCompanionNudge, type NudgeSource } from '@/lib/companion-nudge';
 import { execWithFailover, ensureSchema } from '@/lib/db';
 import { defaultLocale } from '@/i18n/config';
@@ -82,14 +84,32 @@ export async function POST(): Promise<NextResponse> {
 
   const { lastMemoryText, stageGoal, lastTouchedPrompt } = pickNudgeMaterial(profile);
 
-  // MVP：不接 LLM 路径（allowLlm 默认 false）—— L1 三档已覆盖绝大多数用户；
+  // A5 接线（2026-09-24）：L1d 日历触发——发薪日（用户自设）优先，其次月末；
+  // 大促无可靠信号永不猜测。此前库里有 anchorKind 能力但路由从不传参。
+  const anchorKind = anchorKindForToday(profile.payday, timeZoneFrom(cookieStore));
+
+  // A5 接线：safety 闸接上（路由头注释声称的行为此前没实现——safetyBlocked 留白 false）。
+  // 24h 内有过危机/家暴事件的人：nudge 退到"我在这儿。"级别的兜底文案，不调 LLM。
+  // 闸失效（查库异常）按不阻断处理——宁可多说一句，不可错怪一个。
+  let safetyBlocked = false;
+  try {
+    const recent = await execWithFailover((sql) =>
+      sql`SELECT 1 FROM safety_events WHERE user_key = ${identity.key} AND created_at > now() - interval '24 hours' LIMIT 1`
+    );
+    safetyBlocked = recent.length > 0;
+  } catch (error) {
+    console.error('[companion/nudge] safety gate check failed:', error instanceof Error ? error.message : error);
+  }
+
+  // MVP：不接 LLM 路径（allowLlm 默认 false）—— L1 四档已覆盖绝大多数用户；
   // 未来真要打开 LLM，先在 docs/08 登记偏离 + 走 safety 全链路，再开 allowLlm=true。
   const out = await buildCompanionNudge({
     locale,
     lastMemoryText,
     stageGoal,
     lastTouchedPrompt,
-    safetyBlocked: false, // MVP 不接 safetyEvents 扫描，留白
+    anchorKind,
+    safetyBlocked,
     fallback,
   });
 

@@ -21,12 +21,20 @@ interface Props {
   remaining: number;
   /** 从旅程页点「随便聊聊」进来：落地即开聊，不再要第二次点击 */
   autoStart?: boolean;
+  /**
+   * 球气泡那句原文（A4，?quote=…）：新建会话时随 sessions POST 落进对话历史，
+   * 首屏先回放这一句（陪伴者自己的话），AI opener 接住它。续旧会话时忽略。
+   */
+  seedQuote?: string;
 }
 
-export default function ChatView({ locale, dict, openSessionId, initialMessages, remaining, autoStart = false }: Props) {
+export default function ChatView({ locale, dict, openSessionId, initialMessages, remaining, autoStart = false, seedQuote }: Props) {
   const t = dict.chat;
   const [sessionId, setSessionId] = useState<string | null>(openSessionId);
-  const [messages, setMessages] = useState<Turn[]>(initialMessages);
+  const seed = !openSessionId && seedQuote ? seedQuote.trim() : '';
+  const [messages, setMessages] = useState<Turn[]>(
+    seed ? [{ role: 'assistant', content: seed }, ...initialMessages] : initialMessages,
+  );
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
   const [exhausted, setExhausted] = useState(remaining <= 0 && !openSessionId);
@@ -55,10 +63,13 @@ export default function ChatView({ locale, dict, openSessionId, initialMessages,
 
   // 归来问候：一条消息都还没有的会话，由它先开口（接上 memories 里的上次内容），
   // 别让人对着空白自己找话头。续上的旧会话已有消息，这里天然不触发。
+  // 带 seed（A4）时首屏已回放球气泡那句（1 条历史），opener 照常触发——AI 在
+  // 上下文里看到这句，首条回复就是"接住原话"，而不是凭空开新头。
   // 额度语义：opener 就是本会话首条 AI 回复，落账即「新开了一段对话」——
   // 而新开一段本来就该记 1 次，续聊不再扣，所以这里不会凭空多扣。
   useEffect(() => {
-    if (!sessionId || openerAsked.current || messages.length > 0 || ended) return;
+    const threshold = seed ? 1 : 0;
+    if (!sessionId || openerAsked.current || messages.length > threshold || ended) return;
     openerAsked.current = true;
     void stream(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps

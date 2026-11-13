@@ -28,6 +28,16 @@ export const CHAT_MAX_MESSAGES = 40;
 /** 陪伴者弹层轻对话上限：10 轮 = 20 条消息——弹层是"顺便说一句"的轻场景，比 /chat 短 */
 export const COMPANION_MAX_MESSAGES = 20;
 
+/**
+ * A4（?quote 落对话历史，2026-09-24）：清洗 URL 里带来的球气泡原文。
+ * nudge 文案本身 ≤80 字（companion-nudge TEMPLATES），300 是防御上限；
+ * 折叠空白、去首尾——存进 chat_messages 的就是展示给用户的那一句。
+ */
+export function normalizeSeedQuote(raw: unknown): string {
+  if (typeof raw !== 'string') return '';
+  return raw.trim().replace(/\s+/g, ' ').slice(0, 300);
+}
+
 function rowToSession(row: Record<string, unknown>): ChatSession {
   return {
     id: row.id as string,

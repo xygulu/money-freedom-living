@@ -20,14 +20,18 @@ export default async function chatPage({
   searchParams,
 }: {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ start?: string }>;
+  searchParams: Promise<{ start?: string; quote?: string }>;
 }) {
   const { locale } = await params;
   if (!isLocale(locale) || !enabledLocales.includes(locale)) notFound();
   const dict = getDict(locale);
+  const query = await searchParams;
   // ?start=1 = 从旅程页「随便聊聊 / 开始今天的对话」点进来的：已经表达过要聊了，
   // 不再要求第二次点击，落地即建会话（建会话不扣配额，落账仍在首条 AI 回复）。
-  const autoStart = (await searchParams).start === '1';
+  const autoStart = query.start === '1';
+  // ?quote=… = 球气泡那句原文（A4）：原样传给 ChatView——新建会话时随 sessions POST
+  // 落进对话历史（陪伴者自己的话），首屏先回放这一句，AI opener 接住它。
+  const seedQuote = typeof query.quote === 'string' ? query.quote : undefined;
 
   // 访客闸（用户 2026-09-14 拍板：访客 = 只能做金钱关系测试）
   const identity = await requireSignedIn(locale, `/${locale}/chat`);
@@ -63,6 +67,7 @@ export default async function chatPage({
           initialMessages={messages}
           remaining={quota.remaining}
           autoStart={autoStart}
+          seedQuote={seedQuote}
         />
       </div>
       <Link href={`/${locale}/chat/history`} className="mt-8 self-start text-sm text-accent underline underline-offset-4">

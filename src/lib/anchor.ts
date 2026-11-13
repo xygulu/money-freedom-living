@@ -38,3 +38,26 @@ export function parsePaydayInput(input: unknown): Payday | null | undefined {
   if (typeof day !== 'number' || !Number.isInteger(day) || day < 0 || day > 6) return undefined;
   return { type, day };
 }
+
+/** 用户日历上的月末（YYYY-MM-DD 形制入参；坏值一律 false）。L1d month_end 触发用。 */
+export function isMonthEndISO(today: string): boolean {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(today);
+  if (!m) return false;
+  const lastDay = new Date(Date.UTC(Number(m[1]), Number(m[2]), 0)).getUTCDate();
+  return Number(m[3]) === lastDay;
+}
+
+/**
+ * 今天的锚点类型（A5 接线，2026-09-24）：发薪日（用户自设）优先于月末；
+ * 大促没有可靠信号，**永不猜测**（与"发薪日默认不猜"同一纪律）。
+ * 纯函数（now 可注入），单测钉口径。
+ */
+export function anchorKindForToday(
+  payday: Payday | null | undefined,
+  tz: string,
+  now: Date = new Date(),
+): 'payday' | 'month_end' | null {
+  if (payday && isAnchorDay(payday, tz, now)) return 'payday';
+  if (isMonthEndISO(todayIn(tz, now))) return 'month_end';
+  return null;
+}
