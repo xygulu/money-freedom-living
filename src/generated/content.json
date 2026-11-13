@@ -1,6 +1,38 @@
 {
   "books": [
     {
+      "id": "book-mubuqodp",
+      "title": {
+        "en": "<TODO: en 书名>",
+        "zh-CN": "中年觉醒",
+        "zh-TW": "<TODO: zh-TW 书名>",
+        "ja": "<TODO: ja 书名>"
+      },
+      "author": "<TODO: 作者>",
+      "source": "<TODO: 出处（书名/出版社/年份）>",
+      "topics": [
+        "self-worth"
+      ],
+      "status": "draft",
+      "note": "<TODO: 一段话——这本书给读者的是什么？它想带读者从哪里走到哪里？>"
+    },
+    {
+      "id": "book-mubvxgl6",
+      "title": {
+        "en": "<TODO: en 书名>",
+        "zh-CN": "人生只有一件事",
+        "zh-TW": "<TODO: zh-TW 书名>",
+        "ja": "<TODO: ja 书名>"
+      },
+      "author": "<TODO: 作者>",
+      "source": "<TODO: 出处（书名/出版社/年份）>",
+      "topics": [
+        "self-worth"
+      ],
+      "status": "draft",
+      "note": "<TODO: 一段话——这本书给读者的是什么？它想带读者从哪里走到哪里？>"
+    },
+    {
       "id": "money-freedom",
       "title": {
         "en": "A Way of Living Where Money Never Troubles You",
@@ -23,6 +55,616 @@
     }
   ],
   "journey": {
+    "book-mubuqodp": {
+      "en": [
+        {
+          "id": 1,
+          "file": "1.md",
+          "title": "Pause for a moment",
+          "goal": "To see whose script you've been following with money for the first half of your life — without judging right or wrong, just looking at the facts",
+          "weeks": 3,
+          "exercises": [
+            "Recall a recent moment when money made your chest tighten; note when it happened and what triggered it",
+            "Ask yourself one question: who am I trying to prove something to by earning so hard — write it down, even if there's no answer",
+            "Say out loud to someone you trust a weariness you've never voiced, like \"I've actually been holding on for a long time\""
+          ],
+          "ai_stance": {
+            "do": [
+              "Hold the weariness of someone in midlife; first acknowledge the weight of \"holding on all these years,\" then talk about money",
+              "Turn big, vague statements like \"this is all my life will ever be\" back into a specific day, a specific sum, a sleepless night",
+              "Use \"what I might be hearing is...\" to reflect patterns, leaving the interpretation to them",
+              "Allow them to say \"I can't put it into words\" — being able to pause and speak is itself progress in this stage"
+            ],
+            "dont": [
+              "Frame the midlife moment as a problem or a stage task; don't push with \"you should pivot / you should break through\"",
+              "Judge any of their earlier life choices (not changing jobs, not daring to stop, caring about face — none of these are flaws)",
+              "Ask too many probing questions at once, or rush to conclude \"your pattern is XX\"",
+              "Give financial or career advice"
+            ]
+          },
+          "advance_when": [
+            "They can recognize the concrete origins of their money patterns from the first half of life — pointing to a specific scene or sentence that still drives them, rather than just feeling \"exhausted\"",
+            "They form their own attitude toward the old voice that pushes them — confirming or revising one of the \"what I might be hearing\" reflections",
+            "They acknowledge the recurring underlying feelings they have around money and career (fear of falling behind, fear of being compared, fear of stopping), not just recounting one event"
+          ],
+          "ritual": "First-half checklist draft — write down what you've been chasing, and what the day you catch it will look like",
+          "skippable": true,
+          "topics": [
+            "self-worth",
+            "parents"
+          ],
+          "body": "You've reached the halfway point of your life. In the first half, you worked hard: studying, working, buying a home, supporting a family — you chased everything you were supposed to chase. But then one night, or after a health checkup, or news of a peer, a voice surfaced inside you: What am I working so hard for?\n\nThat voice isn't something to fear — it's a doorway. The way you earned, your worries about spending, the tension of never daring to stop — much of it wasn't chosen by you. It was installed very early on — maybe a parent's words \"our family is counting on you,\" or the early comparisons of \"falling short means losing face.\" These aren't flaws. They're things that once saved you. They're just still driving your car today.\n\nIn this stage, we're in no rush to change anything. First, one thing: pause, and see whose hands have been on the wheel. Seeing it isn't resignation — it's the first step to taking back your choices."
+        },
+        {
+          "id": 2,
+          "file": "2.md",
+          "title": "Loosen up",
+          "goal": "To loosen the equation \"my worth = how much I earn and carry,\" moving your sense of deserving from the report card back into yourself",
+          "weeks": 4,
+          "exercises": [
+            "Do one thing today with no output at all — like staring into space for ten minutes — then record only how it felt, not what you gained",
+            "Write down a compliment someone once gave you that you still remember, copying the exact words",
+            "Write down a moment when you felt awkward asking for money or raising your price — just what happened, not what you did wrong"
+          ],
+          "ai_stance": {
+            "do": [
+              "Repeatedly point out the worth that exists independent of money and output — the people they've cared for, the days they've endured",
+              "When they diminish themselves (\"I was just lucky\"), gently return the credit to them",
+              "Let the old equation (earning more = I'm capable) be spoken and understood first, then accompany them in loosening it — don't overturn it directly"
+            ],
+            "dont": [
+              "Cover their specific experiences with slogan-style comfort like \"you have great value\"",
+              "Push them to immediately ask for a raise, demand payment, or reject someone — loosening is internal, not immediate outward action",
+              "Force them to face the panic of \"my first half was wasted\" before they're ready; when that panic appears, catch it first"
+            ]
+          },
+          "advance_when": [
+            "On a day when they accomplished nothing, they can say they don't feel worse for it — even just once, even half-doubting",
+            "They begin describing their worth equation as \"I always thought...\" — showing the equation has shifted from fact to an idea that can be re-examined",
+            "When facing feelings of \"I don't deserve,\" they can pause a moment longer instead of instantly covering it with activity"
+          ],
+          "ritual": "Reassessing worth — write down three things you possess that appear on no resume and no bill",
+          "skippable": true,
+          "topics": [
+            "self-worth",
+            "inner-turmoil"
+          ],
+          "body": "At midlife, many people discover an equation they've never examined: the more I earn and carry, the more I'm worth. Income rises, and the calm lasts three days before the anxiety returns. A project succeeds, one breath of relief, then fear of the next time. Because this equation has no finish line — there's always more.\n\nIn this stage, we loosen it together. Not by deleting the equation, but by seeing it first: the pay you didn't dare mention at the table, the refusal you couldn't speak, the midnight loop of \"am I not good enough\" — it's often behind all of them.\n\nThe loosening is small: do one thing with no output, and find you're still you. Write down someone's genuine acknowledgment of you, and let it linger. A sense of deserving isn't earned — it's restored through repeated confirmation. Your worth has been there since birth; the first half of life simply never gave you the chance to verify it."
+        },
+        {
+          "id": 3,
+          "file": "3.md",
+          "title": "Practice",
+          "goal": "To practice bringing what's loosened into real relationships and real money moments — learning to talk about money, set boundaries, and stop trading giving for love",
+          "weeks": 5,
+          "exercises": [
+            "The next time you feel awkward talking about money, write one line in advance and say it as written — like \"my price for this is X\" — then note your heartbeat and the outcome",
+            "Refuse one small thing — something not yours that someone casually pushed onto you — saying \"not this time\" completely",
+            "Before giving money or a gesture to parents or family, ask yourself first: is this what I genuinely want to give, or am I repaying a debt, proving something",
+            "For one week, record every moment of \"never mind, too much hassle,\" and look at what you gave up"
+          ],
+          "ai_stance": {
+            "do": [
+              "After every small act of speaking up or refusing, first acknowledge how hard that action itself was, before looking at outcomes",
+              "Redefine \"talking about money\" as honesty and respect, not damaging the relationship — avoiding money talk to preserve a relationship is precisely what quietly erodes it",
+              "When giving money to parents feels unfair, help them separate \"filial devotion\" from \"debt repayment,\" allowing both feelings to coexist",
+              "Start practice with the smallest, safest scenario — let them choose"
+            ],
+            "dont": [
+              "Immediately interpret a failed conversation or a rejection as failure — a bad outcome doesn't mean they did something wrong",
+              "Encourage harsh words or clean-break ruptures — we want them to stand firm within relationships, not push relationships away",
+              "Decide for them whom to approach first before they've chosen their practice scenario",
+              "Steer family conflicts toward judging whether the parents were right or wrong"
+            ]
+          },
+          "advance_when": [
+            "They can complete their sentence in a real money situation — regardless of the other person's response, they know they spoke up and stood firm",
+            "They develop new discernment about \"over-giving\": distinguishing what they genuinely want to give from what they're trading for approval, instead of vaguely feeling \"I'm nice to everyone\"",
+            "When rejected or when the other person is displeased, they can bear the discomfort without immediately explaining, compensating, or taking it back"
+          ],
+          "ritual": "The first time you speak up — do the smallest but most real thing in this stage: say out loud one thing about money you should have said long ago",
+          "skippable": true,
+          "free_alt": "Exercises involving giving money to parents can be replaced with: writing a letter or sending a message expressing your heart, with no money involved",
+          "topics": [
+            "boundaries",
+            "parents"
+          ],
+          "body": "After loosening comes practicing in real relationships. A middle-aged person's money is rarely just their own: it's the gesture to parents, the investment in children, the loan you couldn't refuse when a friend asked, the price you couldn't say out loud in a deal.\n\nYou've probably had moments like this: it was time to mention compensation, but the words turned into \"no worries, it's fine\"; giving money to family made your chest tighten, but you transferred it anyway. You thought this was kindness. But inside it often hides an unspoken line: I'm afraid that if I talk about money, the relationship ends; I'm afraid that if I don't give, I won't be needed.\n\nIn this stage, we practice small and real actions: a price written down in advance, one complete \"not this time,\" one sum questioned before giving. No need to be perfect on the first try — only to speak fully and stand firm. People who can talk about money within relationships often find their relationships grow stronger."
+        },
+        {
+          "id": 4,
+          "file": "4.md",
+          "title": "Live a little",
+          "goal": "To turn permission into daily life — allowing rest, allowing enjoyment, allowing money to go toward the parts of you that feel alive, and walking into a way of living for the second half",
+          "weeks": 4,
+          "exercises": [
+            "Set aside a stretch of time each week that serves no purpose — do nothing \"useful,\" and simply note whether any secret guilt crept in",
+            "Spend a sum of money purely for your own enjoyment — the amount doesn't matter — and only ask: is this something I'm allowing myself",
+            "Before sleep, write down one thing from today that made you happy — not because it was meaningful, just because it made you happy",
+            "Imagine yourself ten years from now looking at today's spending, and write one sentence you'd want them to say"
+          ],
+          "ai_stance": {
+            "do": [
+              "When guilt surfaces during enjoyment or rest, normalize it — it's the echo of the old script, not something they did wrong",
+              "Help them distinguish \"splurging\" from \"allowing\": allowing is conscious and doesn't lead to rumination afterward — use their own feelings as the measuring stick",
+              "Help them turn \"how I want to live the second half\" from a slogan into specific small days — defined by themselves, not by the social clock",
+              "When they begin allowing themselves naturally, point it out — the new way of living is already in their body"
+            ],
+            "dont": [
+              "Urge big changes (quitting, starting a business, selling the house) — a way of living grows; it isn't decided",
+              "Instantly elevate their small enjoyments into \"awakening\" or \"rebirth\" — inflating things makes small things weightless",
+              "After they spend on enjoyment, guide them through a cost-benefit review — rumination is the old script; don't extend its life",
+              "Define for them what a \"good second half\" should look like"
+            ]
+          },
+          "advance_when": [
+            "In time without output, their guilt has faded, or it comes and goes — they no longer need busyness to prove the day wasn't wasted",
+            "When spending on their own enjoyment, they do it with awareness rather than a sense of sneaking — no rumination afterward, and no accounting to anyone",
+            "They can describe in their own words what they want the second half to look like, and small daily habits are beginning to match it — not just the thought of \"wanting a different life\""
+          ],
+          "ritual": "An opening line for the second half — write one sentence to your self ten years from now, describing the you of today you want them to see",
+          "skippable": true,
+          "topics": [
+            "allowing",
+            "inner-turmoil"
+          ],
+          "body": "By now, you've seen the old script, loosened the worth equation, and spoken up within your relationships. This final stage isn't a new sprint — it's a different way of living your days.\n\nThe hardest thing about midlife often isn't failing to earn money — it's not daring to stop and use it: guilt when resting, feeling like you're stealing when enjoying, money hoarded for defense, days merely endured. The most cunning thing about scarcity is this: it lets you own everything, but won't let you own this moment.\n\nThe exercises here are all small: a stretch of purposeless time, a purely enjoyable purchase, one thing done just because it made you happy. You'll find that allowing yourself isn't indulgence. Quite the opposite — people who can enjoy with ease handle money with more measure, because when fear loosens, your choices truly become your own.\n\nThe second half isn't a sequel to the first. It belongs to those who finally dare to say to themselves: I'm worth it. May money become a footnote to your days, not their master."
+        }
+      ],
+      "zh-CN": [
+        {
+          "id": 1,
+          "file": "1.md",
+          "title": "停一停",
+          "goal": "看见自己前半生是按谁的剧本在赚钱和花钱——不评判对错，只看事实",
+          "weeks": 3,
+          "exercises": [
+            "回想一次最近为钱心里发紧的瞬间，记下是什么时候、因为什么",
+            "问自己一句：我拼命挣钱，是想向谁证明什么——写下来，哪怕没答案",
+            "对信任的人说出一句从没说过的疲惫，比如\"我其实撑很久了\""
+          ],
+          "ai_stance": {
+            "do": [
+              "接住中年人的疲惫感，先确认\"撑了这么多年\"的重量，再谈钱",
+              "把\"我这辈子就这样了\"这类大而空的话，还原成具体的一天、一笔钱、一次失眠",
+              "用\"我听到的可能是\"反映模式，把解释权留给用户",
+              "允许用户说\"说不清\"——能开口停一停，本身就是这一段的进展"
+            ],
+            "dont": [
+              "把中年危机说成问题或阶段任务，不用\"你该转型/你该突破\"催他行动",
+              "评判他前半生的任何选择（没换工作、不敢停、爱面子都不是缺点）",
+              "一次追问太多，也不急着总结\"你的模式是XX\"",
+              "给理财或职业建议"
+            ]
+          },
+          "advance_when": [
+            "他认出自己前半生的钱模式有具体的来历——能指认是哪个场景、哪句话至今在推动他，而不只是觉得\"很累\"",
+            "他对那个推着自己跑的旧声音有了自己的态度——确认或修正了一个\"我听到的可能\"",
+            "他承认自己在面对钱和事业时反复泛起的底色感受（怕落后、怕被比下去、怕停），而不只是复述一次事件"
+          ],
+          "ritual": "上半场清单初稿——写下你一直在追赶的东西，和追上它的那天的样子",
+          "skippable": true,
+          "topics": [
+            "self-worth",
+            "parents"
+          ],
+          "body": "你到了人生的半场。前半段你很努力：读书、工作、买房、养家，该追的你都追了。可是某天夜里，或者某次体检、某个同龄人的消息之后，你心里冒出一个声音：我这么拼，是为了什么？\n\n这个声音不可怕，它是一个入口。上半场的你，赚钱的方式、花钱的顾虑、不敢停下来的那份紧，多半不是你自己选的，而是从很小的时候就被装进来的——可能是父母的一句\"我们家就靠你了\"，可能是\"不如别人就抬不起头\"的早年被比较。它们不是缺点，是当年救过你的东西，只是现在还在替你开车。\n\n这一段，我们不着急改什么。先做一件事：停下来，看看方向盘一直在谁手里。看见，不是认命，是拿回选择权的第一步。"
+        },
+        {
+          "id": 2,
+          "file": "2.md",
+          "title": "松一松",
+          "goal": "松动\"我的价值=我挣多少、扛多少\"这条等式，让配得感从成绩单上挪回自己身上",
+          "weeks": 4,
+          "exercises": [
+            "今天做一件没有任何产出的事，比如发呆十分钟，做完只记录感受不记录收获",
+            "写下一句别人对你说过、你一直记到现在的认可，原话抄下来",
+            "把一次\"不好意思要钱/不好意思提价\"的场景写下来，只写发生了什么，不写自己哪里不对"
+          ],
+          "ai_stance": {
+            "do": [
+              "反复指认那些与钱和产出无关就存在的价值——他照顾过的人、他熬过的日子",
+              "在他贬低自己（\"我就是运气好\"）时，温和地把功劳还给他",
+              "让旧等式（挣得多=我行）先被说出来、被理解，再陪他松动，不直接推翻"
+            ],
+            "dont": [
+              "用\"你很有价值\"这类口号式安慰盖过他的具体经历",
+              "催他立刻谈加薪、要账、拒绝谁——松动是内部的，不是马上对外行动",
+              "在他还没准备好时逼他面对\"前半生白干了\"的恐慌，这种恐慌出现时先接住"
+            ]
+          },
+          "advance_when": [
+            "他能在没做成任何事的一天里，说出自己并没有因此更差——哪怕只有一次，哪怕半信半疑",
+            "他开始用\"我一直以为\"的句式谈论自己的价值等式——说明等式从事实变成了可以被重新看的想法",
+            "他面对\"不配\"的感觉时，能多停一会儿而不是马上用做事把它盖掉"
+          ],
+          "ritual": "价值重估——写下三样你拥有、但写在任何简历和账单上都不出现的东西",
+          "skippable": true,
+          "topics": [
+            "self-worth",
+            "inner-turmoil"
+          ],
+          "body": "到了半场，很多人发现自己有一条从没检查过的等式：我挣得越多、扛得越多，我就越值钱。收入涨了，安心三天又慌了；事情做成了，松一口气又怕下次。因为这条等式的尽头没有终点线——永远有更多。\n\n这一段我们一起松动它。不是把等式删掉，而是先看见它：你在饭桌上不敢提的报酬，你接下来说不出口的拒绝，你半夜反刍的\"我是不是不行\"，背后常常都是它。\n\n松动的方式很小：做一件没有产出的事，然后发现自己还是你；记下别人真心认可你的那句话，让它多留一会儿。配得感不是挣来的，是被一次次确认回来的。你的价值从出生起就在，前半生只是没机会核对这件事。"
+        },
+        {
+          "id": 3,
+          "file": "3.md",
+          "title": "练一练",
+          "goal": "练习把松动的东西落到关系和钱的现场——学会谈钱、设界、不再用付出来换爱",
+          "weeks": 5,
+          "exercises": [
+            "下一次不好意思谈钱时，提前写好一句话照着说，比如\"这个我的价格是X\"，说完记录心跳和结果",
+            "拒绝一件小事——不是你份内的、别人顺手推给你的，用一句\"这次不行\"完整说完",
+            "给父母或家人一笔钱/一份心意前，先问自己：这是我真心想给的，还是我在还债、在证明",
+            "记录一周里每次\"算了，别麻烦了\"的瞬间，看看你放弃了什么"
+          ],
+          "ai_stance": {
+            "do": [
+              "在他每一次小小的开口和拒绝后，先确认那个动作本身的难度，再看结果",
+              "把\"谈钱\"重新定义为诚实和尊重，而不是伤感情——因为碍于关系不谈，恰恰在慢慢耗损关系",
+              "在他给父母花钱感到委屈时，陪他把\"孝\"和\"还债\"分开看，允许两种感受并存",
+              "练习从最小、最安全的一次开始，由他选场景"
+            ],
+            "dont": [
+              "把某次谈崩或被拒绝立刻解读为失败——结果不好不等于他做错了",
+              "鼓励他把话说狠、划清界限式的决裂——我们要的是关系里能站得住，不是推开关系",
+              "在他还没选定要练的场景时替他决定先对谁开口",
+              "把家庭纠纷往父母对错的审判上引"
+            ]
+          },
+          "advance_when": [
+            "他能在一次真实的钱场景里把话说完整——不管对方反应如何，他知道自己开口了，并且站住了",
+            "他对\"过度付出\"有了新的分辨力：能区分哪些是他想给的、哪些是他在换认可，而不是笼统觉得\"我对谁都好\"",
+            "被拒绝或对方不高兴时，他能承受那份不适，不需要马上解释、补偿或收回"
+          ],
+          "ritual": "第一次开口——做一件这一段里最小但真实的事：把一句早就该说的关于钱的话，说出口",
+          "skippable": true,
+          "free_alt": "涉及给父母钱的练习可改为：写一封信或发一条消息表达心意，不涉及金额",
+          "topics": [
+            "boundaries",
+            "parents"
+          ],
+          "body": "松动之后，要落到真实的关系里练。中年人的钱，很少是自己的钱：是给父母的心意，是给孩子的投入，是朋友开口不好意思拒绝的借款，是合作时说不出口的价格。\n\n你大概有过这样的时刻：明明该提报酬，话到嘴边变成了\"没事，不用了\"；明明给家里花钱心里发紧，还是转了过去。你以为这是善良，其实里面常常藏着一句没说出口的话：我怕谈了钱，关系就没了；我怕不付出，我就不被需要。\n\n这一段我们练的是小而真的动作：一句提前写好的报价，一次完整的\"这次不行\"，一笔给之前先问过自己的钱。不求一次到位，只求你说完整了、站住了。能在关系里谈钱的人，关系反而更结实。"
+        },
+        {
+          "id": 4,
+          "file": "4.md",
+          "title": "活一活",
+          "goal": "把允许过成日常——允许休息、允许享受、允许钱花在让自己活着的部分，走出后半场的活法",
+          "weeks": 4,
+          "exercises": [
+            "每周留一段完全没用处的时间，不做任何\"有用\"的事，只记录你有没有偷偷愧疚",
+            "为自己花一笔纯享受的钱，金额不怕小，只问一句：这是我允许自己的吗",
+            "睡前写下今天一件事，只因为它让你高兴，不因为它有意义",
+            "想象十年后的自己在看你今天的一天花销，写一句你想让他说的话"
+          ],
+          "ai_stance": {
+            "do": [
+              "在他享受或休息时冒出愧疚时，正常化这份愧疚——它是旧脚本的余音，不是他做错了",
+              "帮他分清\"挥霍\"和\"允许\"：允许是有意识的、事后不反刍的；用他自己的感受做标尺",
+              "陪他把\"下半场想怎么活\"从口号变成一个个具体的小日子，由他自己定义，不由社会时钟定义",
+              "当他开始自然而然地允许自己时，指认这个变化——新的活法已经在身体里了"
+            ],
+            "dont": [
+              "催促他做大的改变（辞职、创业、卖房）——活法是长出来的，不是决定的",
+              "把他偶尔的享受立刻升华成\"觉醒\"或\"重生\"，拔高会让小事失重",
+              "在他为享受花钱后，引导他复盘值不值——反刍是旧脚本，不帮它续命",
+              "替他定义\"好的下半场\"应该是什么样子"
+            ]
+          },
+          "advance_when": [
+            "他在没有产出的时间里，愧疚感变淡了或者来了能走了——不再需要用忙碌证明这一天没白过",
+            "他花钱为自己享受时，能带着意识而不是偷感——事后不反刍，也不向谁交代",
+            "他能用自己的话描述后半场想过成的样子，并且开始有与之匹配的小日常，而不只是\"想换个活法\"的念头"
+          ],
+          "ritual": "下半场开场白——写一句给十年后自己的话，说明你想让他看见的、今天的你",
+          "skippable": true,
+          "topics": [
+            "allowing",
+            "inner-turmoil"
+          ],
+          "body": "走到这里，你已经看见了旧剧本，松动过价值等式，也在关系里开过口了。最后一段，不是新的冲刺，而是把日子换一种过法。\n\n中年最难的，往往不是挣不到钱，而是不敢停下来用它：休息时觉得愧疚，享受时像在偷，钱留着防身，日子过着熬着。匮乏感最狡猾的地方是——它让你拥有一切，却不让你拥有此刻。\n\n这一段的练习都很小：一段没用处的时间，一笔纯粹的享受，一件只因高兴而做的事。你会发现，允许自己，不等于放纵；恰恰相反，能安心享受的人，对钱反而更有分寸，因为恐惧松了，选择才真的属于你。\n\n下半场不是上半场的续集。它属于那些终于敢对自己说\"我值得\"的人。愿你把钱过成日子的注脚，而不是日子的主人。"
+        }
+      ]
+    },
+    "book-mubvxgl6": {
+      "en": [
+        {
+          "id": 1,
+          "file": "1.md",
+          "title": "Pause",
+          "goal": "See how you've been rushing outward, seeking outward, rarely truly turning back to look at yourself",
+          "weeks": 3,
+          "exercises": [
+            "Pick one small thing today you'd rather not admit to, and say to yourself, \"This is me\"",
+            "Before bed, jot down in three sentences one moment today that made you uncomfortable",
+            "Before doing something, pause for ten seconds and ask yourself, \"What am I rushing toward right now?\""
+          ],
+          "ai_stance": {
+            "do": [
+              "Hold space for their self-criticism — translate \"I'm not good enough\" into \"I see you\"",
+              "Reflect back, in their own words, what they're busy coping with, and help them lift their head out of the busyness, just once",
+              "Let them be vague — being able to pause at all is progress in this stage"
+            ],
+            "dont": [
+              "Don't give advice or assign changes — this stage is only about seeing, together",
+              "Don't judge their busyness or avoidance",
+              "Don't rush to explain why they're this way — let them find their own clues first"
+            ]
+          },
+          "advance_when": [
+            "They can name their habitual coping style and recognize it as a pattern, not just a temper",
+            "They form their own stance toward \"always being busy,\" rather than just describing how busy they are again",
+            "They're willing to turn their gaze from tasks back to themselves — even if only admitting, \"I rarely look at myself\""
+          ],
+          "ritual": "Write one line of permission to pause, addressed to today's you",
+          "skippable": true,
+          "topics": [
+            "self-worth",
+            "inner-turmoil"
+          ],
+          "body": "Have you noticed how rarely you stop? One thing after another, you fill yourself up with busyness, as if the moment you paused, something would catch up with you. Yet that vague tiredness, that quiet resentment in your heart — it never disappears once the busy work is done. Life, in the end, comes down to one thing: seeing yourself clearly. Not fixing yourself, not scolding yourself — simply seeing first. In this stage, we're in no hurry to change anything. There's only one thing to do: slow down, and look back at what you've been doing, hiding from, and waiting for. Those uncomfortable moments aren't problems — they're clues. You don't need to figure it all out right away. You only need to dare to take one look. Seeing it is already the beginning."
+        },
+        {
+          "id": 2,
+          "file": "2.md",
+          "title": "The Mirror",
+          "goal": "See that the relationships and emotions that hurt you are mostly mirrors reflecting yourself",
+          "weeks": 3,
+          "exercises": [
+            "Pick a recent situation that made you angry and ask yourself, \"Where did this touch a nerve in me?\"",
+            "Write, in your heart, one sentence you've never said aloud to someone difficult",
+            "When you catch yourself blaming someone again, silently add, \"What part of this is mine to own?\""
+          ],
+          "ai_stance": {
+            "do": [
+              "When they complain about others, never dismiss their feelings — then gently turn the lens back toward them",
+              "Reflect patterns with phrases like \"What I'm hearing might be…\" and leave the interpretation to them",
+              "Help them sort out \"my business\" from \"other people's business\""
+            ],
+            "dont": [
+              "Don't say things like \"you should reflect on yourself,\" which can turn into self-attack",
+              "Don't judge their parents, partner, or colleagues",
+              "Don't push toward attribution while their emotions are running high"
+            ]
+          },
+          "advance_when": [
+            "They can recognize, within something painful, the part that belongs to them",
+            "They gain a new understanding of a recurring conflict, rather than repeating the same grievance",
+            "They're willing to acknowledge an unflattering version of themselves in the mirror — and can be a little gentler toward it"
+          ],
+          "ritual": "Silently say to someone difficult, \"Thank you for showing me myself\"",
+          "skippable": true,
+          "topics": [
+            "parents",
+            "boundaries",
+            "inner-turmoil"
+          ],
+          "body": "The people who hurt you are often the most accurate mirrors. The person who always irritates you, the one you keep trying to please, the old story you thought was long behind you — they're all still reflecting some corner of you. Looking in the mirror is not confessing to a crime. Many people hear \"look inward\" and immediately start blaming themselves, feeling like everything is their fault. That isn't looking in a mirror — that's hitting yourself with one. What you'll practice here is something different: seeing without attacking. Seeing where you're afraid, where you long to be validated, where you're handling new relationships with old tools. Many of the scripts still running in you today were learned years ago. They aren't wrong — they're expired. Seeing them clearly is the first step toward letting them retire."
+        },
+        {
+          "id": 3,
+          "file": "3.md",
+          "title": "Learning to Own It",
+          "goal": "Practice admitting your part in specific situations, growing strength from ownership instead of shame",
+          "weeks": 4,
+          "exercises": [
+            "For one small thing you've refused to own, silently say in full, \"I had a part in this\"",
+            "Choose someone safe and genuinely say out loud, \"I'm sorry, that was on me\"",
+            "Each time you want to defend yourself, first ask yourself, \"What am I afraid will happen if I admit it?\""
+          ],
+          "ai_stance": {
+            "do": [
+              "Distinguish \"true ownership\" from \"self-attacking apology\" — the first gives strength, the second makes someone smaller",
+              "After they own something, point out what they've become willing to carry, rather than lingering in guilt",
+              "Start small together — only own what's ownable"
+            ],
+            "dont": [
+              "Don't push them to own mistakes too big to carry, and don't decide for them whom to apologize to",
+              "Don't turn owning up into a moral demand",
+              "Don't tie their self-worth to their mistakes — admitting fault doesn't mean you're bad"
+            ]
+          },
+          "advance_when": [
+            "After owning something, they feel relief and lightness rather than heavier self-loathing",
+            "They can name their responsibility in specific situations, instead of staying with vague \"it's all my fault\"",
+            "Their stance softens, even once, toward the thing they were most afraid of having pointed out"
+          ],
+          "ritual": "Write down one small thing you've refused to own. When you're done, close the notebook — don't destroy it, don't reread it",
+          "skippable": true,
+          "topics": [
+            "self-worth",
+            "inner-turmoil"
+          ],
+          "body": "The phrase \"owning your mistakes\" might sting a little. Because in your experience, admitting fault meant getting scolded, meant bowing your head, meant \"you're not good enough.\" So you learned to argue, to shift the blame outward, to tough it out. But have you noticed — the less willing you are to admit something, the heavier it gets? True ownership isn't pressing yourself down; it's setting down what's been weighing on your heart. The moment you admit it, you might panic, might feel terrible about yourself — but afterward, you actually stand more steady. Because you no longer have to strain to guard that \"I'm fine.\" In this stage we start with very small mistakes; we won't touch what you can't carry yet. What you're here to experience isn't guilt — it's the exhale of letting go."
+        },
+        {
+          "id": 4,
+          "file": "4.md",
+          "title": "Living Well for Yourself",
+          "goal": "Bring the seeing from earlier stages into daily life — practice allowing yourself to receive good things and live with ease",
+          "weeks": 4,
+          "exercises": [
+            "Today, accept something good someone offers you — just say \"thank you,\" and don't push it away",
+            "Set aside a small stretch of time each day to do nothing at all, and let yourself simply be",
+            "Spend money once on something that's purely joyful — no guilt before or after"
+          ],
+          "ai_stance": {
+            "do": [
+              "Gently name it when they deflect, self-blame, or catch a whiff of unworthiness — and pause there with them",
+              "Bring \"living well\" down to small, concrete things, not grand transformations",
+              "When they do occasionally allow themselves something, solemnly acknowledge what that means"
+            ],
+            "dont": [
+              "Don't turn enjoyment into a new task or metric",
+              "Don't rush them when they say \"I still can't do it\"",
+              "Don't give any spending or saving advice — money isn't the point"
+            ]
+          },
+          "advance_when": [
+            "They begin accepting good things without immediately looking for a way to pay them back",
+            "They can allow themselves enjoyment and rest without needing to repeatedly talk themselves into it",
+            "They can feel, in everyday moments, that \"the way I'm living is worthy\" — even if only for an instant"
+          ],
+          "ritual": "Each night, note one small thing you allowed yourself today — no matter how small",
+          "skippable": true,
+          "free_alt": "Every exercise can be done without spending money: accepting a hug, a compliment, or a moment alone all count as allowing yourself",
+          "topics": [
+            "allowing",
+            "self-worth"
+          ],
+          "body": "You've been seeing, mirroring, and owning — now comes the step most easily skipped: allowing yourself to live well. You may have already sensed it: seeing yourself isn't the hard part. What's hard is, after seeing, allowing yourself to be treated well. When someone is kind to you, your instinct is to wave it away; when it's your turn to enjoy something, a voice inside says \"not yet deserved.\" We've met that voice now. We recognize it. And you don't have to obey it anymore. Living well for yourself isn't selfish, and it isn't a reward you must earn — it's the way you were meant to live all along. This stage has no grand moves, only small things: accepting a compliment, leaving some blank space, allowing one unnecessary splurge and one purchase without guilt. Little by little, replace \"I don't deserve it\" with \"I'm allowed.\" Life has only one thing, and in the end it comes down to this: live well for yourself."
+        }
+      ],
+      "zh-CN": [
+        {
+          "id": 1,
+          "file": "1.md",
+          "title": "停下来",
+          "goal": "看见自己一直在向外忙、向外求，很少真正回头看过自己",
+          "weeks": 3,
+          "exercises": [
+            "今天挑一件你不想承认的小事，在心里说一遍「这是我」",
+            "睡前用三句话记下今天让你不舒服的一个瞬间",
+            "做一件事之前先停十秒，问自己「我此刻在急什么」"
+          ],
+          "ai_stance": {
+            "do": [
+              "接住用户对自己的挑剔，把「我不够好」翻译成「我看见了」",
+              "用用户自己的原话反映他正忙着应付什么，帮他从忙碌里抬一次头",
+              "允许他说不清楚——能停下来就已经是这一段的进展"
+            ],
+            "dont": [
+              "不给建议、不布置改变，这一段只陪他看见",
+              "不评判他的忙碌或逃避",
+              "不急着解释他为什么这样，先让他自己摸到线索"
+            ]
+          },
+          "advance_when": [
+            "他能说出自己惯常的应对方式，并且认出它是模式而不只是脾气",
+            "他对「总是在忙」有了一次自己的态度，而不是重复描述有多忙",
+            "他愿意把目光从事情转回自己身上，哪怕只是承认「我很少看自己」"
+          ],
+          "ritual": "写一句给今天的自己的停下来的话",
+          "skippable": true,
+          "topics": [
+            "self-worth",
+            "inner-turmoil"
+          ],
+          "body": "你有没有发现，你很少停下来？事情一件接一件，你用忙碌把自己填得满满当当，好像一停就会被什么追上。可是你心里那股说不清的累和不甘，从来没有因为忙完就消失过。人生这件事，说到底只有一件：看清楚自己。不是改自己，不是骂自己，是先看见。这一段我们不着急改变任何东西。你要做的只有一件事——慢下来，回头看看自己一直在做什么、在躲什么、在等什么。那些让你不舒服的瞬间，不是麻烦，是线索。你不需要马上想通，只需要敢看一眼。看见，就已经是开始了。"
+        },
+        {
+          "id": 2,
+          "file": "2.md",
+          "title": "照镜子",
+          "goal": "看见让你难受的关系和情绪，大多是照见自己的镜子",
+          "weeks": 3,
+          "exercises": [
+            "挑一个最近让你生气的场景，问自己「这件事戳到了我哪里」",
+            "给一位难相处的人在心里写一句你从来没说出口的话",
+            "发现自己又在怪别人时，在心里补一句「我自己可以负什么责」"
+          ],
+          "ai_stance": {
+            "do": [
+              "在用户抱怨他人时，不否定他的感受，再轻轻把镜头转回他自己",
+              "用「我听到的可能」句式反映模式，把解释权留给用户",
+              "陪他分清「我的课题」和「别人的课题」"
+            ],
+            "dont": [
+              "不说「你该反思自己」这类会变成自我攻击的话",
+              "不评判他的父母、伴侣、同事",
+              "不在他情绪激烈时推进归因"
+            ]
+          },
+          "advance_when": [
+            "他能在一件让你难受的事里，认出属于自己的那一部分",
+            "他对某个反复出现的人际冲突有了新的理解，而不只是重复委屈",
+            "他愿意承认镜子里那个不讨喜的自己，还能对它温和一点"
+          ],
+          "ritual": "在心里对一位难相处的人说「谢谢你照见了我」",
+          "skippable": true,
+          "topics": [
+            "parents",
+            "boundaries",
+            "inner-turmoil"
+          ],
+          "body": "让你难受的人，往往是最准的镜子。那个总让你恼火的人、那个你一直在讨好的人、那个你以为早就过去了的旧事——它们都还在照出你身上的某个角落。照镜子不是认罪。很多人一听到「向内看」就开始自责，觉得自己什么都是错，那不是照镜子，那是对着镜子打自己。这一段你要练习的是另一件事：不带攻击地看。看见自己哪里怕了、哪里想被认可、哪里在用旧的方式应付新的关系。你身上很多今天还在运行的脚本，是很多年前就学会的。不是它们错了，是它们过期了。照见它，是让它退休的第一步。"
+        },
+        {
+          "id": 3,
+          "file": "3.md",
+          "title": "学认错",
+          "goal": "在具体的事上练习承认自己的问题，从认错里长出力量而不是羞耻",
+          "weeks": 4,
+          "exercises": [
+            "对一件你一直不肯认的小事，在心里完整地说一遍「这件事我有责任」",
+            "挑一个安全的人，真的说出一句「对不起，这件事是我的问题」",
+            "每次想辩解时，先在心里问「我怕认了之后会怎样」"
+          ],
+          "ai_stance": {
+            "do": [
+              "分清「真实的认错」和「自我攻击的认错」，前者让人有力量，后者让人更小",
+              "在用户说完认错之后，指出他因此愿意承担了什么，而不停留在愧疚",
+              "陪他从小事开始，认得起的错才认"
+            ],
+            "dont": [
+              "不逼他认「认不起」的大错，也不替他决定该向谁道歉",
+              "不把认错变成道德要求",
+              "不让他把自我价值和错误挂钩——认错不等于你不好"
+            ]
+          },
+          "advance_when": [
+            "他认错后感到的是松和轻，而不是更重的自我厌恶",
+            "他能在具体的事上说出自己的责任，而不停留在「都怪我」这种笼统的认",
+            "他对曾经最怕被指出的那个点，态度松动了一次"
+          ],
+          "ritual": "写一件自己一直不肯认的小事，写完合上，不销毁也不重读",
+          "skippable": true,
+          "topics": [
+            "self-worth",
+            "inner-turmoil"
+          ],
+          "body": "认错这个词，你听着可能有点刺。因为在你的经验里，认错往往意味着挨骂、意味着低头、意味着「你不行」。所以你学会了辩解，学会了把责任往外挪，学会了硬撑。可你有没有发现，越是不敢认，那个错就越沉。真正的认错不是把自己按下去，是把压在心里的东西放下来。认的那一刻你可能会慌，会觉得自己很糟——但认完之后，你反而站得更稳。因为不再需要用力守着那个「我没问题」了。这一段我们从很小的错开始练，不碰你扛不动的。你要体验的不是愧疚，是放下的那口气。"
+        },
+        {
+          "id": 4,
+          "file": "4.md",
+          "title": "把自己活好",
+          "goal": "把前几段的看见落进日常，练习允许自己接受好处、活出松弛",
+          "weeks": 4,
+          "exercises": [
+            "今天主动接受一样别人给你的好处，只说「谢谢」不再推辞",
+            "每天留一小段什么都不做的时间，允许自己就这样待着",
+            "花一次让自己纯粹开心的钱，事前事后都不自责"
+          ],
+          "ai_stance": {
+            "do": [
+              "在用户推辞、自责、不配得感冒头时，温和地指出来并陪他停住",
+              "把「活好」落到具体的小事上，不谈宏大改变",
+              "在他偶尔允许了自己之后，郑重地确认这件事的分量"
+            ],
+            "dont": [
+              "不把享受变成新的任务和指标",
+              "不在他说「我还做不到」时催促他",
+              "不给任何消费或省钱建议，花不花钱不是重点"
+            ]
+          },
+          "advance_when": [
+            "他开始能接受好处而不立刻找机会还回去",
+            "他对自己的享受和休息，能容许了，而不需要反复说服自己",
+            "他能在日常小事里体验到「我这样活着是值得的」，哪怕只是一瞬间"
+          ],
+          "ritual": "每晚记下今天允许了自己的一件小事，多小都算",
+          "skippable": true,
+          "free_alt": "所有练习都可以不花钱完成：接受一个拥抱、一次称赞、一段独处，都算允许自己",
+          "topics": [
+            "allowing",
+            "self-worth"
+          ],
+          "body": "前面你一直在看见、在照镜子、在认错——现在轮到最容易被跳过的一步了：允许自己过得好。你可能已经隐约发现，看见自己不难，难的是看完了之后，允许自己被好好对待。别人对你好，你下意识想推掉；轮到自己享受，你心里有个声音说「还不够格」。那个声音我们见过它了，认得它了，现在不必再听它的。把自己活好不是自私，也不是奖励后的犒劳——它是你本来就该有的活法。这一段没有大动作，只有很小的事：接受一句夸奖，留一段空白，允许一次不必要的心动和一次不为自责买单的花钱。一点一点，把「我不配」换成「我可以」。人生只有一件事，最后落下来就是这一句：把自己活好。"
+        }
+      ]
+    },
     "money-freedom": {
       "en": [
         {
@@ -329,6 +971,2290 @@
     }
   },
   "daily": {
+    "book-mubuqodp": {
+      "en": [],
+      "zh-CN": []
+    },
+    "book-mubvxgl6": {
+      "en": [
+        {
+          "text": "You're not worthless—you've just gotten used to proving your worth through a price tag.",
+          "type": "observation",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "When was the last time you felt undeserving, and in what situation?",
+          "topics": [
+            "self-worth",
+            "money-safety"
+          ]
+        },
+        {
+          "text": "The money you saved up doesn't necessarily make you feel safer.",
+          "type": "observation",
+          "stages": [
+            1
+          ],
+          "reflection": "Has there been a time when saving money actually made your heart tighten more?",
+          "topics": [
+            "money-safety",
+            "inner-turmoil"
+          ]
+        },
+        {
+          "text": "The needs you can't voice around money often turn into swallowed resentment.",
+          "type": "observation",
+          "stages": [
+            2,
+            3
+          ],
+          "reflection": "Which act of giving do you secretly wish had been noticed?",
+          "topics": [
+            "boundaries",
+            "self-worth"
+          ]
+        },
+        {
+          "text": "Today, try spending a little money on yourself, just because you want to.",
+          "type": "practice",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "How do your body and heart feel differently before and after spending?",
+          "topics": [
+            "allowing",
+            "self-worth"
+          ]
+        },
+        {
+          "text": "Money is a tool for your life, not a scorecard for your worth.",
+          "type": "way",
+          "stages": [
+            2,
+            3
+          ],
+          "reflection": "If you stopped measuring yourself by income, what would you let go of first?",
+          "topics": [
+            "self-worth",
+            "money-safety"
+          ]
+        },
+        {
+          "text": "The way you cling to your savings balance looks like guarding something that could never save your life.",
+          "type": "observation",
+          "stages": [
+            1
+          ],
+          "reflection": "When you see your balance fluctuate, what's the first thought that comes to you?",
+          "topics": [
+            "money-safety",
+            "inner-turmoil"
+          ]
+        },
+        {
+          "text": "Write down what you're worried about today, then mark which parts are imagined.",
+          "type": "practice",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "After writing it all down, how much has the weight of the worry changed?",
+          "topics": [
+            "inner-turmoil",
+            "money-safety"
+          ]
+        },
+        {
+          "text": "What you can't bring yourself to spend is often not the money, but the permission to give yourself.",
+          "type": "observation",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "The last time you hesitated for a long time over a purchase, what was holding you back?",
+          "topics": [
+            "allowing",
+            "self-worth"
+          ]
+        },
+        {
+          "text": "Allowing yourself to rest is also a way of spending money.",
+          "type": "way",
+          "stages": [
+            2,
+            3
+          ],
+          "reflection": "Which forms of rest could you actually afford completely?",
+          "topics": [
+            "allowing",
+            "inner-turmoil"
+          ]
+        },
+        {
+          "text": "The tone your family used when talking about money still lives in your body today.",
+          "type": "observation",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "When your family talked about money, what was your body's first reaction?",
+          "topics": [
+            "parents",
+            "inner-turmoil"
+          ]
+        },
+        {
+          "text": "Today, observe one small expense without judging it or recording it.",
+          "type": "practice",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "When spending without judgment, what did you notice?",
+          "topics": [
+            "inner-turmoil",
+            "allowing"
+          ]
+        },
+        {
+          "text": "Talking about money doesn't hurt relationships—hiding it does.",
+          "type": "way",
+          "stages": [
+            2,
+            3
+          ],
+          "reflection": "In which relationship are you most afraid of bringing money out into the open?",
+          "topics": [
+            "boundaries"
+          ]
+        },
+        {
+          "text": "Inside your over-giving there's often a hidden receipt, meant to be exchanged for approval.",
+          "type": "observation",
+          "stages": [
+            2,
+            3
+          ],
+          "reflection": "The last time you reluctantly said yes to someone, what were you thinking in that moment?",
+          "topics": [
+            "boundaries",
+            "self-worth"
+          ]
+        },
+        {
+          "text": "Try saying no to one small request, and see if the relationship actually collapses.",
+          "type": "practice",
+          "stages": [
+            2,
+            3
+          ],
+          "reflection": "After saying no, how far apart were your fear and reality?",
+          "topics": [
+            "boundaries"
+          ]
+        },
+        {
+          "text": "When you push away good things offered to you, you're pushing away goodness that belongs to you.",
+          "type": "observation",
+          "stages": [
+            2
+          ],
+          "reflection": "The last time someone treated you generously, what was your first reaction?",
+          "topics": [
+            "allowing",
+            "self-worth"
+          ]
+        },
+        {
+          "text": "Buy yourself something that needs no justification—even just this once.",
+          "type": "practice",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "When you got it, what was the first sentence that rose up inside you?",
+          "topics": [
+            "allowing",
+            "self-worth"
+          ]
+        },
+        {
+          "text": "Catastrophic math can never be calculated, because it assumes the worst from the very start.",
+          "type": "observation",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "That worst-case picture in your mind—how often has it actually come true?",
+          "topics": [
+            "inner-turmoil",
+            "money-safety"
+          ]
+        },
+        {
+          "text": "Spreading money matters out on paper is often far lighter than letting them churn in your head.",
+          "type": "way",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "After writing it down, which worry became smaller?",
+          "topics": [
+            "inner-turmoil"
+          ]
+        },
+        {
+          "text": "What your parents couldn't give you doesn't mean you don't deserve to have it.",
+          "type": "observation",
+          "stages": [
+            2,
+            3
+          ],
+          "reflection": "Which longings have you never dared to voice since childhood?",
+          "topics": [
+            "parents",
+            "self-worth"
+          ]
+        },
+        {
+          "text": "Write your parents one sentence you've never said out loud—no need to send it.",
+          "type": "practice",
+          "stages": [
+            2,
+            3
+          ],
+          "reflection": "After writing it, how does your chest feel?",
+          "topics": [
+            "parents"
+          ]
+        },
+        {
+          "text": "Earning money is hard, that's true—but you don't owe the world your exhaustion.",
+          "type": "way",
+          "stages": [
+            2,
+            3
+          ],
+          "reflection": "Is there a moment today when you could simply not try?",
+          "topics": [
+            "allowing",
+            "self-worth"
+          ]
+        },
+        {
+          "text": "Your control over money is really a way of soothing a frightened child inside.",
+          "type": "observation",
+          "stages": [
+            2,
+            3
+          ],
+          "reflection": "Which spending rule of yours was actually set long, long ago?",
+          "topics": [
+            "money-safety",
+            "parents"
+          ]
+        },
+        {
+          "text": "Today, record every urge to spend—don't act on them, just note them.",
+          "type": "practice",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "Behind these urges, is there a shared emotion?",
+          "topics": [
+            "inner-turmoil"
+          ]
+        },
+        {
+          "text": "The way you talk to yourself about money shapes your relationship with money.",
+          "type": "observation",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "What words do you usually use to describe your money?",
+          "topics": [
+            "self-worth",
+            "inner-turmoil"
+          ]
+        },
+        {
+          "text": "Treat enjoyment as part of your necessities, not a leftover balance saved for rewards.",
+          "type": "way",
+          "stages": [
+            2,
+            3
+          ],
+          "reflection": "Which enjoyments have you been holding back on, never quite letting yourself have?",
+          "topics": [
+            "allowing"
+          ]
+        },
+        {
+          "text": "The people you envy often simply gave themselves permission first.",
+          "type": "observation",
+          "stages": [
+            2,
+            3
+          ],
+          "reflection": "That ease you envy—where exactly is the looseness in it?",
+          "topics": [
+            "self-worth",
+            "allowing"
+          ]
+        },
+        {
+          "text": "Count how much you spent on others this month, and how much you spent on yourself.",
+          "type": "practice",
+          "stages": [
+            2,
+            3
+          ],
+          "reflection": "When you see that ratio, what's your first feeling?",
+          "topics": [
+            "boundaries",
+            "allowing"
+          ]
+        },
+        {
+          "text": "When what's missing isn't money, no amount of spending can fill the gap.",
+          "type": "observation",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "After your most recent purchase, was that emptiness still there?",
+          "topics": [
+            "inner-turmoil",
+            "self-worth"
+          ]
+        },
+        {
+          "text": "Money comes and goes—the place where you remain is the place that needs your care.",
+          "type": "way",
+          "stages": [
+            3,
+            4
+          ],
+          "reflection": "Through money's ups and downs, what makes you feel steady?",
+          "topics": [
+            "money-safety",
+            "allowing"
+          ]
+        },
+        {
+          "text": "Who you are today has more choices than who you were back then.",
+          "type": "observation",
+          "stages": [
+            3,
+            4
+          ],
+          "reflection": "Which old money decision could you remake right now?",
+          "topics": [
+            "self-worth",
+            "allowing"
+          ]
+        },
+        {
+          "text": "The weight money holds in your heart is often heavier than what it actually does for you.",
+          "type": "observation",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "When money comes to mind, what's the very first feeling that arises?",
+          "topics": [
+            "money-safety",
+            "inner-turmoil"
+          ]
+        },
+        {
+          "text": "You wait for a moment when you've 'earned it' to treat yourself well, but that moment never quite arrives.",
+          "type": "observation",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "What 'I can only enjoy this once I'm good enough' condition have you set for yourself?",
+          "topics": [
+            "self-worth",
+            "allowing"
+          ]
+        },
+        {
+          "text": "Living your days well should come before becoming a better version of yourself, not after.",
+          "type": "way",
+          "stages": [
+            2,
+            3
+          ],
+          "reflection": "If you decided to live today well, how would you spend it?",
+          "topics": [
+            "allowing",
+            "self-worth"
+          ]
+        },
+        {
+          "text": "The savings you don't dare touch protect more than money — they protect a version of you that can't let go.",
+          "type": "observation",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "What imagined catastrophe does that untouchable fund shield you from?",
+          "topics": [
+            "money-safety",
+            "inner-turmoil"
+          ]
+        },
+        {
+          "text": "Today, notice one conversation you have with money — how does it sound in your head?",
+          "type": "practice",
+          "stages": [
+            1
+          ],
+          "reflection": "How many times did money appear in your mind today, and in what tone?",
+          "topics": [
+            "inner-turmoil",
+            "money-safety"
+          ]
+        },
+        {
+          "text": "People who've been the responsible one for too long often forget they deserve to be treated too.",
+          "type": "observation",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "When someone last spent money on you, what was your first reaction?",
+          "topics": [
+            "self-worth",
+            "allowing"
+          ]
+        },
+        {
+          "text": "You don't need to become a better person first before you deserve what you want right now.",
+          "type": "observation",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "What makes you feel like 'it's not allowed yet'?",
+          "topics": [
+            "self-worth",
+            "allowing"
+          ]
+        },
+        {
+          "text": "Money anxiety is loudest not when you have the least, but often when you have enough.",
+          "type": "observation",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "When do you most often think about money? What are you doing in those moments?",
+          "topics": [
+            "inner-turmoil",
+            "money-safety"
+          ]
+        },
+        {
+          "text": "Today, pick one small pleasure you've been putting off 'until later' — and move it to today.",
+          "type": "practice",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "When exactly is that 'later'? And who decided?",
+          "topics": [
+            "allowing",
+            "self-worth"
+          ]
+        },
+        {
+          "text": "When your relationship with your parents loosens even an inch, the tension you feel when spending money eases a little too.",
+          "type": "observation",
+          "stages": [
+            2
+          ],
+          "reflection": "What kind of tension around money reminds you of someone in your family?",
+          "topics": [
+            "parents",
+            "money-safety"
+          ]
+        },
+        {
+          "text": "You can feel tenderness for your past self instead of continuing to force them to scrimp.",
+          "type": "way",
+          "stages": [
+            2
+          ],
+          "reflection": "If that child from back then stood in front of you now, what would you want to say?",
+          "topics": [
+            "parents",
+            "self-worth"
+          ]
+        },
+        {
+          "text": "The security you scrape so hard to save is sometimes really about 'never being judged'.",
+          "type": "observation",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "How much money would let you finally breathe easy? Where did that number come from?",
+          "topics": [
+            "money-safety",
+            "self-worth"
+          ]
+        },
+        {
+          "text": "Where your money goes today is where your heart is.",
+          "type": "observation",
+          "stages": [
+            1,
+            2,
+            3
+          ],
+          "reflection": "Your biggest expense this month — what do you care about that it leads to?",
+          "topics": [
+            "inner-turmoil",
+            "self-worth"
+          ]
+        },
+        {
+          "text": "Talk with someone you trust about how money has felt lately — share feelings, not numbers.",
+          "type": "practice",
+          "stages": [
+            2,
+            3
+          ],
+          "reflection": "Before you open up, which part of yourself are you afraid they'll judge?",
+          "topics": [
+            "boundaries",
+            "money-safety"
+          ]
+        },
+        {
+          "text": "Money can be a flowing kindness; not every amount needs to be settled to the last cent.",
+          "type": "way",
+          "stages": [
+            3
+          ],
+          "reflection": "The last time you didn't 'settle the score' — what did that leave you with?",
+          "topics": [
+            "boundaries",
+            "allowing"
+          ]
+        },
+        {
+          "text": "The money task you keep putting off usually carries some kind of fear.",
+          "type": "observation",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "With that thing you've been avoiding — are you afraid of doing it, or of what comes after?",
+          "topics": [
+            "money-safety",
+            "inner-turmoil"
+          ]
+        },
+        {
+          "text": "Break one postponed money task into three steps, and do only the first step.",
+          "type": "practice",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "After the first step, did the task feel smaller in your mind?",
+          "topics": [
+            "inner-turmoil",
+            "money-safety"
+          ]
+        },
+        {
+          "text": "Allowing uncertainty around money is a harder — and greater — skill than gripping tightly.",
+          "type": "way",
+          "stages": [
+            2,
+            3
+          ],
+          "reflection": "If you allowed a little uncertainty, what would you loosen your grip on first?",
+          "topics": [
+            "money-safety",
+            "allowing"
+          ]
+        },
+        {
+          "text": "You're generous with others and harsh with yourself — that gap didn't come from nowhere.",
+          "type": "observation",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "Compare your last kindness to yourself with your last to someone else — how wide was the gap?",
+          "topics": [
+            "self-worth",
+            "parents"
+          ]
+        },
+        {
+          "text": "Today, write down one small thing that proves 'I am worthy' — it doesn't have to involve money.",
+          "type": "practice",
+          "stages": [
+            1
+          ],
+          "reflection": "As you wrote it, did you believe it fully, or did you discount it a little?",
+          "topics": [
+            "self-worth"
+          ]
+        },
+        {
+          "text": "Real confidence isn't in your balance — it's in daring to live at your own pace.",
+          "type": "observation",
+          "stages": [
+            2,
+            3
+          ],
+          "reflection": "When have you felt that kind of confidence? What was your life like then?",
+          "topics": [
+            "self-worth",
+            "allowing"
+          ]
+        },
+        {
+          "text": "Other people's opinions of you shouldn't be the only basis for what you decide you're worth.",
+          "type": "observation",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "Whose words lately have quietly shifted how you value yourself?",
+          "topics": [
+            "self-worth",
+            "boundaries"
+          ]
+        },
+        {
+          "text": "Today, spend some money on your health or rest — the kind you'd normally hesitate over.",
+          "type": "practice",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "At the moment you paid, did it hurt because of the money, or because of being good to yourself?",
+          "topics": [
+            "allowing",
+            "self-worth"
+          ]
+        },
+        {
+          "text": "For someone who feels anxious no matter how much they earn, the missing thing was never a number.",
+          "type": "observation",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "How much would you need to earn before you'd let yourself feel at peace?",
+          "topics": [
+            "money-safety",
+            "inner-turmoil"
+          ]
+        },
+        {
+          "text": "Take the time you'd spend comparing, and use it for one small thing that makes you happy.",
+          "type": "practice",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "In those few minutes without comparing, where did your attention go?",
+          "topics": [
+            "inner-turmoil",
+            "self-worth"
+          ]
+        },
+        {
+          "text": "Ease isn't giving up — it's finally no longer using money to prove anything.",
+          "type": "way",
+          "stages": [
+            2,
+            3
+          ],
+          "reflection": "If you had nothing to prove to anyone, what kind of life would you most want?",
+          "topics": [
+            "self-worth",
+            "allowing"
+          ]
+        },
+        {
+          "text": "The money worries you carry for your family can actually be shared, a little at a time.",
+          "type": "observation",
+          "stages": [
+            2
+          ],
+          "reflection": "Among your family's money worries, which ones were never yours to carry alone?",
+          "topics": [
+            "parents",
+            "boundaries"
+          ]
+        },
+        {
+          "text": "Tonight before sleep, recall one purchase that was truly worth it — just savor its goodness.",
+          "type": "practice",
+          "stages": [
+            1,
+            2,
+            3
+          ],
+          "reflection": "As you savored it, where in your body did you feel yourself relax first?",
+          "topics": [
+            "allowing",
+            "inner-turmoil"
+          ]
+        },
+        {
+          "text": "In relationships where you truly connect, money shouldn't be off-limits to talk about.",
+          "type": "observation",
+          "stages": [
+            2,
+            3
+          ],
+          "reflection": "Who do you most wish you could talk to about money, but haven't yet?",
+          "topics": [
+            "boundaries",
+            "parents"
+          ]
+        },
+        {
+          "text": "Take it slow — your relationship with money is a lifelong one, and it can't be rushed.",
+          "type": "way",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "Looking back to today, where has your relationship with money already loosened?",
+          "topics": [
+            "inner-turmoil",
+            "allowing"
+          ]
+        },
+        {
+          "text": "Much of the harshness you hold toward yourself was actually learned somewhere else.",
+          "type": "observation",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "The self-criticism that plays most often in your mind—whose voice was it first?",
+          "topics": [
+            "self-worth",
+            "parents"
+          ]
+        },
+        {
+          "text": "The anxiety money can solve is often only the smallest layer of the anxiety.",
+          "type": "observation",
+          "stages": [
+            1
+          ],
+          "reflection": "Last time you thought 'just a little more savings and I'll feel safe'—how long did that safety actually last?",
+          "topics": [
+            "money-safety",
+            "inner-turmoil"
+          ]
+        },
+        {
+          "text": "The relationship where you're afraid to talk about money is often the one that tires you most.",
+          "type": "observation",
+          "stages": [
+            2
+          ],
+          "reflection": "When you avoid the topic of money, what else are you avoiding in that relationship?",
+          "topics": [
+            "boundaries"
+          ]
+        },
+        {
+          "text": "That guilt you feel when resting has been deceiving you for a long time.",
+          "type": "observation",
+          "stages": [
+            2
+          ],
+          "reflection": "When you stop and pause, what's the first thought that comes up?",
+          "topics": [
+            "allowing",
+            "self-worth"
+          ]
+        },
+        {
+          "text": "Today, allow yourself one moment of 'solving nothing.'",
+          "type": "practice",
+          "stages": [
+            2,
+            3
+          ],
+          "reflection": "During that stretch of doing nothing, what shifts in your body and your thoughts?",
+          "topics": [
+            "allowing",
+            "inner-turmoil"
+          ]
+        },
+        {
+          "text": "Saying 'I need' out loud is far lighter than letting grievances pile up inside.",
+          "type": "way",
+          "stages": [
+            2
+          ],
+          "reflection": "Which long-unspoken need can you finally see clearly right now?",
+          "topics": [
+            "boundaries",
+            "self-worth"
+          ]
+        },
+        {
+          "text": "Your impatience with money is often just money being impatient with you first.",
+          "type": "observation",
+          "stages": [
+            1
+          ],
+          "reflection": "When did you start believing money was a problem you had to fix quickly?",
+          "topics": [
+            "inner-turmoil",
+            "money-safety"
+          ]
+        },
+        {
+          "text": "Today, spend five minutes simply looking at your money, without judging.",
+          "type": "practice",
+          "stages": [
+            1
+          ],
+          "reflection": "When you just look at the numbers without judging, what's the first feeling that rises?",
+          "topics": [
+            "money-safety",
+            "inner-turmoil"
+          ]
+        },
+        {
+          "text": "No one taught you as a child that money could be easy—but that doesn't mean you can't learn it now.",
+          "type": "observation",
+          "stages": [
+            2
+          ],
+          "reflection": "If money had been easy to talk about in your home, what would those dinner tables have looked like?",
+          "topics": [
+            "parents",
+            "money-safety"
+          ]
+        },
+        {
+          "text": "Every sum of money you cling to carries a reason you're afraid to let go.",
+          "type": "observation",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "The money you're most reluctant to touch—what is it guarding for you?",
+          "topics": [
+            "money-safety",
+            "parents"
+          ]
+        },
+        {
+          "text": "The awkwardness you feel when accepting kindness is where practicing generosity begins.",
+          "type": "way",
+          "stages": [
+            2,
+            3
+          ],
+          "reflection": "The last time someone was good to you, what unfamiliarity was hidden in your first reaction?",
+          "topics": [
+            "allowing",
+            "self-worth"
+          ]
+        },
+        {
+          "text": "Your spending list is really an emotional diary.",
+          "type": "observation",
+          "stages": [
+            1
+          ],
+          "reflection": "Looking over your recent purchases, which emotion shows up most often?",
+          "topics": [
+            "inner-turmoil"
+          ]
+        },
+        {
+          "text": "Today, do one small thing purely for joy, not for any use.",
+          "type": "practice",
+          "stages": [
+            2,
+            3
+          ],
+          "reflection": "When you do something 'useless but joyful,' where does your resistance come from?",
+          "topics": [
+            "allowing",
+            "self-worth"
+          ]
+        },
+        {
+          "text": "The poverty your parents passed down may not be about money—it's often that posture of not daring to ask.",
+          "type": "observation",
+          "stages": [
+            2
+          ],
+          "reflection": "Which household catchphrase still shapes the way you ask for things today?",
+          "topics": [
+            "parents",
+            "self-worth"
+          ]
+        },
+        {
+          "text": "Accounts can be settled precisely; people don't need to be.",
+          "type": "way",
+          "stages": [
+            3
+          ],
+          "reflection": "In which relationship do you keep the strictest accounts? How precise do you need it to be before you feel safe?",
+          "topics": [
+            "boundaries",
+            "money-safety"
+          ]
+        },
+        {
+          "text": "Most of what you worry about never happens, yet the interest you pay on it accrues daily.",
+          "type": "observation",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "This month, how much energy have you spent on imagined bad outcomes?",
+          "topics": [
+            "inner-turmoil",
+            "money-safety"
+          ]
+        },
+        {
+          "text": "Money spent on your body is the first thing you cut—and the first thing you regret.",
+          "type": "observation",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "When was the last time you shortchanged your body to save money?",
+          "topics": [
+            "allowing",
+            "self-worth"
+          ]
+        },
+        {
+          "text": "Today, leave something you want to buy in the shopping cart for twenty-four hours.",
+          "type": "practice",
+          "stages": [
+            1
+          ],
+          "reflection": "Looking at it again a day later, how has your wanting of it changed?",
+          "topics": [
+            "inner-turmoil",
+            "allowing"
+          ]
+        },
+        {
+          "text": "Your perfectionism about money might just be fear of starting.",
+          "type": "observation",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "What exactly are you afraid of ruining, that keeps you from getting started with money?",
+          "topics": [
+            "money-safety",
+            "self-worth"
+          ]
+        },
+        {
+          "text": "A boundary isn't pushing people away—it's what lets you stay in the relationship.",
+          "type": "way",
+          "stages": [
+            2,
+            3
+          ],
+          "reflection": "In which relationship have you pushed yourself too hard for too long, until you're nearly drained?",
+          "topics": [
+            "boundaries"
+          ]
+        },
+        {
+          "text": "The person you envy is also living a life you don't need to live.",
+          "type": "observation",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "After the envy fades, what small part of it do you actually want?",
+          "topics": [
+            "self-worth",
+            "inner-turmoil"
+          ]
+        },
+        {
+          "text": "Today, sincerely thank someone who has helped you—and let the weight of it land.",
+          "type": "practice",
+          "stages": [
+            2
+          ],
+          "reflection": "After saying thank you, how does the feeling moving through your body differ from usual?",
+          "topics": [
+            "allowing",
+            "boundaries"
+          ]
+        },
+        {
+          "text": "Once you start facing money matters, they're never as frightening as you imagined.",
+          "type": "observation",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "Think of one money matter you've already faced—how much of its weight remains?",
+          "topics": [
+            "money-safety",
+            "inner-turmoil"
+          ]
+        },
+        {
+          "text": "You're not tense because you lack money; you're so tense you can't see that you don't actually lack it.",
+          "type": "observation",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "Set aside the word 'not enough'—what do you actually have right now?",
+          "topics": [
+            "money-safety",
+            "inner-turmoil"
+          ]
+        },
+        {
+          "text": "Your love for your parents doesn't need to be proven by depleting yourself.",
+          "type": "way",
+          "stages": [
+            2
+          ],
+          "reflection": "If you had nothing to prove, how would you naturally treat your parents?",
+          "topics": [
+            "parents",
+            "boundaries"
+          ]
+        },
+        {
+          "text": "The level of enjoyment you allow yourself is often lower than what you can actually bear.",
+          "type": "observation",
+          "stages": [
+            2,
+            3
+          ],
+          "reflection": "Given your current means, what kind of enjoyment could you actually afford?",
+          "topics": [
+            "allowing",
+            "self-worth"
+          ]
+        },
+        {
+          "text": "Today, notice how it feels after saying 'no' once.",
+          "type": "practice",
+          "stages": [
+            2
+          ],
+          "reflection": "The unease that follows a refusal—how long does it usually last, and what does it look like?",
+          "topics": [
+            "boundaries",
+            "self-worth"
+          ]
+        },
+        {
+          "text": "Wealth compounds in your mood first.",
+          "type": "way",
+          "stages": [
+            3
+          ],
+          "reflection": "When your mood loosens, what changes follow in how you act and how you spend?",
+          "topics": [
+            "money-safety",
+            "allowing"
+          ]
+        },
+        {
+          "text": "Every meal you skimped on in the past is recorded in a ledger that was never settled.",
+          "type": "observation",
+          "stages": [
+            2
+          ],
+          "reflection": "That old ledger of how you shortchanged yourself—how do you want to begin turning its pages?",
+          "topics": [
+            "parents",
+            "self-worth"
+          ]
+        },
+        {
+          "text": "At the end of today, find one moment that cost no money yet made you feel rich.",
+          "type": "practice",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "In that moment, what made you feel 'this is enough'?",
+          "topics": [
+            "allowing",
+            "money-safety"
+          ]
+        }
+      ],
+      "zh-CN": [
+        {
+          "text": "你不是没有价值，你只是习惯用价格来证明它。",
+          "type": "observation",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "最近一次感到不配，是在什么场合？",
+          "topics": [
+            "self-worth",
+            "money-safety"
+          ]
+        },
+        {
+          "text": "省下来的那笔钱，未必让你更安心。",
+          "type": "observation",
+          "stages": [
+            1
+          ],
+          "reflection": "有没有一次省钱后，心里反而更紧了？",
+          "topics": [
+            "money-safety",
+            "inner-turmoil"
+          ]
+        },
+        {
+          "text": "对钱说不出口的需求，常常变成憋着的委屈。",
+          "type": "observation",
+          "stages": [
+            2,
+            3
+          ],
+          "reflection": "哪一笔付出，你其实希望被看见？",
+          "topics": [
+            "boundaries",
+            "self-worth"
+          ]
+        },
+        {
+          "text": "今天试着为自己花一小笔钱，只是因为想要。",
+          "type": "practice",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "花钱前后，身体和心里的感觉有什么不同？",
+          "topics": [
+            "allowing",
+            "self-worth"
+          ]
+        },
+        {
+          "text": "钱是你生活的工具，不是你人生的评分表。",
+          "type": "way",
+          "stages": [
+            2,
+            3
+          ],
+          "reflection": "如果不用收入衡量自己，你会先松开什么？",
+          "topics": [
+            "self-worth",
+            "money-safety"
+          ]
+        },
+        {
+          "text": "你紧盯着存款数字的样子，像在守一样救不了命的东西。",
+          "type": "observation",
+          "stages": [
+            1
+          ],
+          "reflection": "看到余额波动时，你最先想到什么？",
+          "topics": [
+            "money-safety",
+            "inner-turmoil"
+          ]
+        },
+        {
+          "text": "把今天担心的事写下来，再标出哪部分是想象。",
+          "type": "practice",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "写完之后，担心的重量变了多少？",
+          "topics": [
+            "inner-turmoil",
+            "money-safety"
+          ]
+        },
+        {
+          "text": "你舍不得花的，往往不是钱，是那份对自己的许可。",
+          "type": "observation",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "上一次犹豫很久的购买，卡住你的是什么？",
+          "topics": [
+            "allowing",
+            "self-worth"
+          ]
+        },
+        {
+          "text": "允许自己休息，也是一种花钱的方式。",
+          "type": "way",
+          "stages": [
+            2,
+            3
+          ],
+          "reflection": "哪些休息方式，你其实完全付得起？",
+          "topics": [
+            "allowing",
+            "inner-turmoil"
+          ]
+        },
+        {
+          "text": "小时候家里谈钱的语气，现在还留在你身体里。",
+          "type": "observation",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "家人谈钱时，你的身体第一反应是什么？",
+          "topics": [
+            "parents",
+            "inner-turmoil"
+          ]
+        },
+        {
+          "text": "今天对一件小开销不评价、不记账，只观察。",
+          "type": "practice",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "不做评价地花钱，你注意到了什么？",
+          "topics": [
+            "inner-turmoil",
+            "allowing"
+          ]
+        },
+        {
+          "text": "谈钱不伤感情，藏着掖着才伤。",
+          "type": "way",
+          "stages": [
+            2,
+            3
+          ],
+          "reflection": "哪段关系里，你最怕把钱说开？",
+          "topics": [
+            "boundaries"
+          ]
+        },
+        {
+          "text": "你的过度付出里，常常藏着一张换认可的收据。",
+          "type": "observation",
+          "stages": [
+            2,
+            3
+          ],
+          "reflection": "最近一次勉强答应别人，你当时在想什么？",
+          "topics": [
+            "boundaries",
+            "self-worth"
+          ]
+        },
+        {
+          "text": "试着拒绝一个小请求，看看关系有没有塌。",
+          "type": "practice",
+          "stages": [
+            2,
+            3
+          ],
+          "reflection": "说完不之后，你的担心和现实差多远？",
+          "topics": [
+            "boundaries"
+          ]
+        },
+        {
+          "text": "你收到好东西时的推辞，是在推走一份属于你的好。",
+          "type": "observation",
+          "stages": [
+            2
+          ],
+          "reflection": "上一次被慷慨对待，你的第一反应是什么？",
+          "topics": [
+            "allowing",
+            "self-worth"
+          ]
+        },
+        {
+          "text": "给自己买一件不需要理由的东西，只此一次也无妨。",
+          "type": "practice",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "拿到它的时候，你心里冒出的第一句话是什么？",
+          "topics": [
+            "allowing",
+            "self-worth"
+          ]
+        },
+        {
+          "text": "灾难化的账，永远算不清，因为它本来就假设了最坏。",
+          "type": "observation",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "最坏的那个画面，多久真实出现过一次？",
+          "topics": [
+            "inner-turmoil",
+            "money-safety"
+          ]
+        },
+        {
+          "text": "把钱的事摊开在纸上，常常比在心里翻滚轻得多。",
+          "type": "way",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "写下来之后，哪条担心变小了？",
+          "topics": [
+            "inner-turmoil"
+          ]
+        },
+        {
+          "text": "父母没给你的，不代表你不配拥有。",
+          "type": "observation",
+          "stages": [
+            2,
+            3
+          ],
+          "reflection": "哪些想要，你从小就不敢开口？",
+          "topics": [
+            "parents",
+            "self-worth"
+          ]
+        },
+        {
+          "text": "给父母写一句没说出口的话，不用寄出。",
+          "type": "practice",
+          "stages": [
+            2,
+            3
+          ],
+          "reflection": "写完之后，胸口是什么感觉？",
+          "topics": [
+            "parents"
+          ]
+        },
+        {
+          "text": "赚钱辛苦是真的，但你不欠这个世界一个疲惫。",
+          "type": "way",
+          "stages": [
+            2,
+            3
+          ],
+          "reflection": "今天有没有一个瞬间，可以不努力？",
+          "topics": [
+            "allowing",
+            "self-worth"
+          ]
+        },
+        {
+          "text": "你对钱的控制，其实是在安抚一个害怕的小孩。",
+          "type": "observation",
+          "stages": [
+            2,
+            3
+          ],
+          "reflection": "哪条花钱规矩，其实是很久以前定的？",
+          "topics": [
+            "money-safety",
+            "parents"
+          ]
+        },
+        {
+          "text": "今天记录每次想花钱的冲动，不用执行，只记录。",
+          "type": "practice",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "这些冲动背后，有没有共同的情绪？",
+          "topics": [
+            "inner-turmoil"
+          ]
+        },
+        {
+          "text": "你和自己谈钱的方式，决定了你和钱的关系。",
+          "type": "observation",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "你常用什么词形容自己的钱？",
+          "topics": [
+            "self-worth",
+            "inner-turmoil"
+          ]
+        },
+        {
+          "text": "把享受当作必需品的一部分，而不是奖励的余额。",
+          "type": "way",
+          "stages": [
+            2,
+            3
+          ],
+          "reflection": "哪些享受，你一直攒着没舍得？",
+          "topics": [
+            "allowing"
+          ]
+        },
+        {
+          "text": "你羡慕的那些人，往往只是先允许了自己。",
+          "type": "observation",
+          "stages": [
+            2,
+            3
+          ],
+          "reflection": "你羡慕的那份松，具体松在哪里？",
+          "topics": [
+            "self-worth",
+            "allowing"
+          ]
+        },
+        {
+          "text": "数一数这个月你为别人花了多少，又为自己花了多少。",
+          "type": "practice",
+          "stages": [
+            2,
+            3
+          ],
+          "reflection": "看到这个比例时，你的第一感受是什么？",
+          "topics": [
+            "boundaries",
+            "allowing"
+          ]
+        },
+        {
+          "text": "缺的不是钱的时候，花再多钱也填不上。",
+          "type": "observation",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "最近一次购物后，那个空缺还在吗？",
+          "topics": [
+            "inner-turmoil",
+            "self-worth"
+          ]
+        },
+        {
+          "text": "钱来钱去，你始终在的那个位置，才是要照顾的地方。",
+          "type": "way",
+          "stages": [
+            3,
+            4
+          ],
+          "reflection": "钱起落之间，是什么让你觉得稳？",
+          "topics": [
+            "money-safety",
+            "allowing"
+          ]
+        },
+        {
+          "text": "今天的你，已经比当年的你，有更多选择。",
+          "type": "observation",
+          "stages": [
+            3,
+            4
+          ],
+          "reflection": "哪个和钱有关的旧决定，你现在可以重新做？",
+          "topics": [
+            "self-worth",
+            "allowing"
+          ]
+        },
+        {
+          "text": "钱在你心里的分量，常常重过它实际的用途。",
+          "type": "observation",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "想到钱时，你心里的第一感受是什么？",
+          "topics": [
+            "money-safety",
+            "inner-turmoil"
+          ]
+        },
+        {
+          "text": "你等一个'配得上'的时刻才对自己好，那个时刻总不来。",
+          "type": "observation",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "你给自己定过什么'够好了才能享受'的条件？",
+          "topics": [
+            "self-worth",
+            "allowing"
+          ]
+        },
+        {
+          "text": "把日子过好这件事，本身就该排在'变得更好'前面。",
+          "type": "way",
+          "stages": [
+            2,
+            3
+          ],
+          "reflection": "如果今天就过好这一天，你会怎么安排？",
+          "topics": [
+            "allowing",
+            "self-worth"
+          ]
+        },
+        {
+          "text": "你不敢动的储蓄，护住的不只是钱，还有一个不敢松的自己。",
+          "type": "observation",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "那笔'打死不动'的钱，替你挡住了什么想象？",
+          "topics": [
+            "money-safety",
+            "inner-turmoil"
+          ]
+        },
+        {
+          "text": "今天留意一次你和钱的对话，它在心里是怎么被念出来的。",
+          "type": "practice",
+          "stages": [
+            1
+          ],
+          "reflection": "一整天里，钱在你心里出现过几次、以什么口吻？",
+          "topics": [
+            "inner-turmoil",
+            "money-safety"
+          ]
+        },
+        {
+          "text": "懂事太久的人，常常忘了自己也值得被请客。",
+          "type": "observation",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "上一次别人为你花钱，你的第一反应是什么？",
+          "topics": [
+            "self-worth",
+            "allowing"
+          ]
+        },
+        {
+          "text": "你不必先变成更好的人，才配拥有现在想要的东西。",
+          "type": "observation",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "是什么让你觉得'现在还不行'？",
+          "topics": [
+            "self-worth",
+            "allowing"
+          ]
+        },
+        {
+          "text": "金钱焦虑最吵的时候，往往不是最缺的时候。",
+          "type": "observation",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "你什么时候最常想起钱？那时你在做什么？",
+          "topics": [
+            "inner-turmoil",
+            "money-safety"
+          ]
+        },
+        {
+          "text": "今天挑一件一直'等以后'的小享受，把它挪到今天。",
+          "type": "practice",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "那个'以后'具体是什么时候？谁规定的？",
+          "topics": [
+            "allowing",
+            "self-worth"
+          ]
+        },
+        {
+          "text": "和父母的关系松一寸，你花钱时的紧就少一分。",
+          "type": "observation",
+          "stages": [
+            2
+          ],
+          "reflection": "你花钱时哪种紧，让你想起家里的某个人？",
+          "topics": [
+            "parents",
+            "money-safety"
+          ]
+        },
+        {
+          "text": "你可以心疼过去的自己，而不是继续逼他省。",
+          "type": "way",
+          "stages": [
+            2
+          ],
+          "reflection": "如果当年那个孩子站在面前，你想对他说什么？",
+          "topics": [
+            "parents",
+            "self-worth"
+          ]
+        },
+        {
+          "text": "你拼命攒的安全感，有时攒的是'不被否定'。",
+          "type": "observation",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "多少钱会让你觉得终于能松一口气？这个数字怎么来的？",
+          "topics": [
+            "money-safety",
+            "self-worth"
+          ]
+        },
+        {
+          "text": "今天的每一笔钱花在哪里，你的心就在哪里。",
+          "type": "observation",
+          "stages": [
+            1,
+            2,
+            3
+          ],
+          "reflection": "这个月最大的那笔支出，通向你在乎的什么？",
+          "topics": [
+            "inner-turmoil",
+            "self-worth"
+          ]
+        },
+        {
+          "text": "找一位信任的人聊聊你最近的金钱状态，只说感受不说数字。",
+          "type": "practice",
+          "stages": [
+            2,
+            3
+          ],
+          "reflection": "开口之前，你担心对方怎么看你的哪一部分？",
+          "topics": [
+            "boundaries",
+            "money-safety"
+          ]
+        },
+        {
+          "text": "钱可以是流动的善意，不必每一笔都算清。",
+          "type": "way",
+          "stages": [
+            3
+          ],
+          "reflection": "最近一笔'没算清'的钱，给你留下的是什么？",
+          "topics": [
+            "boundaries",
+            "allowing"
+          ]
+        },
+        {
+          "text": "你拖延不做的那件钱的事，多半带着某种怕。",
+          "type": "observation",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "那件拖着的事，你怕的是做，还是做之后的结果？",
+          "topics": [
+            "money-safety",
+            "inner-turmoil"
+          ]
+        },
+        {
+          "text": "把一件拖着没办的钱事拆成三步，只做第一步。",
+          "type": "practice",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "第一步做完后，那件事在你心里变小了吗？",
+          "topics": [
+            "inner-turmoil",
+            "money-safety"
+          ]
+        },
+        {
+          "text": "允许钱上有不确定，是比攥紧更难也更大的本事。",
+          "type": "way",
+          "stages": [
+            2,
+            3
+          ],
+          "reflection": "如果允许一点不确定，你会先松开什么？",
+          "topics": [
+            "money-safety",
+            "allowing"
+          ]
+        },
+        {
+          "text": "你对别人大方、对自己苛刻，这个剪刀差是有来处的。",
+          "type": "observation",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "你上一次对自己和上一次对别人，标准差了多少？",
+          "topics": [
+            "self-worth",
+            "parents"
+          ]
+        },
+        {
+          "text": "今天记录一件'我值得'的小事，与钱无关也行。",
+          "type": "practice",
+          "stages": [
+            1
+          ],
+          "reflection": "写下它时，你心里是信的，还是打了个折扣？",
+          "topics": [
+            "self-worth"
+          ]
+        },
+        {
+          "text": "一个人真正的底气，不在余额里，在他敢按自己的节奏活。",
+          "type": "observation",
+          "stages": [
+            2,
+            3
+          ],
+          "reflection": "你什么时候体验过这种底气？那时你在过什么日子？",
+          "topics": [
+            "self-worth",
+            "allowing"
+          ]
+        },
+        {
+          "text": "别人对你的评价，不该是你给自己定价的唯一依据。",
+          "type": "observation",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "最近哪句别人的话，悄悄改了你的自我估价？",
+          "topics": [
+            "self-worth",
+            "boundaries"
+          ]
+        },
+        {
+          "text": "今天为健康或休息花一笔平时舍不得的钱。",
+          "type": "practice",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "掏钱那一刻，你心疼的是钱，还是'对自己好'这件事？",
+          "topics": [
+            "allowing",
+            "self-worth"
+          ]
+        },
+        {
+          "text": "赚多少都不安的人，缺的从来不是数字。",
+          "type": "observation",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "你觉得要赚到多少，才有资格安心？",
+          "topics": [
+            "money-safety",
+            "inner-turmoil"
+          ]
+        },
+        {
+          "text": "把比较的时间拿来做一件让自己高兴的小事。",
+          "type": "practice",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "放下比较的那几分钟，你的注意力去了哪里？",
+          "topics": [
+            "inner-turmoil",
+            "self-worth"
+          ]
+        },
+        {
+          "text": "松弛不是躺平，是你终于不再用钱证明什么。",
+          "type": "way",
+          "stages": [
+            2,
+            3
+          ],
+          "reflection": "不用向谁证明时，你最想过怎样的日子？",
+          "topics": [
+            "self-worth",
+            "allowing"
+          ]
+        },
+        {
+          "text": "你替家人扛的那部分钱的心事，其实可以分一些出去。",
+          "type": "observation",
+          "stages": [
+            2
+          ],
+          "reflection": "家里的钱心事里，哪些本来不该你一个人扛？",
+          "topics": [
+            "parents",
+            "boundaries"
+          ]
+        },
+        {
+          "text": "今天睡前回想一笔花得值的钱，只回味它的好。",
+          "type": "practice",
+          "stages": [
+            1,
+            2,
+            3
+          ],
+          "reflection": "回味时，身体哪里先松了下来？",
+          "topics": [
+            "allowing",
+            "inner-turmoil"
+          ]
+        },
+        {
+          "text": "和你聊得来的关系里，钱的话题不该是禁区。",
+          "type": "observation",
+          "stages": [
+            2,
+            3
+          ],
+          "reflection": "你最想和谁谈钱，又一直没开口？",
+          "topics": [
+            "boundaries",
+            "parents"
+          ]
+        },
+        {
+          "text": "慢慢来，你和钱的关系是一辈子的事，急不来。",
+          "type": "way",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "走到今天，你和钱之间已经松动了哪里？",
+          "topics": [
+            "inner-turmoil",
+            "allowing"
+          ]
+        },
+        {
+          "text": "你对自己的很多苛刻，其实是从别处学来的。",
+          "type": "observation",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "你脑海里那句最常响起的自我批评，最早是谁的声音？",
+          "topics": [
+            "self-worth",
+            "parents"
+          ]
+        },
+        {
+          "text": "钱能解决的焦虑，往往只是焦虑里最小的一层。",
+          "type": "observation",
+          "stages": [
+            1
+          ],
+          "reflection": "上次以为'再攒一点就安心'，后来那种安心持续了多久？",
+          "topics": [
+            "money-safety",
+            "inner-turmoil"
+          ]
+        },
+        {
+          "text": "你不敢谈钱的那段关系，常常也最让你累。",
+          "type": "observation",
+          "stages": [
+            2
+          ],
+          "reflection": "避开钱的话题时，你们的关系里还避开了什么？",
+          "topics": [
+            "boundaries"
+          ]
+        },
+        {
+          "text": "休息时的那种愧疚感，骗了你很久。",
+          "type": "observation",
+          "stages": [
+            2
+          ],
+          "reflection": "你停下来的时候，心里最先冒出的念头是什么？",
+          "topics": [
+            "allowing",
+            "self-worth"
+          ]
+        },
+        {
+          "text": "今天允许自己有一个'什么都不解决'的时刻。",
+          "type": "practice",
+          "stages": [
+            2,
+            3
+          ],
+          "reflection": "在那段什么都不做的时间里，你身体和念头的变化是什么？",
+          "topics": [
+            "allowing",
+            "inner-turmoil"
+          ]
+        },
+        {
+          "text": "把'我需要'说出口，比在心里攒委屈轻得多。",
+          "type": "way",
+          "stages": [
+            2
+          ],
+          "reflection": "哪一句一直没说出口的需要，此刻你已经能看见它了？",
+          "topics": [
+            "boundaries",
+            "self-worth"
+          ]
+        },
+        {
+          "text": "你对钱的不耐烦，常是它先对你不耐烦的。",
+          "type": "observation",
+          "stages": [
+            1
+          ],
+          "reflection": "什么时候你开始觉得，钱是必须赶紧搞定的问题？",
+          "topics": [
+            "inner-turmoil",
+            "money-safety"
+          ]
+        },
+        {
+          "text": "今天花五分钟，只是看着自己的钱，不去评判。",
+          "type": "practice",
+          "stages": [
+            1
+          ],
+          "reflection": "只看着数字不评判时，心里升起的第一个感受是什么？",
+          "topics": [
+            "money-safety",
+            "inner-turmoil"
+          ]
+        },
+        {
+          "text": "小时候没人告诉你钱可以轻松，不代表你学不会。",
+          "type": "observation",
+          "stages": [
+            2
+          ],
+          "reflection": "如果钱在你家是可以轻松谈的，那时的餐桌会是什么样？",
+          "topics": [
+            "parents",
+            "money-safety"
+          ]
+        },
+        {
+          "text": "你紧握的每一笔钱，都带着一个不敢放手的理由。",
+          "type": "observation",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "你最舍不得动的那笔钱，替你守着什么？",
+          "topics": [
+            "money-safety",
+            "parents"
+          ]
+        },
+        {
+          "text": "接受一份好处时的别扭，是练习慷慨的开始。",
+          "type": "way",
+          "stages": [
+            2,
+            3
+          ],
+          "reflection": "上一次别人对你好，你的第一反应里藏着怎样的不习惯？",
+          "topics": [
+            "allowing",
+            "self-worth"
+          ]
+        },
+        {
+          "text": "你的消费清单，其实是一张情绪日记。",
+          "type": "observation",
+          "stages": [
+            1
+          ],
+          "reflection": "翻看最近的几笔消费，哪种情绪出现的频率最高？",
+          "topics": [
+            "inner-turmoil"
+          ]
+        },
+        {
+          "text": "今天做一件纯粹为了高兴、不为有用的小事。",
+          "type": "practice",
+          "stages": [
+            2,
+            3
+          ],
+          "reflection": "做'没用却高兴'的事时，你给自己的阻力来自哪里？",
+          "topics": [
+            "allowing",
+            "self-worth"
+          ]
+        },
+        {
+          "text": "父母给的穷，未必是钱，常常是那种不敢要的姿势。",
+          "type": "observation",
+          "stages": [
+            2
+          ],
+          "reflection": "家里的哪句口头禅，至今还在影响你要东西时的姿态？",
+          "topics": [
+            "parents",
+            "self-worth"
+          ]
+        },
+        {
+          "text": "账可以算清，人不必算清。",
+          "type": "way",
+          "stages": [
+            3
+          ],
+          "reflection": "你在哪段关系里算得最细？细到什么程度才觉得安全？",
+          "topics": [
+            "boundaries",
+            "money-safety"
+          ]
+        },
+        {
+          "text": "你担心的事大多不会发生，但你为它付的利息每天都在。",
+          "type": "observation",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "这个月你在想象中的坏结果上，花了多少心力？",
+          "topics": [
+            "inner-turmoil",
+            "money-safety"
+          ]
+        },
+        {
+          "text": "给身体花的钱，是你最先省掉、也最先后悔的一笔。",
+          "type": "observation",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "最近一次为了省钱而委屈身体，是什么时候？",
+          "topics": [
+            "allowing",
+            "self-worth"
+          ]
+        },
+        {
+          "text": "今天把一件想买的东西在购物车里放满二十四小时。",
+          "type": "practice",
+          "stages": [
+            1
+          ],
+          "reflection": "隔了一天再看它，你想要它的心情发生了什么变化？",
+          "topics": [
+            "inner-turmoil",
+            "allowing"
+          ]
+        },
+        {
+          "text": "你在钱上的完美主义，可能只是不敢开始。",
+          "type": "observation",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "你迟迟不开始打理钱，怕弄砸的到底是什么？",
+          "topics": [
+            "money-safety",
+            "self-worth"
+          ]
+        },
+        {
+          "text": "边界不是推开人，是让你还能继续待在关系里。",
+          "type": "way",
+          "stages": [
+            2,
+            3
+          ],
+          "reflection": "哪段关系里，你勉强自己太久、已经有些耗尽了？",
+          "topics": [
+            "boundaries"
+          ]
+        },
+        {
+          "text": "你羡慕的人，也在过你不需要过的人生。",
+          "type": "observation",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "羡慕过后，你真正想要的那一小部分是什么？",
+          "topics": [
+            "self-worth",
+            "inner-turmoil"
+          ]
+        },
+        {
+          "text": "今天对一位帮过你的人，认真说一句谢谢并收下它的重量。",
+          "type": "practice",
+          "stages": [
+            2
+          ],
+          "reflection": "说出谢谢之后，你身体里流动的感觉和平时有什么不同？",
+          "topics": [
+            "allowing",
+            "boundaries"
+          ]
+        },
+        {
+          "text": "钱的事一旦开始面对，就没有你以为的那么可怕。",
+          "type": "observation",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "回想一件你已经面对了的钱事，它现在的重量还剩多少？",
+          "topics": [
+            "money-safety",
+            "inner-turmoil"
+          ]
+        },
+        {
+          "text": "你不是缺钱才紧张，你紧张到看不出自己其实不缺。",
+          "type": "observation",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "放下'不够'这个词，你现在实际拥有的会是什么？",
+          "topics": [
+            "money-safety",
+            "inner-turmoil"
+          ]
+        },
+        {
+          "text": "给父母的爱不必用透支自己来证明。",
+          "type": "way",
+          "stages": [
+            2
+          ],
+          "reflection": "如果不必证明什么，你会怎样自然地对待父母？",
+          "topics": [
+            "parents",
+            "boundaries"
+          ]
+        },
+        {
+          "text": "你允许自己享受的程度，往往低于你实际的承受力。",
+          "type": "observation",
+          "stages": [
+            2,
+            3
+          ],
+          "reflection": "按现在的能力，你其实可以承担怎样的享受？",
+          "topics": [
+            "allowing",
+            "self-worth"
+          ]
+        },
+        {
+          "text": "今天留意一次说'不'之后的感觉。",
+          "type": "practice",
+          "stages": [
+            2
+          ],
+          "reflection": "拒绝之后的那份不安，通常持续多久、长什么样子？",
+          "topics": [
+            "boundaries",
+            "self-worth"
+          ]
+        },
+        {
+          "text": "财富的复利，先在心情上发生。",
+          "type": "way",
+          "stages": [
+            3
+          ],
+          "reflection": "当你的心情变松了，做事和用钱的选择跟着变了什么？",
+          "topics": [
+            "money-safety",
+            "allowing"
+          ]
+        },
+        {
+          "text": "你替过去省下的每一顿，都记在一本没清算过的账上。",
+          "type": "observation",
+          "stages": [
+            2
+          ],
+          "reflection": "那本关于亏待自己的旧账，你想怎么开始翻页？",
+          "topics": [
+            "parents",
+            "self-worth"
+          ]
+        },
+        {
+          "text": "今天结束时，找到一件不为金钱发生、却让你觉得富有的瞬间。",
+          "type": "practice",
+          "stages": [
+            1,
+            2
+          ],
+          "reflection": "那个瞬间里，是什么让你觉得'够了'？",
+          "topics": [
+            "allowing",
+            "money-safety"
+          ]
+        }
+      ]
+    },
     "money-freedom": {
       "en": [
         {
@@ -2381,6 +5307,346 @@
     }
   },
   "lamps": {
+    "book-mubuqodp": {
+      "1": [
+        {
+          "kind": "bookmubuqodp_stage1_spot_the_hand",
+          "topic": "parents",
+          "needsAction": false,
+          "promptHint": "当读者能指认前半生钱模式的具体来历——是哪个场景、哪句话至今在推着他跑，而不只是觉得「很累」时视为到达",
+          "label": {
+            "en": "Naming what has been pushing you",
+            "zh-CN": "指得出推手",
+            "zh-TW": "指得出推手",
+            "ja": "押してくるものを言い当てている"
+          },
+          "hint": {
+            "en": "You can point to the specific scene or sentence that has been driving your money life — not just “I feel tired,” but “that's what's been pushing me”",
+            "zh-CN": "你能指认那个推着自己跑的具体场景或那句话——不是「就是很累」，而是「原来是它在推我」",
+            "zh-TW": "你能指認那個推著自己跑的具體場景或那句話——不是「就是很累」，而是「原來是它在推我」",
+            "ja": "自分のお金の生き方を押し続けてきた具体的な場面や言葉を指し示せること——「ただ疲れた」ではなく、「あれが押していたのか」と"
+          }
+        },
+        {
+          "kind": "bookmubuqodp_stage1_own_stance_on_the_voice",
+          "topic": "self-worth",
+          "needsAction": false,
+          "promptHint": "当读者对那个推着自己跑的旧声音有了自己的态度——确认或修正了一个「我听到的可能」，而不是照单全收或完全麻木时视为到达",
+          "label": {
+            "en": "Taking your own stance toward the old voice",
+            "zh-CN": "对旧声音有了自己的态度",
+            "zh-TW": "對舊聲音有了自己的態度",
+            "ja": "古い声への自分の態度を持てている"
+          },
+          "hint": {
+            "en": "You hold your own stance toward the voice that pushes you — confirming or correcting what you think you've heard, neither swallowing it whole nor going numb",
+            "zh-CN": "你对那个推着自己跑的旧声音有了自己的态度——确认或修正了一个「我听到的可能」，而不是照单全收，也不是麻木听不见",
+            "zh-TW": "你對那個推著自己跑的舊聲音有了自己的態度——確認或修正了一個「我聽到的可能」，而不是照單全收，也不是麻木聽不見",
+            "ja": "自分を押し立てる古い声に対して自分の態度を持てていること——聞いたことの意味を確かめるか、修正するか。呑み込むだけでも、麻痺してもいない"
+          }
+        },
+        {
+          "kind": "bookmubuqodp_stage1_name_the_undercurrent",
+          "topic": "inner-turmoil",
+          "needsAction": false,
+          "promptHint": "当读者承认自己在面对钱和事业时反复泛起的底色感受——怕落后、怕被比下去、怕停——并能把它当作感受说出来，而非复述一次事件时视为到达",
+          "label": {
+            "en": "Admitting the feeling underneath",
+            "zh-CN": "认得底色感受",
+            "zh-TW": "認得底色感受",
+            "ja": "底に流れる気持ちを認めている"
+          },
+          "hint": {
+            "en": "You can name the recurring undercurrent — fear of falling behind, of being compared, of stopping — as a feeling you carry, not a story about one event",
+            "zh-CN": "你能承认并说出面对钱和事业时反复泛起的底色感受——怕落后、怕被比下去、怕停——而不是复述某一次事件",
+            "zh-TW": "你能承認並說出面對錢和事業時反覆泛起的底色感受——怕落後、怕被比下去、怕停——而不是複述某一次事件",
+            "ja": "お金や仕事を前に繰り返し湧く底の気持ち——遅れる怖れ、比べられる怖れ、止まる怖れ——を、一つの出来事の話ではなく自分の感覚として認められること"
+          }
+        }
+      ],
+      "2": [
+        {
+          "kind": "bookmubuqodp_stage2_worth_on_empty_days",
+          "topic": "self-worth",
+          "needsAction": false,
+          "promptHint": "当读者能在没做成任何事的一天里，说出自己并没有因此更差——哪怕只有一次、哪怕半信半疑时视为到达",
+          "label": {
+            "en": "Still whole on a day of nothing",
+            "zh-CN": "没做成事的一天也没更差",
+            "zh-TW": "沒做成事的一天也沒更差",
+            "ja": "何も成せなかった日でも、変わっていないと言える"
+          },
+          "hint": {
+            "en": "On a day when nothing got done, you can say you're not worth less — even just once, even half-believing it",
+            "zh-CN": "在没做成任何事的一天里，你能说出自己并没有因此更差——哪怕只有一次，哪怕半信半疑",
+            "zh-TW": "在沒做成任何事的一天裡，你能說出自己並沒有因此更差——哪怕只有一次，哪怕半信半疑",
+            "ja": "何も成せなかった日に、「だからといって自分は安くなっていない」と言えること——一度でも、半分の信いでも"
+          }
+        },
+        {
+          "kind": "bookmubuqodp_stage2_equation_as_thought",
+          "topic": "self-worth",
+          "needsAction": false,
+          "promptHint": "当读者开始用「我一直以为」的句式谈论自己的价值等式——说明等式从事实松动成了可以被重新看的想法时视为到达",
+          "label": {
+            "en": "The equation has become a thought",
+            "zh-CN": "等式变成了想法",
+            "zh-TW": "等式變成了想法",
+            "ja": "等式が「思い込み」になった"
+          },
+          "hint": {
+            "en": "You can say “I always thought my worth = what I earn and carry” — the equation has loosened from fact into a thought you can look at again",
+            "zh-CN": "你能用「我一直以为」谈论「我的价值=我挣多少、扛多少」——等式从事实松动成了可以重新看的想法",
+            "zh-TW": "你能用「我一直以為」談論「我的價值＝我掙多少、扛多少」——等式從事實鬆動成了可以重新看的想法",
+            "ja": "「ずっとこう思っていた」と、価値の等式（稼いだ額＝自分の価値）を語れること——事実から、見直せる考えへと緩んだ合図"
+          }
+        },
+        {
+          "kind": "bookmubuqodp_stage2_stay_with_not_enough",
+          "topic": "allowing",
+          "needsAction": false,
+          "promptHint": "当读者面对「不配」的感觉时能多停一会儿——不马上用做事把它盖掉，能描述那份停下来的体验时视为到达",
+          "label": {
+            "en": "Staying a moment longer",
+            "zh-CN": "在不配感里多停一会儿",
+            "zh-TW": "在不配感裡多停一會兒",
+            "ja": "「資格がない」感に、少し留まれる"
+          },
+          "hint": {
+            "en": "When the “I don't deserve this” feeling comes, you can stay with it a little longer instead of immediately burying it under more doing",
+            "zh-CN": "「不配」的感觉来时，你能多停一会儿，而不是马上用做事把它盖掉",
+            "zh-TW": "「不配」的感覺來時，你能多停一會兒，而不是馬上用做事把它蓋掉",
+            "ja": "「私には資格がない」という感覚が来たとき、すぐに忙しさで覆い隠さず、少しの間そこに留まれること"
+          }
+        }
+      ],
+      "3": [
+        {
+          "kind": "bookmubuqodp_stage3_finished_sentence_about_money",
+          "topic": "boundaries",
+          "needsAction": true,
+          "promptHint": "当读者在一次真实的钱场景里把话说完整——不管对方反应如何，他知道自己开口了并且站住了（需有真实行为记录）时视为到达",
+          "label": {
+            "en": "Said it and stood there",
+            "zh-CN": "把钱话说完整了",
+            "zh-TW": "把錢話說完整了",
+            "ja": "お金の話を、言い切った"
+          },
+          "hint": {
+            "en": "In a real money conversation, you said your piece in full and held your ground — regardless of how the other person reacted",
+            "zh-CN": "在一次真实的钱场景里，你把话说完整了，并且站住了——不管对方反应如何",
+            "zh-TW": "在一次真實的錢場景裡，你把話說完整了，並且站住了——不管對方反應如何",
+            "ja": "実際のお金の場面で、言いたいことを言い切り、そこに立っていられたこと——相手の反応がどうであれ"
+          }
+        },
+        {
+          "kind": "bookmubuqodp_stage3_tell_giving_apart",
+          "topic": "boundaries",
+          "needsAction": false,
+          "promptHint": "当读者对过度付出有了新分辨力——能具体区分哪些是自己想给的、哪些是在换认可，而非笼统觉得「我对谁都好」时视为到达",
+          "label": {
+            "en": "Telling your giving apart",
+            "zh-CN": "分得清给与换",
+            "zh-TW": "分得清給與換",
+            "ja": "与えることと、引き換えにすることが分けられる"
+          },
+          "hint": {
+            "en": "You can tell apart what you genuinely want to give from what you give to earn approval — instead of a blanket “I'm just good to everyone”",
+            "zh-CN": "你能区分哪些付出是自己真想给的、哪些是在换认可——而不是笼统觉得「我对谁都好」",
+            "zh-TW": "你能區分哪些付出是自己真想給的、哪些是在換認可——而不是籠統覺得「我對誰都好」",
+            "ja": "自分が本当に与えたいものと、承認と引き換えにしているものを区別できること——「誰にでも優しいだけ」では片付けずに"
+          }
+        },
+        {
+          "kind": "bookmubuqodp_stage3_bear_the_discomfort",
+          "topic": "inner-turmoil",
+          "needsAction": false,
+          "promptHint": "当读者被拒绝或对方不高兴时能承受那份不适——没有马上解释、补偿或收回（能描述那份不适如何过去），而非只是假装不在乎时视为到达",
+          "label": {
+            "en": "Letting the discomfort sit",
+            "zh-CN": "接得住那份不适",
+            "zh-TW": "接得住那份不適",
+            "ja": "その居心地の悪さを持ちこたえられる"
+          },
+          "hint": {
+            "en": "When you're refused or someone is unhappy, you can bear the discomfort without rushing to explain, compensate, or take it all back",
+            "zh-CN": "被拒绝或对方不高兴时，你能承受那份不适——不需要马上解释、补偿或收回",
+            "zh-TW": "被拒絕或對方不高興時，你能承受那份不適——不需要馬上解釋、補償或收回",
+            "ja": "断られたり、相手が不機嫌になったりしたとき、すぐに弁明や埋め合わせ、撤回に走らず、その居心地の悪さを持ちこたえられること"
+          }
+        }
+      ]
+    },
+    "book-mubvxgl6": {
+      "1": [
+        {
+          "kind": "bookmubvxgl6_stage1_see_coping_pattern",
+          "topic": "inner-turmoil",
+          "needsAction": false,
+          "promptHint": "当读者能说出自己惯常的应对方式，并认出它是模式而不只是脾气时视为到达——判定的程度是「认出模式」，不是「描述最近一次忙碌」",
+          "label": {
+            "en": "Naming your usual way of coping",
+            "zh-CN": "认得出惯常的应对",
+            "zh-TW": "認得出慣常的應對",
+            "ja": "いつもの自分の対処の仕方がわかっている"
+          },
+          "hint": {
+            "en": "Your usual way of coping with stress is visible to you — you can name it and see it as a pattern, not just a mood",
+            "zh-CN": "你惯常的应对方式你认得出——能说出它是什么，并认出它是模式，而不只是一时的脾气",
+            "zh-TW": "你慣常的應對方式你認得出——能說出它是什麼，並認出它是模式，而不只是一時的脾氣",
+            "ja": "ストレスへのいつもの対処の仕方に気づいている——一時的なイライラではなく、自分の中のパターンとして認められること"
+          }
+        },
+        {
+          "kind": "bookmubvxgl6_stage1_own_attitude_on_busyness",
+          "topic": "self-worth",
+          "needsAction": false,
+          "promptHint": "当读者对「总是在忙」说出了自己的态度时视为到达——有立场（哪怕是矛盾的），不是复述有多忙、多累",
+          "label": {
+            "en": "Holding your own stance on the busyness",
+            "zh-CN": "对「总是忙」有了自己的态度",
+            "zh-TW": "對「總是忙」有了自己的態度",
+            "ja": "「いつも忙しい」への自分の態度を持っている"
+          },
+          "hint": {
+            "en": "About the constant busyness — you hold a stance of your own, instead of just recounting how busy and tired you are",
+            "zh-CN": "关于「总是在忙」，你有了一次自己的态度——而不是又一次复述自己有多忙、多累",
+            "zh-TW": "關於「總是在忙」，你有了一次自己的態度——而不是又一次複述自己有多忙、多累",
+            "ja": "「いつも忙しい」ことについて——どれだけ忙しいかを語るのではなく、自分なりの態度を一度持てていること"
+          }
+        },
+        {
+          "kind": "bookmubvxgl6_stage1_turn_gaze_inward",
+          "topic": "allowing",
+          "needsAction": true,
+          "promptHint": "当读者以真实行为记录承认「我很少看自己」、把目光从事情转回自己身上时视为到达——哪怕是极小的一次回头，动作真实发生才算",
+          "label": {
+            "en": "Turning your gaze back to yourself",
+            "zh-CN": "愿意回头看自己",
+            "zh-TW": "願意回頭看自己",
+            "ja": "ふと自分の方を向き直れている"
+          },
+          "hint": {
+            "en": "Even for a moment — you turn your gaze away from tasks and back to yourself, and can admit “I rarely look at myself”",
+            "zh-CN": "哪怕只是承认一句「我很少看自己」——你真的把目光从事情转回自己身上一次",
+            "zh-TW": "哪怕只是承認一句「我很少看自己」——你真的把目光從事情轉回自己身上一次",
+            "ja": "「自分をほとんど見ていなかった」と認めるだけでも——物事から目を離し、一度自分の方を向き直れたこと"
+          }
+        }
+      ],
+      "2": [
+        {
+          "kind": "bookmubvxgl6_stage2_recognize_own_share",
+          "topic": "boundaries",
+          "needsAction": false,
+          "promptHint": "当读者能在一件难受的事里认出属于自己的那一部分时视为到达——不是全揽责任，也不是只看对方的错，而是分得出「这里有我的一份」",
+          "label": {
+            "en": "Finding your part in the hard moments",
+            "zh-CN": "认得出属于自己的那部分",
+            "zh-TW": "認得出屬於自己的那部分",
+            "ja": "つらい出来事の中の「自分の分」が見えている"
+          },
+          "hint": {
+            "en": "In something that hurt you, you can tell which part belongs to you — not taking all the blame, not only seeing theirs",
+            "zh-CN": "在一件让你难受的事里，你分得出属于自己的那一份——不是全揽过来，也不是只看到对方的错",
+            "zh-TW": "在一件讓你難受的事裡，你分得出屬於自己的那一份——不是全攬過來，也不是只看到對方的錯",
+            "ja": "つらかった出来事の中に、自分に属する部分を見分けられること——全部引き受けるでも、相手だけを責めるでもなく"
+          }
+        },
+        {
+          "kind": "bookmubvxgl6_stage2_reread_recurring_conflict",
+          "topic": "parents",
+          "needsAction": false,
+          "promptHint": "当读者对某个反复出现的人际冲突给出新的理解时视为到达——理解里带着镜子式的看见，不是又一次重复委屈",
+          "label": {
+            "en": "Reading the same conflict differently",
+            "zh-CN": "老冲突有了新读法",
+            "zh-TW": "老衝突有了新讀法",
+            "ja": "同じぶつかり合いの読み方が変わっている"
+          },
+          "hint": {
+            "en": "That conflict that keeps repeating — you have a new way of understanding it, instead of retelling the same grievance",
+            "zh-CN": "那个反复出现的冲突，你对它有了新的理解——而不是又把委屈重复一遍",
+            "zh-TW": "那個反覆出現的衝突，你對它有了新的理解——而不是又把委屈重複一遍",
+            "ja": "繰り返すあの対立について——同じ悔しさを語り直すのではなく、新しい理解が生まれていること"
+          }
+        },
+        {
+          "kind": "bookmubvxgl6_stage2_soften_toward_unlovable_self",
+          "topic": "self-worth",
+          "needsAction": false,
+          "promptHint": "当读者承认镜子里那个不讨喜的自己、且语气对自己温和了一些时视为到达——承认与温和要同时在，只是承认带着厌恶不算",
+          "label": {
+            "en": "Softening toward what you see",
+            "zh-CN": "对不讨喜的自己软下来一点",
+            "zh-TW": "對不討喜的自己軟下來一點",
+            "ja": "見たくない自分に、少しだけ優しくなれている"
+          },
+          "hint": {
+            "en": "You can admit the less likable self in the mirror — and be a little gentler toward it, instead of turning away in disgust",
+            "zh-CN": "你能承认镜子里那个不讨喜的自己——还能对它温和一点，而不是厌恶地扭过头去",
+            "zh-TW": "你能承認鏡子裡那個不討喜的自己——還能對它溫和一點，而不是厭惡地扭過頭去",
+            "ja": "鏡の中の好ましくない自分を認め——嫌悪して目を逸らすのではなく、少しだけ穏やかに接せられていること"
+          }
+        }
+      ],
+      "3": [
+        {
+          "kind": "bookmubvxgl6_stage3_feel_light_after_admitting",
+          "topic": "inner-turmoil",
+          "needsAction": false,
+          "promptHint": "当读者描述认错后的感受是松和轻、而非更重的自我厌恶时视为到达——判定的程度是内在感受的转变，不是认了多少次错",
+          "label": {
+            "en": "Feeling lighter after owning it",
+            "zh-CN": "认完错是松的",
+            "zh-TW": "認完錯是鬆的",
+            "ja": "認めたあと、少し軽くなっている"
+          },
+          "hint": {
+            "en": "After admitting your part, what you feel is release and lightness — not a heavier dose of self-loathing",
+            "zh-CN": "认了自己的那部分之后，你感到的是松和轻——而不是更重的自我厌恶",
+            "zh-TW": "認了自己的那部分之後，你感到的是鬆和輕——而不是更重的自我厭惡",
+            "ja": "自分の部分を認めたあとに感じるのは、ほどける軽さ——重い自己嫌悪ではないこと"
+          }
+        },
+        {
+          "kind": "bookmubvxgl6_stage3_name_specific_responsibility",
+          "topic": "boundaries",
+          "needsAction": false,
+          "promptHint": "当读者能在具体的事上说出自己的责任、具体到行为层面时视为到达——「都怪我」式的笼统认不算到达",
+          "label": {
+            "en": "Saying specifically what was yours",
+            "zh-CN": "说得清具体的那份责任",
+            "zh-TW": "說得清具體的那份責任",
+            "ja": "自分の責任を具体的に言えている"
+          },
+          "hint": {
+            "en": "In a concrete situation, you can name your own responsibility in specifics — beyond a vague “it was all my fault”",
+            "zh-CN": "在具体的事上，你说得出自己的那份责任——而不是停留在「都怪我」这种笼统的认",
+            "zh-TW": "在具體的事上，你說得出自己的那份責任——而不是停留在「都怪我」這種籠統的認",
+            "ja": "具体的な出来事の中で、自分の責任を具体的に言語化できている——「全部自分が悪い」という曖昧な受け止めではなく"
+          }
+        },
+        {
+          "kind": "bookmubvxgl6_stage3_loosen_feared_spot",
+          "topic": "self-worth",
+          "needsAction": true,
+          "promptHint": "当读者以真实行为记录表明：对曾经最怕被指出的那个点，态度松动了一次时视为到达——哪怕只是第一次敢直面它、没有立刻缩回，须有真实记录",
+          "label": {
+            "en": "Letting the feared spot loosen once",
+            "zh-CN": "最怕的那个点松了一次",
+            "zh-TW": "最怕的那個點鬆了一次",
+            "ja": "一番指摘されたくなかった場所が、一度ほぐれている"
+          },
+          "hint": {
+            "en": "The one thing you most feared being called out on — your stance toward it loosened, even just once, and it shows in something you actually did",
+            "zh-CN": "对曾经最怕被指出的那个点，你的态度松动了一次——哪怕只是第一次敢直面它，而且这件事真的发生了",
+            "zh-TW": "對曾經最怕被指出的那個點，你的態度鬆動了一次——哪怕只是第一次敢直面它，而且這件事真的發生了",
+            "ja": "かつて一番指摘されたくなかったあの場所への態度が、一度でもほぐれたこと——初めて直面できただけでもよく、実際の記録として残っていること"
+          }
+        }
+      ]
+    },
     "money-freedom": {
       "1": [
         {
@@ -2702,5 +5968,5 @@
       }
     }
   },
-  "builtAt": "2026-09-21T06:18:35.118Z"
+  "builtAt": "2026-11-13T14:19:39.795Z"
 }
