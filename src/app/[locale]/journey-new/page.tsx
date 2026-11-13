@@ -23,6 +23,7 @@ import { activeBookEntries, activeBookId, getProfile, recordDailySeen } from '@/
 import { getUiVersion } from '@/lib/ui-version';
 import { computeStageProgress } from '@/lib/stage';
 import { getSttProviders } from '@/lib/stt';
+import { lastQuoteBefore } from '@/lib/road';
 import { isVerdictNode } from '@/lib/cognition';
 import { nodeQuestion, returnGapBucket, touchReturnQuery } from '@/lib/touch';
 import { track } from '@/lib/analytics';
@@ -105,6 +106,10 @@ export default async function journeyNewPage({
     ? computeStageProgress(locale, stage, profile, bookId)
     : { checks: [], litCount: 0 };
 
+  // 「你上次留在这里」（P3-4，docs/06 §2.2 昨日回响）：今天之前最近一句他自己的话。
+  // 没有就不渲染（留白不占位）；今天的原话不算"上次"（MirrorCard 已经照过一次）。
+  const lastEcho = profile ? lastQuoteBefore(profile, today) : null;
+
   // 验收打点（与 classic /journey 同口径；A1/U1：此前新版完全不记——邮件拉回的
   // 归因在新版不可测，"触达拉回率"护栏指标只能拿到 classic 一半的数据）。
   const gapBucket = returnGapBucket(profile?.last_active_date, today);
@@ -170,6 +175,14 @@ export default async function journeyNewPage({
           </svg>
         </Link>
       </header>
+
+      {/* 你上次留在这里（P3-4）：最便宜的"被记住"体感——没有引语整个不渲染 */}
+      {lastEcho && (
+        <div data-last-echo className="mb-8 border border-line bg-white/60 p-5">
+          <p className="text-xs tracking-widest text-ink-soft">{dict.journey.lastEchoLead}</p>
+          <p className="mt-2 text-sm leading-relaxed">{lastEcho.text}</p>
+        </div>
+      )}
 
       <NewJourneyView
         locale={locale}

@@ -263,7 +263,8 @@
     "closeMigrateNo": "Not really",
     "closeMigrateKept": "Kept.",
     "closeMigrateUndo": "Undo",
-    "roadLink": "The road you've walked"
+    "roadLink": "The road you've walked",
+    "lastEchoLead": "Where you left off:"
   },
   "topics": {
     "self-worth": "Whether I'm worth it",

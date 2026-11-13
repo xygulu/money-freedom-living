@@ -263,7 +263,8 @@
     "closeMigrateNo": "そうでもない",
     "closeMigrateKept": "残しました。",
     "closeMigrateUndo": "取り消す",
-    "roadLink": "あなたが歩いてきた道"
+    "roadLink": "あなたが歩いてきた道",
+    "lastEchoLead": "この前、ここに残した言葉"
   },
   "topics": {
     "self-worth": "自分にその値打ちがあるか",

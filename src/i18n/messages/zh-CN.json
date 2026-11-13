@@ -263,7 +263,8 @@
     "closeMigrateNo": "不对",
     "closeMigrateKept": "记下了。",
     "closeMigrateUndo": "撤销",
-    "roadLink": "你走过的路"
+    "roadLink": "你走过的路",
+    "lastEchoLead": "你上次留在这里："
   },
   "topics": {
     "self-worth": "我配不配",

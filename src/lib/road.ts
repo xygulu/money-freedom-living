@@ -97,3 +97,42 @@ export function inviteBooksFor(
   const opened = new Set(profile.books.map((b) => b.bookId));
   return getBooks().filter((b) => b.status === 'active' && !opened.has(b.id) && b.topics.includes(topic));
 }
+
+/** 「你上次留在这里」（P3-4，docs/06 §2.2 的昨日回响）：他最近一次留下的原话。 */
+export interface LastQuote {
+  text: string;
+  /** 原话落档时间（UTC ISO）——展示层现在不用它，留给回看页排序/标注用 */
+  at: string;
+  from: 'letter' | 'thread';
+}
+
+/**
+ * 今天之前最近的一句他自己的话（信件 + 命题线原话，时间取最近——与触达 pickEcho
+ * 同一口径："记得住的体感来自近，不来自多"）。今天的原话不算"上次"——提交后
+ * MirrorCard 已经照过一次，再摆就成复读。没有就返回 null：调用方**不渲染**，
+ * 留白不占位（docs/06 §2.2 硬规矩）。纯函数，零 IO。
+ */
+export function lastQuoteBefore(
+  profile: Pick<GrowthProfile, 'threads' | 'letters'>,
+  todayISO: string,
+  maxChars = 80,
+): LastQuote | null {
+  const dayStart = Date.parse(`${todayISO}T00:00:00Z`);
+  const candidates = [
+    ...(profile.letters ?? [])
+      .filter((l) => (l.content ?? '').trim())
+      .map((l) => ({ text: l.content.trim(), from: 'letter' as const, at: Date.parse(l.createdAt) })),
+    ...Object.values(profile.threads ?? {})
+      .flatMap((t) => t?.evidence ?? [])
+      .filter((e) => (e.quote ?? '').trim())
+      .map((e) => ({ text: (e.quote ?? '').trim(), from: 'thread' as const, at: Date.parse(e.at) })),
+  ].filter((x) => !Number.isNaN(x.at) && (Number.isNaN(dayStart) || x.at < dayStart));
+  if (!candidates.length) return null;
+  const last = candidates.sort((a, b) => a.at - b.at).pop()!;
+  const t = last.text.replace(/\s+/g, ' ');
+  return {
+    text: t.length <= maxChars ? t : `${t.slice(0, maxChars)}…`,
+    at: new Date(last.at).toISOString(),
+    from: last.from,
+  };
+}
