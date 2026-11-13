@@ -38,6 +38,33 @@ export interface SessionMemory {
   sessionId?: string; // 产生本摘要的会话；存量条目无此字段——时间线渲染为不可点
 }
 
+// ---- memories 存储侧滚动合并（C6，2026-09-24）----
+// 注入侧只取最近 5 条（prompt.ts MEMORIES_COUNT），但存储侧此前无限涨——导出体积、
+// 注入预算前的读取、JSONB 行宽都跟着涨。超量时把最旧的收拢成一条合集，不删内容。
+export const MEMORIES_STORAGE_CAP = 30;
+export const MEMORIES_KEEP_RECENT = 20;
+export const MEMORIES_MERGED_MAX_CHARS = 600;
+
+/**
+ * 滚动合并（纯函数）：超过 CAP 时把最旧的（length - KEEP_RECENT）条合成一条
+ * 「更早的摘要合集」，保留最近 KEEP_RECENT 条原样。
+ * - 不破坏「档案只增不减」：内容收拢不删除——合集保留原文（截 600 字符加省略号）；
+ * - 合集 date 取最旧一条（它代表"那段时间"），sessionId 清空（不属于任何一场对话）；
+ * - pinned 不参与（addPinned 同款纪律：结构化字段永不进摘要合并）。
+ */
+export function mergeMemoriesRolling(existing: SessionMemory[]): { memories: SessionMemory[]; merged: boolean } {
+  if (existing.length <= MEMORIES_STORAGE_CAP) return { memories: existing, merged: false };
+  const overflow = existing.length - MEMORIES_KEEP_RECENT;
+  const old = existing.slice(0, overflow);
+  const rest = existing.slice(overflow);
+  const combined = old.map((m) => m.text.trim()).join(' / ');
+  const digest = combined.length > MEMORIES_MERGED_MAX_CHARS
+    ? `${combined.slice(0, MEMORIES_MERGED_MAX_CHARS - 1)}…`
+    : combined;
+  const mergedEntry: SessionMemory = { date: old[0].date, text: digest };
+  return { memories: [mergedEntry, ...rest], merged: true };
+}
+
 /** 心印（docs/02 阶段仪式）：完成推进标志/进入新阶段时点亮。kind 结构化键，展示名走 i18n */
 export interface Stamp {
   kind: string; // stage1_story / stage2_claim / stage3_seven / stage2_entered …（stage.ts 判定表）
@@ -623,9 +650,23 @@ export async function appendMemories(userKey: string, entries: SessionMemory[]):
   const seen = new Set(existing.memories.map((m) => m.text));
   const fresh = entries.filter((e) => e.text.trim() && !seen.has(e.text.trim()));
   if (fresh.length === 0) return;
+  const mergedFresh = fresh.map((e) => ({ date: e.date, text: e.text.trim(), ...(e.sessionId ? { sessionId: e.sessionId } : {}) }));
+  // 未超量：走 `||` 追加（并发写者不被覆盖——只往当前列值后拼）。超量（C6）：整组重写
+  // 做滚动合并。合并路径的读-写间隙可能丢并发写入——罕见路径下，这点风险远小于
+  // 无限增长的确定成本（C6 登记的权衡，docs/03 §11 留痕）。
+  if (existing.memories.length + mergedFresh.length <= MEMORIES_STORAGE_CAP) {
+    await execWithFailover((sql: SqlClient) =>
+      sql`UPDATE growth_profiles
+          SET memories = memories || ${JSON.stringify(mergedFresh)}::jsonb,
+              updated_at = now()
+          WHERE user_key = ${userKey}`
+    );
+    return;
+  }
+  const { memories } = mergeMemoriesRolling([...existing.memories, ...mergedFresh]);
   await execWithFailover((sql: SqlClient) =>
     sql`UPDATE growth_profiles
-        SET memories = memories || ${JSON.stringify(fresh.map((e) => ({ date: e.date, text: e.text.trim(), ...(e.sessionId ? { sessionId: e.sessionId } : {}) })))}::jsonb,
+        SET memories = ${JSON.stringify(memories)}::jsonb,
             updated_at = now()
         WHERE user_key = ${userKey}`
   );
