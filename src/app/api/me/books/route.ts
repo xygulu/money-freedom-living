@@ -13,7 +13,8 @@
 import { NextRequest } from 'next/server';
 import { TOPICS, getBook, type TopicId } from '@/lib/content';
 import { resolveIdentity } from '@/lib/identity';
-import { addBookSelection, ensureProfile, mergeBookSelection, saveBooks } from '@/lib/profile';
+import { addBookSelection, activeBookId, ensureProfile, mergeBookSelection, saveBooks } from '@/lib/profile';
+import { insertPortraitVersion, nextPortraitVersion } from '@/lib/evolution';
 import { track } from '@/lib/analytics';
 import { jsonError } from '@/lib/sse';
 
@@ -40,10 +41,32 @@ export async function POST(request: NextRequest) {
     }
 
     const profile = await ensureProfile(identity.key, locale);
+    const nowISO = new Date().toISOString();
     const books =
       mode === 'add'
-        ? addBookSelection(profile.books, bookId, new Date().toISOString(), focusTopic)
-        : mergeBookSelection(profile.books, bookId, new Date().toISOString(), focusTopic);
+        ? addBookSelection(profile.books, bookId, nowISO, focusTopic)
+        : mergeBookSelection(profile.books, bookId, nowISO, focusTopic);
+
+    // 换书快照（C5，2026-09-24）：select 模式真的换了主线书且已有画像时，先把当前
+    // 画像存一版 source='book_switch'、book_id 归**出走的书**——换书场景的画像版本
+    // 归属从此可区分（docs/02 §10.6 登记的缺口）。best-effort：快照失败不拦选书。
+    const outgoing = activeBookId(profile);
+    if (mode === 'select' && outgoing !== bookId && profile.portrait) {
+      try {
+        const nextVersion = await nextPortraitVersion(identity.key);
+        await insertPortraitVersion(
+          identity.key,
+          nextVersion,
+          profile.portrait,
+          'book_switch',
+          { from: outgoing, to: bookId },
+          outgoing,
+        );
+      } catch (error) {
+        console.error('[api/me/books] book_switch portrait snapshot failed:', error);
+      }
+    }
+
     await saveBooks(identity.key, books);
     if (mode === 'add') {
       await track(identity.key, 'book_added', { bookId, ...(focusTopic ? { topic: focusTopic } : {}) }, profile.locale);

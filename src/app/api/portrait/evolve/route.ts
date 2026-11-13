@@ -5,7 +5,7 @@
 // 现画像不动、提议不消失。不消耗聊天配额（对齐体检；频率由素材闸控制）。
 import { NextRequest } from 'next/server';
 import { requireApiUser } from '@/lib/api-auth';
-import { getProfile, savePortrait, bumpActiveDay, type Portrait } from '@/lib/profile';
+import { getProfile, savePortrait, bumpActiveDay, activeBookId, type Portrait } from '@/lib/profile';
 import {
   baselineFor,
   countMaterialSince,
@@ -74,9 +74,10 @@ export async function POST(request: NextRequest) {
       }
 
       const nextVersion = previous.version + 1;
-      // 懒回填：存量用户当前版不在版本表，先补上（演进基线从此有锚点）
+      // 懒回填：存量用户当前版不在版本表，先补上（演进基线从此有锚点）。
+      // book_id（C5）：归当时的主线书。
       if (!versions.some((v) => v.version === previous.version)) {
-        await insertPortraitVersion(identity.key, previous.version, previous, 'backfill');
+        await insertPortraitVersion(identity.key, previous.version, previous, 'backfill', {}, activeBookId(profile));
       }
       const nextPortrait: Portrait = {
         questionnaire: previous.questionnaire,
@@ -95,7 +96,7 @@ export async function POST(request: NextRequest) {
         journals: material.journals.length,
         experiments: material.experiments.length,
         daysSince: counts.daysSince,
-      });
+      }, activeBookId(profile));
       await savePortrait(identity.key, nextPortrait);
       // 清锁 + 记录生成时刻 + 重置提议埋点纪元（proposedSeenAt: null）
       await saveEvolution(identity.key, { generatingAt: null, lastGeneratedAt: now, proposedSeenAt: null });

@@ -7,7 +7,7 @@
 // sessionId 只在 echo 步 CTA "想多聊聊" → 走完 talk 步再生成画像时才有值。
 import { NextRequest } from 'next/server';
 import { resolveIdentity } from '@/lib/identity';
-import { getProfile, savePortrait, bumpActiveDay, type Portrait } from '@/lib/profile';
+import { getProfile, savePortrait, bumpActiveDay, activeBookId, type Portrait } from '@/lib/profile';
 import { getSession, getSessionMessages, closeSession } from '@/lib/chat';
 import { buildPortraitMessages, validatePortraitDraft } from '@/lib/onboarding';
 import { insertPortraitVersion } from '@/lib/evolution';
@@ -80,9 +80,9 @@ export async function POST(request: NextRequest) {
     };
     await savePortrait(identity.key, portrait);
     // v1 快照入版本表（时间线画像节点 + 演进基线用）。best-effort：失败不拦画像，
-    // 首次演进时有懒回填兜底
+    // 首次演进时有懒回填兜底。book_id（C5）：归当时的主线书——换书场景的版本归属从此可区分。
     try {
-      await insertPortraitVersion(identity.key, 1, portrait, 'onboarding');
+      await insertPortraitVersion(identity.key, 1, portrait, 'onboarding', {}, activeBookId(profile));
     } catch (error) {
       console.error('[api/onboarding/portrait] insert v1 snapshot failed:', error);
     }

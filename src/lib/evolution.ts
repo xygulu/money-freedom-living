@@ -9,7 +9,7 @@ import { getJournalEntries, countJournalEntriesSince } from '@/lib/journal';
 import { LOCALE_NAME } from '@/lib/onboarding';
 import type { Locale } from '@/i18n/config';
 
-export type PortraitVersionSource = 'onboarding' | 'evolve' | 'backfill';
+export type PortraitVersionSource = 'onboarding' | 'evolve' | 'backfill' | 'book_switch';
 
 /** portrait_versions 一行：某版画像的完整快照（含当时的 calibrations/scriptStatus） */
 export interface PortraitVersion {
@@ -18,6 +18,8 @@ export interface PortraitVersion {
   portrait: Portrait;
   /** 该版基于的新素材量 {memories, journals, experiments, daysSince} */
   material: Record<string, unknown>;
+  /** 这版画像属于哪本书（C5：换书场景的版本归属可区分；存量行为 NULL → undefined） */
+  bookId?: string;
   createdAt: string;
 }
 
@@ -27,6 +29,7 @@ function rowToVersion(row: Record<string, unknown>): PortraitVersion {
     source: (row.source as PortraitVersionSource) ?? 'onboarding',
     portrait: row.portrait as Portrait,
     material: (row.material as Record<string, unknown> | null) ?? {},
+    bookId: typeof row.book_id === 'string' && row.book_id ? row.book_id : undefined,
     createdAt: iso(row.created_at),
   };
 }
@@ -35,7 +38,7 @@ function rowToVersion(row: Record<string, unknown>): PortraitVersion {
 export async function listPortraitVersions(userKey: string, limit = 50): Promise<PortraitVersion[]> {
   await ensureSchema();
   const rows = await execWithFailover((sql) =>
-    sql`SELECT version, source, portrait, material, created_at
+    sql`SELECT version, source, portrait, material, book_id, created_at
         FROM portrait_versions WHERE user_key = ${userKey}
         ORDER BY version DESC LIMIT ${limit}`
   );
@@ -46,26 +49,42 @@ export async function listPortraitVersions(userKey: string, limit = 50): Promise
 export async function getPortraitVersion(userKey: string, version: number): Promise<PortraitVersion | null> {
   await ensureSchema();
   const rows = await execWithFailover((sql) =>
-    sql`SELECT version, source, portrait, material, created_at
+    sql`SELECT version, source, portrait, material, book_id, created_at
         FROM portrait_versions WHERE user_key = ${userKey} AND version = ${version}`
   );
   return rows[0] ? rowToVersion(rows[0]) : null;
 }
 
-/** 写入一版快照。UNIQUE (user_key, version) + DO NOTHING：懒回填/并发演进幂等 */
+/** 写入一版快照。UNIQUE (user_key, version) + DO NOTHING：懒回填/并发演进幂等。
+ *  bookId（C5）：这版画像属于哪本书——换书时的 book_switch 快照归出走的书，
+ *  其余快照归当时的主线书。不传 = 存量行为（列留 NULL），不猜。 */
 export async function insertPortraitVersion(
   userKey: string,
   version: number,
   portrait: Portrait,
   source: PortraitVersionSource,
-  material: Record<string, unknown> = {}
+  material: Record<string, unknown> = {},
+  bookId?: string
 ): Promise<void> {
   await ensureSchema();
   await execWithFailover((sql) =>
-    sql`INSERT INTO portrait_versions (user_key, version, portrait, source, material)
-        VALUES (${userKey}, ${version}, ${JSON.stringify(portrait)}::jsonb, ${source}, ${JSON.stringify(material)}::jsonb)
-        ON CONFLICT (user_key, version) DO NOTHING`
+    bookId
+      ? sql`INSERT INTO portrait_versions (user_key, version, portrait, source, material, book_id)
+            VALUES (${userKey}, ${version}, ${JSON.stringify(portrait)}::jsonb, ${source}, ${JSON.stringify(material)}::jsonb, ${bookId})
+            ON CONFLICT (user_key, version) DO NOTHING`
+      : sql`INSERT INTO portrait_versions (user_key, version, portrait, source, material)
+            VALUES (${userKey}, ${version}, ${JSON.stringify(portrait)}::jsonb, ${source}, ${JSON.stringify(material)}::jsonb)
+            ON CONFLICT (user_key, version) DO NOTHING`
   );
+}
+
+/** 下一版号（C5 换书快照用）：现最大 version + 1；空表从 1 起。 */
+export async function nextPortraitVersion(userKey: string): Promise<number> {
+  await ensureSchema();
+  const rows = await execWithFailover((sql) =>
+    sql`SELECT COALESCE(max(version), 0)::int AS v FROM portrait_versions WHERE user_key = ${userKey}`
+  );
+  return (Number(rows[0]?.v) || 0) + 1;
 }
 
 // ---------- 常量 ----------
