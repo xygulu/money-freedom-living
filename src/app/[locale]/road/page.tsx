@@ -15,7 +15,7 @@ import { enabledLocales, isLocale } from '@/i18n/config';
 import { requireSignedIn } from '@/lib/identity';
 import { getProfile } from '@/lib/profile';
 import { buildRoad, inviteBooksFor } from '@/lib/road';
-import { bookTitle } from '@/lib/content';
+import { bookTitle, TOPICS } from '@/lib/content';
 import { formatTimelineDay } from '@/lib/timeline';
 import { getUiVersion, withJourneyHref } from '@/lib/ui-version';
 
@@ -46,6 +46,18 @@ export default async function roadPage({ params }: { params: Promise<{ locale: s
       {!road || road.lines.length === 0 ? (
         <div className="mt-8 border border-dashed border-line p-6">
           <p className="text-sm leading-relaxed text-ink-soft">{dict.road.empty}</p>
+          {/* P2-5（2026-09-24）：第一天的远景框架——六个命题先给个名字。
+              此前新用户在这里只看到一句"还没有走过的路"，六命题完全不可见，
+              第一天的心智锚点就只剩"书的阶段"。这些是远处的风景，不是欠账：
+              不计数、不排序、不催。 */}
+          <ul className="mt-4 flex flex-wrap gap-2">
+            {TOPICS.map((topic) => (
+              <li key={topic} data-road-ahead={topic} className="border border-dashed border-line px-3 py-1.5 text-sm text-ink-soft/70">
+                {topicName(topic)}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-3 text-xs leading-relaxed text-ink-soft/70">{dict.road.aheadHint}</p>
           <Link
             href={dict.nav.journeyHref}
             className="mt-5 inline-block border border-ink px-5 py-2.5 text-sm transition-colors hover:bg-ink hover:text-paper"

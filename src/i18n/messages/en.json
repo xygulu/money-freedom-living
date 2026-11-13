@@ -115,7 +115,8 @@
     "privacyLink": "Privacy policy",
     "signOut": "Sign out",
     "signOutConfirm": "Sign out now?",
-    "error": "Something went wrong, please try again"
+    "error": "Something went wrong, please try again",
+    "roadHint": "Everything you have walked is still here. Books appear only on this page."
   },
   "touch": {
     "optInLabel": "I'd like to hear from you at a few points along the way (unsubscribe anytime)",

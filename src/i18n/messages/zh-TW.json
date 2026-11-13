@@ -115,7 +115,8 @@
     "privacyLink": "隱私政策",
     "signOut": "登出",
     "signOutConfirm": "真的要登出？",
-    "error": "出了點問題，請重試"
+    "error": "出了點問題，請重試",
+    "roadHint": "走過的每一步都還在。書也只在這裡露面。"
   },
   "touch": {
     "optInLabel": "我願意在幾個節點上收到你的來信（可隨時退訂）",

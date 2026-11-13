@@ -36,6 +36,13 @@ export default async function mePage({ params }: { params: Promise<{ locale: str
       hint: hasPortrait ? dict.me.portraitDone : dict.me.portraitEmpty,
     },
     {
+      // 「你走过的路」入口（P2-6）：原先只在旅程页 {profile && …} 块里——没走过路的
+      // 人反而永远够不到它。收进「我」，第一天就可达。
+      href: `/${locale}/road`,
+      label: dict.road.title,
+      hint: dict.me.roadHint,
+    },
+    {
       href: `/${locale}/vip`,
       label: dict.me.vip,
       hint: isVip ? dict.me.vipActive : dict.me.vipFree,
