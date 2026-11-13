@@ -47,10 +47,17 @@ interface Props {
    * 未配置时「按一下说」整个不渲染——不把用户引向一个永远按不响的东西。
    */
   speechEnabled?: boolean;
+  /**
+   * 节点回程归因（A1/U1）：从节点信链接回来时由服务端传入，原样带回 close 提交——
+   * /api/journey/close 据此记 node_verdict（source='touch'）。classic 的 DayCloseCard
+   * 同款字段；不传 = 自己走到页面交的一格（source='app'）。
+   */
+  node?: string;
+  from?: string;
   onSubmitted: (payload: SubmittedPayload) => void;
 }
 
-export default function ActCard({ locale, dict, exercise, speechEnabled = false, onSubmitted }: Props) {
+export default function ActCard({ locale, dict, exercise, speechEnabled = false, node, from, onSubmitted }: Props) {
   const t = dict.newJourney;
   // 「按一下说」的三条文案与经典版「合」同源（dict.journey），不另起一套键
   const speech = { startLabel: dict.journey.closeSpeech, stopLabel: dict.journey.closeSpeechStop, failedLabel: dict.journey.closeSpeechFailed };
@@ -108,6 +115,8 @@ export default function ActCard({ locale, dict, exercise, speechEnabled = false,
           thought: thought.trim() || undefined,
           firstLine: firstLineSkipped ? undefined : firstLine.trim() || undefined,
           firstLineSkipped,
+          node,
+          from,
           locale,
         }),
       });

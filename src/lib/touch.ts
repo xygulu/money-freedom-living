@@ -128,6 +128,41 @@ export function unsubUrl(baseUrl: string, locale: string, token: string): string
 }
 
 /**
+ * 归因回程参数校验（A1/U1，2026-09-24）：邮件/推送回程链接带 `?from=touch&node=Dx`，
+ * 两个守卫 redirect 与新版打点共用这一处白名单——只放行 `from=touch` + `node=D<数字>`，
+ * 其余一律当没看见（不污染回程 URL，也不给乱填参数的人记假归因）。
+ * 注意与 `isVerdictNode`（6 个判定节点）的口径差：D3 是触达节点但**不提问不判定**，
+ * 回程照样记 touch_return，只是没有问题可摆、没有答卷可收。
+ */
+export function touchReturnQuery(
+  params: { from?: string; node?: string } | undefined,
+): string {
+  const from = params?.from;
+  const node = params?.node;
+  if (from !== 'touch' || !node || !/^D\d+$/.test(node)) return '';
+  return `from=touch&node=${encodeURIComponent(node)}`;
+}
+
+/** 回程间隔分桶（与 /journey classic 同一口径，抽出来防两版漂移）。 */
+export type ReturnGapBucket = 'first' | 'same_day' | '1-3' | '4-7' | '8+';
+
+export function returnGapBucket(
+  lastActiveDate: string | null | undefined,
+  todayISO: string,
+): ReturnGapBucket {
+  if (!lastActiveDate) return 'first';
+  const from = Date.parse(`${lastActiveDate}T00:00:00Z`);
+  const to = Date.parse(`${todayISO}T00:00:00Z`);
+  if (Number.isNaN(from) || Number.isNaN(to)) return 'first';
+  const days = Math.floor((to - from) / 86_400_000);
+  if (days < 0) return 'first';
+  if (days === 0) return 'same_day';
+  if (days <= 3) return '1-3';
+  if (days <= 7) return '4-7';
+  return '8+';
+}
+
+/**
  * 这个节点要问的那一个问题（docs/10 §2.1）。
  *
  * 信里问一次，回程页再问一次——**同一个问题**，同一份文案。只在一处写死，两处引用，

@@ -13,3 +13,25 @@
   margin-top: auto; /* §4 一屏放下硬约束：把路径段推到屏底 */
   padding-top: 14px;
 }
+
+/* 节点信回程的问题块（A1/U1，classic 同款形制：左引线 + 引导句 + 问题原文）。
+   摆在「今天这一步」上方——他在信里被问过一次，回来这一格就是答卷。 */
+.nodeQuestion {
+  margin-bottom: 14px;
+  border-left: 2px solid var(--accent);
+  padding-left: 16px;
+}
+
+.nodeQuestionLead {
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  color: var(--scene-soft);
+  margin: 0;
+}
+
+.nodeQuestionText {
+  margin: 6px 0 0;
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--scene-ink);
+}

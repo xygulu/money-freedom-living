@@ -34,6 +34,14 @@ interface Props {
   stage: number;
   /** 服务端配置了 STT provider 才为 true——「按一下说」落 commitSheet ②③（批 D1） */
   speechEnabled?: boolean;
+  /**
+   * 节点信回程带的问题（A1/U1，docs/10 §2.2）：信里问一次，回程页接着问——同一个
+   * 问题摆在「今天这一步」上方。null = 不是判定节点回程（或 D3 这种不提问的节点）。
+   */
+  nodeQuestion?: string | null;
+  /** close 提交附带的归因字段（/api/journey/close 据此记 node_verdict.source） */
+  closeNode?: string;
+  closeFrom?: string;
 }
 
 export interface MirrorState {
@@ -49,7 +57,7 @@ export interface MirrorState {
   receipt: string | null;
 }
 
-export default function NewJourneyView({ locale, dict, daily, exercise, progress, stageNames, userKey, stage, speechEnabled = false }: Props) {
+export default function NewJourneyView({ locale, dict, daily, exercise, progress, stageNames, userKey, stage, speechEnabled = false, nodeQuestion = null, closeNode, closeFrom }: Props) {
   // 提交后的镜像状态（用户原话 + echo）；null = 未提交，仍在 act 段
   const [mirror, setMirror] = useState<MirrorState | null>(null);
 
@@ -63,11 +71,21 @@ export default function NewJourneyView({ locale, dict, daily, exercise, progress
       {/* 段 2: 今天这一步（提交前显示）/ 段 3: mirror（提交后显示）*/}
       {mirror === null ? (
         <section data-step="act" className={styles.section}>
+          {/* 从节点信回来的：那封信问的问题原样摆在格子旁（docs/10 §2.2，classic 同款）。
+              同一个问题在信里问过一次，这里再问一次——不是重复，是**接上**。 */}
+          {nodeQuestion && (
+            <div data-node-question className={styles.nodeQuestion}>
+              <p className={styles.nodeQuestionLead}>{dict.touch.nodeBackLead}</p>
+              <p className={styles.nodeQuestionText}>{nodeQuestion}</p>
+            </div>
+          )}
           <ActCard
             locale={locale}
             dict={dict}
             exercise={exercise}
             speechEnabled={speechEnabled}
+            node={closeNode}
+            from={closeFrom}
             onSubmitted={(payload) => setMirror(payload)}
           />
         </section>

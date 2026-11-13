@@ -27,7 +27,7 @@ import { track } from '@/lib/analytics';
 import { buildTimeline, formatTimelineDay } from '@/lib/timeline';
 import { computeStageProgress, lampsFor, MAX_STAGE } from '@/lib/stage';
 import { isVerdictNode } from '@/lib/cognition';
-import { nodeQuestion } from '@/lib/touch';
+import { nodeQuestion, touchReturnQuery } from '@/lib/touch';
 import { getSttProviders } from '@/lib/stt';
 import { baselineFor, countMaterialSince, shouldPropose, saveEvolution, listPortraitVersions } from '@/lib/evolution';
 import { shouldOfferAssess, saveAssessmentState, ASSESS_PENDING_TTL_DAYS } from '@/lib/assess';
@@ -60,9 +60,15 @@ export default async function journeyPage({
   // **必须在 uiVersion guard 之前**——访客既不该看到 classic 也不该看到 new，两边都跳 /login
   const identity = await requireSignedIn(locale, `/${locale}/journey`);
 
+  // 触达归因参数（A1/U1 修复，2026-09-24）：classic 用户点信里的链接（回程默认指
+  // /journey-new）会在这里被反向 redirect 到 /journey——此前 query 丢在跳转里，
+  // touch_return 记不上、节点问题也摆不出来。白名单校验收在 touchReturnQuery 一处。
+  const query = await searchParams;
+  const returnSuffix = touchReturnQuery(query) ? `?${touchReturnQuery(query)}` : '';
+
   // 前台改造（70-2 A2）· 经典版守卫。非 classic 直接重定向到一幕。
   if ((await getUiVersion()) !== 'classic') {
-    redirect(`/${locale}/journey-new`);
+    redirect(`/${locale}/journey-new${returnSuffix}`);
   }
 
   const headersList = await headers();
@@ -180,7 +186,6 @@ export default async function journeyPage({
 
   // 验收指标：24h-72h 回访等（docs/02 §11）。查询端按 user+day 去重，这里无条件打点。
   const gapBucket = gapDays < 0 ? 'first' : gapDays === 0 ? 'same_day' : gapDays <= 3 ? '1-3' : gapDays <= 7 ? '4-7' : '8+';
-  const query = await searchParams;
   // 节点回程（docs/10 §2.2）：只有 6 个节点算节点，别的 node 参数一律当没看见。
   // 判定收在 isVerdictNode 一处——页面认的、接口认的、埋点认的必须是同一批节点，
   // 不然会出现"页面摆了问题、接口不记答卷"这种静默的错位。

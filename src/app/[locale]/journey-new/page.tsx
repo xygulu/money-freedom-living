@@ -23,6 +23,9 @@ import { activeBookEntries, activeBookId, getProfile, recordDailySeen } from '@/
 import { getUiVersion } from '@/lib/ui-version';
 import { computeStageProgress } from '@/lib/stage';
 import { getSttProviders } from '@/lib/stt';
+import { isVerdictNode } from '@/lib/cognition';
+import { nodeQuestion, returnGapBucket, touchReturnQuery } from '@/lib/touch';
+import { track } from '@/lib/analytics';
 import NewJourneyView from '@/components/NewJourneyView';
 import AddBookEntry from '@/components/AddBookEntry';
 
@@ -32,8 +35,10 @@ const todayISO = () => new Date().toISOString().slice(0, 10);
 
 export default async function journeyNewPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string }>;
+  searchParams: Promise<{ from?: string; node?: string }>;
 }) {
   const { locale } = await params;
   if (!isLocale(locale) || !enabledLocales.includes(locale)) notFound();
@@ -43,10 +48,17 @@ export default async function journeyNewPage({
   // 必须在 uiVersion guard 之前——经典版访客也挡掉（避免 cookie 切换路径暴露内容）
   const identity = await requireSignedIn(locale, `/${locale}/journey-new`);
 
+  // 触达归因参数（A1/U1 修复，2026-09-24）：白名单校验收在 touchReturnQuery 一处。
+  // 跨版本守卫 redirect 时 query 原样带走（此前 redirect 丢 query——classic 用户点信里
+  // 的链接回来，归因参数会在跳转中丢失，touch_return 永远记不上）。
+  const query = await searchParams;
+  const returnQuery = touchReturnQuery(query);
+  const returnSuffix = returnQuery ? `?${returnQuery}` : '';
+
   // 经典版守卫（70-2 A2）。ui_version === 'classic' 时反向回到经典旅程页；
   // 经典版本身的 11 块内容保留在 /journey 一行不动。
   if ((await getUiVersion()) === 'classic') {
-    redirect(`/${locale}/journey`);
+    redirect(`/${locale}/journey${returnSuffix}`);
   }
 
   const headersList = await headers();
@@ -92,6 +104,28 @@ export default async function journeyNewPage({
   const progress = profile
     ? computeStageProgress(locale, stage, profile, bookId)
     : { checks: [], litCount: 0 };
+
+  // 验收打点（与 classic /journey 同口径；A1/U1：此前新版完全不记——邮件拉回的
+  // 归因在新版不可测，"触达拉回率"护栏指标只能拿到 classic 一半的数据）。
+  const gapBucket = returnGapBucket(profile?.last_active_date, today);
+  try {
+    await track(identity.key, 'journey_visit', { gap: gapBucket }, locale);
+    // 从信里回来的那一次单独记一笔。用 returnQuery 当闸（from=touch + node=D<数字>
+    // 的白名单校验已收在 touchReturnQuery 一处）——D3 也算：它不提问不判定，
+    // 但"被信叫回来了"这件事必须记，否则 D3 这封的拉回效果永远测不到。
+    if (returnQuery) {
+      await track(identity.key, 'touch_return', { node: query.node!, gap: gapBucket }, locale);
+    }
+  } catch {
+    // 打点绝不阻塞页面
+  }
+
+  // 节点问题（docs/10 §2.2）：只有 6 个判定节点有——D3 是"你上次说的那句话我留着"，不提问。
+  const nodeParam = isVerdictNode(query?.node) ? query.node : undefined;
+  const nodeQuestionText = nodeParam ? nodeQuestion(dict, nodeParam) : null;
+  // close 提交要带的归因字段：让 node_verdict 能认出"这格答卷是从信里回来的"
+  // （判据与上面 touch_return 同一处白名单，两处口径不可能再分叉）。
+  const fromTouch = returnQuery ? 'touch' : undefined;
 
   // 阶段名属于书（U6：i18n 里不得留单本书的阶段语汇）——从内容层按当前书取，
   // 路上的节点名随书替换（title 就是各语言 journey md 里的短名，如「看见」）
@@ -147,6 +181,9 @@ export default async function journeyNewPage({
         userKey={identity.key}
         stage={stage}
         speechEnabled={getSttProviders().length > 0}
+        nodeQuestion={nodeQuestionText}
+        closeNode={nodeParam}
+        closeFrom={fromTouch}
       />
 
       {/* 归属行（2026-09-24 用户拍板「用户需要知道在落地的是哪几本书」）：汇入制下
