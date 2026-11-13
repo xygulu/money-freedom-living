@@ -48,11 +48,11 @@ describe('returnGapBucket —— 回程间隔分桶（与 classic 同口径）',
   });
 
   it('1-3 天 / 4-7 天 / 8+ 天', () => {
-    expect(returnGapBucket('2026-09-23', '2026-11-13')).toBe('1-3');
-    expect(returnGapBucket('2026-09-21', '2026-11-13')).toBe('1-3');
-    expect(returnGapBucket('2026-09-20', '2026-11-13')).toBe('4-7');
-    expect(returnGapBucket('2026-09-17', '2026-11-13')).toBe('4-7');
-    expect(returnGapBucket('2026-09-16', '2026-11-13')).toBe('8+');
+    expect(returnGapBucket('2026-11-12', '2026-11-13')).toBe('1-3');
+    expect(returnGapBucket('2026-11-10', '2026-11-13')).toBe('1-3');
+    expect(returnGapBucket('2026-11-09', '2026-11-13')).toBe('4-7');
+    expect(returnGapBucket('2026-11-06', '2026-11-13')).toBe('4-7');
+    expect(returnGapBucket('2026-11-05', '2026-11-13')).toBe('8+');
     expect(returnGapBucket('2026-06-01', '2026-11-13')).toBe('8+');
   });
 

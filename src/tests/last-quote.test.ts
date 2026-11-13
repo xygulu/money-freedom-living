@@ -52,7 +52,7 @@ describe('lastQuoteBefore', () => {
     });
     expect(lastQuoteBefore(p, '2026-11-13')).toBeNull();
     // 但到了明天，它就是"上次"了
-    expect(lastQuoteBefore(p, '2026-09-25')?.text).toBe('今天刚说的这句');
+    expect(lastQuoteBefore(p, '2026-11-14')?.text).toBe('今天刚说的这句');
   });
 
   it('同一句在多条线/多条证据里，只取最新一条', () => {
