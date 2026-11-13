@@ -590,6 +590,13 @@ export default function OnboardingWizard({ locale, dict, books }: Props) {
             >
               {o.echo.saveCTA}
             </Link>
+            {/* P1-6/P1-7（2026-09-24）：在被说中的峰值时刻才说这句话——价值讲成
+                「关系延续」（你走了之后我还能找到你），不是「数据归属」（档案跟着账号走）。
+                游客丢上下文零提示的缺口也在这一行补上：放在 echo（画像刚说完他），
+                不放在流程结尾的例行公事位置。 */}
+            <p data-echo-keep-line className="mt-2 text-xs leading-relaxed text-ink-soft/70">
+              {o.echo.keepLine}
+            </p>
           </>
         )}
       </div>

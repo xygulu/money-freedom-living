@@ -89,7 +89,7 @@
   },
   "me": {
     "title": "Me",
-    "guestNote": "You're walking as a guest. Sign in and your profile follows your account.",
+    "guestNote": "You are walking as a guest. Sign in and your profile follows you — so I can still find you after you leave.",
     "loginLink": "Sign in / Create account",
     "portrait": "My money portrait",
     "portraitDone": "Read it anytime, calibrate it anytime.",
@@ -495,7 +495,8 @@
       "amend": "Not quite right? You can fix it in the next step",
       "fallback": "I didn't catch it clearly yet. Let's talk a little first — no rush.",
       "chatCTA": "Want to keep talking?",
-      "saveCTA": "Save this portrait?"
+      "saveCTA": "Save this portrait?",
+      "keepLine": "This is worth keeping. Sign up and it stays with you — so I can still find you after you leave."
     },
     "reflect": {
       "title": "Is this you?",
