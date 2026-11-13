@@ -29,7 +29,7 @@ export const CHAT_MAX_MESSAGES = 40;
 export const COMPANION_MAX_MESSAGES = 20;
 
 /**
- * A4（?quote 落对话历史，2026-09-24）：清洗 URL 里带来的球气泡原文。
+ * A4（?quote 落对话历史，2026-11-13）：清洗 URL 里带来的球气泡原文。
  * nudge 文案本身 ≤80 字（companion-nudge TEMPLATES），300 是防御上限；
  * 折叠空白、去首尾——存进 chat_messages 的就是展示给用户的那一句。
  */

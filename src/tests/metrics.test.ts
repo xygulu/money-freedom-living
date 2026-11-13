@@ -1,4 +1,4 @@
-// 机制仪表纯函数（2026-09-24 批 1c）：把漏斗聚合的口径钉死。
+// 机制仪表纯函数（2026-11-13 批 1c）：把漏斗聚合的口径钉死。
 // DB 聚合部分走 smoke/线上验，这里只测纯函数——ratioOf 的 0/0 语义、
 // 六节点分桶的"没答过的节点保留全 0 行"、触达 per-node 合并。
 import { describe, expect, it } from 'vitest';
@@ -15,7 +15,7 @@ function verdictRow(partial: Partial<NodeVerdictRow>): NodeVerdictRow {
     basisTopic: null,
     basisAt: null,
     source: 'app',
-    at: '2026-09-24T00:00:00.000Z',
+    at: '2026-11-13T00:00:00.000Z',
     ...partial,
   };
 }

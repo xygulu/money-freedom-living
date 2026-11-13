@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
         ? addBookSelection(profile.books, bookId, nowISO, focusTopic)
         : mergeBookSelection(profile.books, bookId, nowISO, focusTopic);
 
-    // 换书快照（C5，2026-09-24）：select 模式真的换了主线书且已有画像时，先把当前
+    // 换书快照（C5，2026-11-13）：select 模式真的换了主线书且已有画像时，先把当前
     // 画像存一版 source='book_switch'、book_id 归**出走的书**——换书场景的画像版本
     // 归属从此可区分（docs/02 §10.6 登记的缺口）。best-effort：快照失败不拦选书。
     const outgoing = activeBookId(profile);

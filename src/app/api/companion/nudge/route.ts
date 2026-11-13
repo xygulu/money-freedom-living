@@ -84,7 +84,7 @@ export async function POST(): Promise<NextResponse> {
 
   const { lastMemoryText, stageGoal, lastTouchedPrompt } = pickNudgeMaterial(profile);
 
-  // A5 接线（2026-09-24）：L1d 日历触发——发薪日（用户自设）优先，其次月末；
+  // A5 接线（2026-11-13）：L1d 日历触发——发薪日（用户自设）优先，其次月末；
   // 大促无可靠信号永不猜测。此前库里有 anchorKind 能力但路由从不传参。
   const anchorKind = anchorKindForToday(profile.payday, timeZoneFrom(cookieStore));
 

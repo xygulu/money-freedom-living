@@ -38,7 +38,7 @@ export interface SessionMemory {
   sessionId?: string; // 产生本摘要的会话；存量条目无此字段——时间线渲染为不可点
 }
 
-// ---- memories 存储侧滚动合并（C6，2026-09-24）----
+// ---- memories 存储侧滚动合并（C6，2026-11-13）----
 // 注入侧只取最近 5 条（prompt.ts MEMORIES_COUNT），但存储侧此前无限涨——导出体积、
 // 注入预算前的读取、JSONB 行宽都跟着涨。超量时把最旧的收拢成一条合集，不删内容。
 export const MEMORIES_STORAGE_CAP = 30;

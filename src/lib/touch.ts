@@ -128,7 +128,7 @@ export function unsubUrl(baseUrl: string, locale: string, token: string): string
 }
 
 /**
- * 归因回程参数校验（A1/U1，2026-09-24）：邮件/推送回程链接带 `?from=touch&node=Dx`，
+ * 归因回程参数校验（A1/U1，2026-11-13）：邮件/推送回程链接带 `?from=touch&node=Dx`，
  * 两个守卫 redirect 与新版打点共用这一处白名单——只放行 `from=touch` + `node=D<数字>`，
  * 其余一律当没看见（不污染回程 URL，也不给乱填参数的人记假归因）。
  * 注意与 `isVerdictNode`（6 个判定节点）的口径差：D3 是触达节点但**不提问不判定**，

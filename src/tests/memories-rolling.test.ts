@@ -1,4 +1,4 @@
-// C6（2026-09-24）：memories 存储侧滚动合并的纯函数口径。
+// C6（2026-11-13）：memories 存储侧滚动合并的纯函数口径。
 // 注入侧只取最近 5 条（prompt.ts），存储侧超量收拢最旧的——内容收拢不删除。
 import { describe, expect, it } from 'vitest';
 import {

@@ -1,4 +1,4 @@
-// 批 2b（A2/A4/A5，2026-09-24）纯函数口径：
+// 批 2b（A2/A4/A5，2026-11-13）纯函数口径：
 // - normalizeSeedQuote：球气泡原文进对话历史前的清洗（A4）
 // - isMonthEndISO / anchorKindForToday：nudge L1d 日历触发的判定（A5）
 import { describe, expect, it } from 'vitest';

@@ -1,4 +1,4 @@
-// C5（2026-09-24）：换书场景的画像版本归属——select 模式真的换了主线书时，
+// C5（2026-11-13）：换书场景的画像版本归属——select 模式真的换了主线书时，
 // 先把当前画像存一版 source='book_switch'、book_id 归出走的书。
 // 路由薄壳：身份/落库/埋点/版本表 mock 掉，判定逻辑（换没换 / 有没有画像 / add 不触发）在这里守。
 import { beforeEach, describe, expect, it, vi } from 'vitest';

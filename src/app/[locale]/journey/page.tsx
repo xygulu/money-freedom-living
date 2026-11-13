@@ -60,7 +60,7 @@ export default async function journeyPage({
   // **必须在 uiVersion guard 之前**——访客既不该看到 classic 也不该看到 new，两边都跳 /login
   const identity = await requireSignedIn(locale, `/${locale}/journey`);
 
-  // 触达归因参数（A1/U1 修复，2026-09-24）：classic 用户点信里的链接（回程默认指
+  // 触达归因参数（A1/U1 修复，2026-11-13）：classic 用户点信里的链接（回程默认指
   // /journey-new）会在这里被反向 redirect 到 /journey——此前 query 丢在跳转里，
   // touch_return 记不上、节点问题也摆不出来。白名单校验收在 touchReturnQuery 一处。
   const query = await searchParams;

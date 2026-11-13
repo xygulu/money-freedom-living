@@ -46,7 +46,7 @@ export default async function roadPage({ params }: { params: Promise<{ locale: s
       {!road || road.lines.length === 0 ? (
         <div className="mt-8 border border-dashed border-line p-6">
           <p className="text-sm leading-relaxed text-ink-soft">{dict.road.empty}</p>
-          {/* P2-5（2026-09-24）：第一天的远景框架——六个命题先给个名字。
+          {/* P2-5（2026-11-13）：第一天的远景框架——六个命题先给个名字。
               此前新用户在这里只看到一句"还没有走过的路"，六命题完全不可见，
               第一天的心智锚点就只剩"书的阶段"。这些是远处的风景，不是欠账：
               不计数、不排序、不催。 */}

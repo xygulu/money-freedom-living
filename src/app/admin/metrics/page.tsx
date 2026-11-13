@@ -1,4 +1,4 @@
-// 机制仪表（2026-09-24 批 1c）：验证期漏斗一页看全。
+// 机制仪表（2026-11-13 批 1c）：验证期漏斗一页看全。
 // 数据全部来自 events / growth_profiles 的只读聚合（src/lib/metrics.ts），零新表零新采集。
 // 鉴权继承 admin/layout.tsx 的 currentAdmin 闸（非管理员 404）。
 // 铁律：只呈现分布，不做任何"达标/未达标"判定（verdicts.ts 同款纪律——阈值等

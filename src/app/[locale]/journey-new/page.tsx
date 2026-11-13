@@ -52,7 +52,7 @@ export default async function journeyNewPage({
   // 必须在 uiVersion guard 之前——经典版访客也挡掉（避免 cookie 切换路径暴露内容）
   const identity = await requireSignedIn(locale, `/${locale}/journey-new`);
 
-  // 触达归因参数（A1/U1 修复，2026-09-24）：白名单校验收在 touchReturnQuery 一处。
+  // 触达归因参数（A1/U1 修复，2026-11-13）：白名单校验收在 touchReturnQuery 一处。
   // 跨版本守卫 redirect 时 query 原样带走（此前 redirect 丢 query——classic 用户点信里
   // 的链接回来，归因参数会在跳转中丢失，touch_return 永远记不上）。
   const query = await searchParams;
