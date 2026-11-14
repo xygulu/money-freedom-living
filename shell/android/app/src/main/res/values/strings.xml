@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">一辈子不愁钱的活法</string>
+    <string name="title_activity_main">一辈子不愁钱的活法</string>
+    <string name="package_name">ink.miller.honghong</string>
+    <string name="custom_url_scheme">ink.miller.honghong</string>
+</resources>

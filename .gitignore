@@ -21,3 +21,6 @@ docs/kb/
 
 # 设计稿（plan 期间工作产物，跟 commit 不该跟；正式落地后由设计稿对应的代码 commit 取代）
 docs/design/
+
+# APK 构建产物（个人安装用 debug 包，不入库）
+public/apk/

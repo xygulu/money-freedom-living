@@ -1,0 +1,4 @@
+# Android 构建产物不入库（gradle 生成物 + APK）
+build/
+.gradle/
+local.properties

@@ -1,0 +1,23 @@
+{
+	"appId": "ink.miller.honghong",
+	"appName": "一辈子不愁钱的活法",
+	"webDir": "www",
+	"server": {
+		"url": "https://honghong.miller.ink",
+		"allowNavigation": [
+			"honghong.miller.ink"
+		]
+	},
+	"ios": {
+		"contentInset": "never"
+	},
+	"plugins": {
+		"PushNotifications": {
+			"presentationOptions": [
+				"badge",
+				"alert",
+				"sound"
+			]
+		}
+	}
+}
