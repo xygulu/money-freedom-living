@@ -3,7 +3,9 @@
 #
 # 用法（Mac 上，仓库根目录）：
 #   ./shell/ios/build-ipa.sh [TEAM_ID]
+#   BUILD_NUMBER=7 ./shell/ios/build-ipa.sh ABCDE12345   # 指定构建号
 # 不给 TEAM_ID 时从 Xcode 里已登录的账号自动取（xcodebuild -showBuildSettings）。
+# 构建号不指定则自动递增（TestFlight 拒绝重复 build 号——上传第二次必须换号）。
 #
 # 前置（一次性）：
 #   1. Apple Developer Program 已注册（$99/年）——TestFlight 的门槛，没有它本脚本跑不了上传
@@ -41,6 +43,18 @@ if [ -z "$TEAM_ID" ]; then
 fi
 echo "▶ Team ID: $TEAM_ID"
 
+# 构建号：TestFlight 拒绝重复 build 号（同一个号只能上传一次）——自动递增，
+# 记录在 build/build-number.txt（build/ 不入库）。要指定就 BUILD_NUMBER=7。
+BUILD_NUMBER_FILE="$OUT_DIR/build-number.txt"
+if [ -n "${BUILD_NUMBER:-}" ]; then
+  CURRENT_BUILD="$BUILD_NUMBER"
+else
+  CURRENT_BUILD=$(( $(cat "$BUILD_NUMBER_FILE" 2>/dev/null || echo 0) + 1 ))
+fi
+mkdir -p "$OUT_DIR"
+echo "$CURRENT_BUILD" > "$BUILD_NUMBER_FILE"
+echo "▶ 构建号（build number）: $CURRENT_BUILD"
+
 # 1) 同步 web 与插件（远端壳：页面在线上，sync 只是把插件与配置对齐）
 echo "▶ cap sync ios"
 (cd "$ROOT/shell" && npx --yes cap@latest sync ios 2>/dev/null || ./node_modules/.bin/cap sync ios)
@@ -58,7 +72,7 @@ xcodebuild \
   -allowProvisioningDeviceRegistration \
   DEVELOPMENT_TEAM="$TEAM_ID" \
   PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID" \
-  MARKETING_VERSION=1.0 CURRENT_PROJECT_VERSION=1 \
+  MARKETING_VERSION=1.0 CURRENT_PROJECT_VERSION="$CURRENT_BUILD" \
   clean archive
 
 # 3) 导出 IPA（app-store-connect 方法 = 给 TestFlight/上架用）

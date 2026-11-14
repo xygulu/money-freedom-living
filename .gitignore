@@ -24,3 +24,6 @@ docs/design/
 
 # APK 构建产物（个人安装用 debug 包，不入库）
 public/apk/
+
+# iOS 构建产物（IPA / xcarchive / 构建号记录）
+shell/ios/build/
