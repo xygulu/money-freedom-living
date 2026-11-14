@@ -48,7 +48,13 @@ public class MainActivity extends BridgeActivity {
         try {
             super.onCreate(savedInstanceState);
         } catch (Throwable t) {
-            showFatal("onCreate 异常", t);
+            if (isWebViewTooOld(t)) {
+                // 系统WebView提供方过旧（如无GMS的老设备：提供方包名与Google不同，
+                // 装新版WebView APK也换不掉）——壳在此设备上无法运行，指路浏览器
+                showWebViewTooOld(t);
+            } else {
+                showFatal("onCreate 异常", t);
+            }
             return;
         }
 
@@ -70,6 +76,54 @@ public class MainActivity extends BridgeActivity {
         } catch (Throwable ignored) {
         }
         show(text);
+    }
+
+    /**
+     * WebView 提供方过旧的识别（2026-11-14，多亲 Qin 2 / Android 9 实锤）：
+     * AbstractMethodError on WebViewFactoryProvider.getWebViewClassLoader ——
+     * androidx.webkit 的 glue 通信要求提供方实现 P 接口，老提供方没有 → 初始化即炸。
+     */
+    private static boolean isWebViewTooOld(Throwable t) {
+        Throwable cur = t;
+        while (cur != null) {
+            String msg = cur.getMessage();
+            if (cur instanceof AbstractMethodError && msg != null && msg.contains("WebViewFactoryProvider")) return true;
+            for (StackTraceElement f : cur.getStackTrace()) {
+                if (f.getClassName().contains("WebViewGlueCommunicator")) return true;
+            }
+            cur = cur.getCause();
+        }
+        return false;
+    }
+
+    private void showWebViewTooOld(Throwable t) {
+        StringWriter sw = new StringWriter();
+        t.printStackTrace(new PrintWriter(sw));
+        String detail = "设备: " + Build.MANUFACTURER + " " + Build.MODEL
+                + "  Android " + Build.VERSION.RELEASE + " (SDK " + Build.VERSION.SDK_INT + ")\n" + sw;
+        try {
+            new AlertDialog.Builder(this)
+                    .setTitle("这台设备的系统 WebView 过旧")
+                    .setMessage("本应用需要较新的系统 WebView 才能运行。这台设备的 WebView 版本过旧（且无法通过安装应用更新）。\n\n请用手机浏览器打开 honghong.miller.ink 使用，体验完整一致。")
+                    .setPositiveButton("用浏览器打开", (d, w) -> {
+                        try {
+                            startActivity(new android.content.Intent(
+                                    android.content.Intent.ACTION_VIEW,
+                                    android.net.Uri.parse("https://honghong.miller.ink")));
+                        } catch (Throwable ignored) {
+                        }
+                    })
+                    .setNeutralButton("复制详情", (d, w) -> {
+                        try {
+                            ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                            cm.setPrimaryClip(ClipData.newPlainText("crash", detail));
+                            Toast.makeText(this, "已复制", Toast.LENGTH_SHORT).show();
+                        } catch (Throwable ignored) {
+                        }
+                    })
+                    .show();
+        } catch (Throwable ignored) {
+        }
     }
 
     private void showLastCrashIfAny() {
