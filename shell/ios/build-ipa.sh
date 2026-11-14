@@ -56,8 +56,10 @@ echo "$CURRENT_BUILD" > "$BUILD_NUMBER_FILE"
 echo "▶ 构建号（build number）: $CURRENT_BUILD"
 
 # 1) 同步 web 与插件（远端壳：页面在线上，sync 只是把插件与配置对齐）
+#    **必须用本地 CLI**（版本与 package.json 对齐）：用临时下载的最新版 CLI 会重新生成
+#    Package.swift / Gradle 配置，版本与已装的 @capacitor/core 错配。
 echo "▶ cap sync ios"
-(cd "$ROOT/shell" && npx --yes cap@latest sync ios 2>/dev/null || ./node_modules/.bin/cap sync ios)
+(cd "$ROOT/shell" && ./node_modules/.bin/cap sync ios)
 
 # 2) archive
 mkdir -p "$OUT_DIR"
