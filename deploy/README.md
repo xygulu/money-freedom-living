@@ -117,3 +117,27 @@ systemctl disable --now mfl-touch.timer
 ```
 
 或者干脆把 `TOUCH_CRON_SECRET` 从 `.env.local` 里删掉——端点立刻关门。
+
+## 6. 安卓壳：分发与更新机制（2026-11-14 起）
+
+**形态**：远端壳（同 iOS 形制，docs/03 §11 安卓壳条目）——页面全部来自线上站点，壳只承载原生桥。
+
+**更新机制的两层，别混**：
+
+| 层 | 更新方式 | 谁的动作 |
+|---|---|---|
+| 网页内容/功能 | **自动**——App 每次启动加载线上站点，`pnpm build` + 重启（§0.1）即全员生效，无需重装 | 正常发版流程 |
+| 壳本身（原生桥/插件/配置） | **手动**——`gradlew assembleDebug` 重出包，覆盖 `public/apk/` 后用户重新下载安装一次 | 仅原生改动时 |
+
+**出包 → 下发的固定动作**：
+
+```bash
+cd shell/android
+JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 ANDROID_HOME=/opt/android-sdk ./gradlew assembleDebug --no-daemon
+cp app/build/outputs/apk/debug/app-debug.apk ../../public/apk/honghong-debug.apk
+systemctl restart mfl-web.service   # public/ 运行时直读，重启确保干净
+```
+
+下载地址恒定：`https://honghong.miller.ink/apk/honghong-debug.apk`（覆盖即更新，链接不变）。
+
+**边界与将来**：debug 签名（个人安装，允许未知来源）；Android 推送需 Firebase 配置才工作（未配，静默降级）；链接是公开的——壳里没有秘密，只加载公开站点，可接受。将来上商店 = 换正式签名 + 走商店审核，届时此链接退役。
