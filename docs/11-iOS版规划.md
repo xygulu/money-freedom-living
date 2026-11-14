@@ -36,7 +36,7 @@
 3. **首版要不要推送**：**要**。→ M2 全量在册：APNs + device token 通道 + 触达调度加 push 通道；权限请求时机 = 首次「今天这一步」之后。
 4. **付费形态**：**同意首版免费无墙**——先测 iOS 上的效果，再考虑付费（IAP 3.1.1 约束届时单独拍板）。
 
-### M1 · 壳工程（✅ 代码侧全齐——骨架/Info.plist/safe-area/16px/图标启动屏，2026-10-02；剩 Mac 编译签名 + 展示名 + 真机滚动手感）
+### M1 · 壳工程（✅ 代码侧全齐——骨架/Info.plist/safe-area/16px/图标启动屏，2026-10-02；**2026-11-14 补齐出包通道**——共享 scheme + Mac 侧一键脚本 + 操作手册；剩 Mac 编译签名 + 展示名 + 真机滚动手感）
 
 - ✅ **Capacitor 8.5.2 远端壳**（`shell/`，与 Next 应用完全隔离）：`server.url` → `https://honghong.miller.ink` + `allowNavigation`（桥注入，推送可用）；bundle id `ink.miller.honghong`（改名窗口 = 门户建 App ID 前）；ios 工程已在 Linux 生成（Cap 8 走 SPM，Mac 侧无需 pod install）。
 - ✅ **Info.plist 已配**：`NSMicrophoneUsageDescription`（STT 麦克风必需，无则崩）、iPhone 竖屏锁定、`UIUserInterfaceStyle: Light`（首版锁亮色）、`ITSAppUsesNonExemptEncryption: false`（HTTPS-only 豁免，M3 提前）。
@@ -87,3 +87,15 @@
 5. `npx cap open ios` 真机跑通 → Product → Archive → TestFlight
 
 服务器侧需要的密钥（配推送时给）：.p8 文件、Key ID、Team ID——走私下渠道，不进仓库。
+
+### M1 补 · 出包通道（2026-11-14，编码侧补齐代码侧能做的最后一环）
+
+用户 2026-11-14 要求「生成 iOS 版 → 装到手机 → 上 TestFlight」。**Linux 侧能做的已全部做完**，剩下的两步在用户侧（缺不可替代的账号与硬件）：
+
+- ✅ **共享 scheme 补齐**（`shell/ios/App/App.xcodeproj/xcshareddata/xcschemes/App.xcscheme`）——Capacitor CLI 生成工程时**不落** shared scheme，Mac 侧 `xcodebuild -scheme App` 脚本化构建会直接找不到 scheme（图形界面打开不受影响）。这是"一键出包"的前置。
+- ✅ **`shell/ios/build-ipa.sh`**（Mac 一键）：`cap sync ios` → `xcodebuild archive` → `xcodebuild exportArchive`（method=app-store-connect）→ 产出 `shell/ios/build/App.ipa`。TEAM_ID 自动从 Xcode 已登录账号取（或传参）；**构建号自动递增**（TestFlight 拒绝重复 build 号，记录在 build/build-number.txt）。
+- ✅ **`shell/ios/upload-testflight.sh`**（上传）：App Store Connect API Key（三件套 env）或 Apple ID + App 专用密码两种认证。
+- ✅ **`shell/ios/README.md`**（操作手册）：先决条件 / 拉码 / 出包 / 上传 / App Store Connect 外测组配置 / **常见卡点表**（签名错、构建卡处理中、bundle id 已被占、上传成功但手机看不到）。
+- ✅ **`cap sync ios` 同步插件**：clipboard（今日新增）+ push-notifications 均已进 `Package.swift`。
+- ⛔ **不可替代的两件事（用户侧）**：① **Apple Developer Program 未注册**（$99/年）——TestFlight 的硬门槛，没有它无法上传任何构建；② **Mac + Xcode**——iOS 编译与签名只能在这上面做（Linux 无 Swift 工具链与 iOS SDK）。
+- 💡 **零成本替代路径（今天就能用）**：**PWA**（2026-11-14 已上线 manifest + 图标 + SW）——iPhone 用 Safari 打开 → 分享 → 添加到主屏幕 = 有图标的全屏 App 形态，零账号零审核。TestFlight 的增量只有推送（APNs）与上架。
