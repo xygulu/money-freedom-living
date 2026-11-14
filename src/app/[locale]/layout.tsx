@@ -10,6 +10,7 @@ import { getProfile } from '@/lib/profile';
 import { getUiVersion } from '@/lib/ui-version';
 import JourneyProgressBar from '@/components/JourneyProgressBar';
 import PushTapBridge from '@/components/PushTapBridge';
+import ShellPaste from '@/components/ShellPaste';
 
 export const metadata: Metadata = {
   title: 'Money Freedom Living',
@@ -77,6 +78,9 @@ export default async function LocaleLayout({
       <body className="h-full antialiased">
         {/* 推送点按桥（docs/11 M2）：壳里点通知跳站内；浏览器与 SSR 下是空转的 null */}
         <PushTapBridge />
+        {/* 安卓壳长按粘贴（2026-11-14）：壳内 WebView 原生粘贴菜单不弹的兜底——
+            长按输入框直接贴剪贴板；浏览器与 iOS 下是空转的 null */}
+        <ShellPaste />
         {/* 安全区 padding 在 body（globals.css）；容器 min-h-full 让它计入视口高度 */}
         <div className="mx-auto flex min-h-full max-w-xl flex-col px-5">
           <main className="flex-1">{children}</main>
