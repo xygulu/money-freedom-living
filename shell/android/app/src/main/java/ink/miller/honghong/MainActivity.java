@@ -2,9 +2,12 @@ package ink.miller.honghong;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.os.Build;
 import android.os.Bundle;
+import android.widget.Toast;
 
 import com.getcapacitor.BridgeActivity;
 
@@ -90,9 +93,17 @@ public class MainActivity extends BridgeActivity {
     private void show(String text) {
         try {
             new AlertDialog.Builder(this)
-                    .setTitle("壳诊断信息（截图发给编码侧）")
+                    .setTitle("壳诊断信息（复制后发给编码侧）")
                     .setMessage(text.length() > 3800 ? text.substring(0, 3800) + " …" : text)
                     .setPositiveButton("知道了", null)
+                    .setNeutralButton("复制", (d, w) -> {
+                        try {
+                            ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                            cm.setPrimaryClip(ClipData.newPlainText("crash", text));
+                            Toast.makeText(this, "已复制，去微信/邮件粘贴即可", Toast.LENGTH_SHORT).show();
+                        } catch (Throwable ignored) {
+                        }
+                    })
                     .show();
         } catch (Throwable ignored) {
             // 连弹窗都弹不出就真的没救了——那种情况走无线 adb 取 logcat
