@@ -11,6 +11,7 @@ import { getUiVersion } from '@/lib/ui-version';
 import JourneyProgressBar from '@/components/JourneyProgressBar';
 import PushTapBridge from '@/components/PushTapBridge';
 import ShellPaste from '@/components/ShellPaste';
+import PwaRegister from '@/components/PwaRegister';
 
 export const metadata: Metadata = {
   title: 'Money Freedom Living',
@@ -62,6 +63,15 @@ export default async function LocaleLayout({
   return (
     <html lang={htmlLang(locale)} data-scene-theme="plain">
       <head>
+        {/* PWA（2026-11-14）：浏览器「添加到主屏幕」= 有图标、全屏、无地址栏的 App 形态。
+            Qin 2 这类系统 WebView 过旧、跑不了 Capacitor 壳的设备，走这条路。
+            SW 只为满足安装条件注册，且不缓存任何含个人数据的响应（public/sw.js 有注释）。 */}
+        <link rel="manifest" href="/manifest.json" />
+        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="不愁钱" />
+        <meta name="mobile-web-app-capable" content="yes" />
         {/* 把浏览器报的 IANA 时区写进 cookie，服务端据此算「今天」并告诉 AI 现在几点。
             内联脚本而不是组件：要在 hydration 之前就跑完，首屏之后的每个请求都带得上。
             第一次访问的那个请求还没有 cookie（服务端回落 UTC）；用户换城市时自动刷新。 */}
@@ -81,6 +91,8 @@ export default async function LocaleLayout({
         {/* 安卓壳长按粘贴（2026-11-14）：壳内 WebView 原生粘贴菜单不弹的兜底——
             长按输入框直接贴剪贴板；浏览器与 iOS 下是空转的 null */}
         <ShellPaste />
+        {/* PWA service worker 注册（浏览器「添加到主屏幕」的安装条件） */}
+        <PwaRegister />
         {/* 安全区 padding 在 body（globals.css）；容器 min-h-full 让它计入视口高度 */}
         <div className="mx-auto flex min-h-full max-w-xl flex-col px-5">
           <main className="flex-1">{children}</main>
